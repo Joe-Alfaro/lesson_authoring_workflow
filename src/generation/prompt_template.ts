@@ -17,7 +17,7 @@ The reader is a classroom teacher who will teach the lesson tomorrow with little
 Structure:
 - A lesson has sections in this order: "launch", then "literacy_lab" (omit it for Spark and flex lessons), then "learning_in_action", then "look_back". Homework is separate (or null).
 - Section minutes must add up to exactly the lesson duration given in the request. For a 50-minute lesson use Launch 5 / Literacy Lab 10 / Learning in Action 30 / Look Back 5; Spark lessons use Launch 15 / Learning in Action 30 / Look Back 5; flex days use Launch 5 / Learning in Action 40 / Look Back 5. For longer lessons scale Learning in Action (and if needed the Literacy Lab) so the total still matches.
-- Launch, Literacy Lab and Look Back each have one part without a label. Learning in Action has Part "A" and Part "B" (flex days: "Huddle 1", "Huddle 2", "Huddle 3"), each with a title, its minutes and a one-sentence purpose. Part minutes add up to the section minutes.
+- Launch, Literacy Lab and Look Back each have one part without a label. Learning in Action has parts labeled "Part A" and "Part B" (flex days: "Huddle 1", "Huddle 2", "Huddle 3"), each with a title, its minutes and a one-sentence purpose. Part minutes add up to the section minutes.
 - Every focus standard must appear in the "standards" list of at least one Learning in Action part. Only use standard codes given in the request; never invent codes.
 - Every "ask" block has an exemplar: a strong but achievable grade 6 answer in complete sentences.
 - Each Learning in Action part and the Literacy Lab end with one "eld_instructions" block and one "student_support" block. Launch and Look Back do not have them.
@@ -36,7 +36,7 @@ Blocks
 - say: one spoken paragraph of 2-5 sentences. Use it to frame the activity, for a think-aloud after a "teach" block (first person, showing each step of the thinking), or as the bridge to the next section.
 - connection: one or two sentences linking this section to the next ("Now that we have..., we are ready to...").
 - directions: 1-4 imperative sentences in order, naming the expected output (how many sentences, which column of the organizer, which partner goes first).
-- ask: one open question tied to the part's standard; prefer how/why questions over recall. Exemplar length: 1-2 sentences for quick checks, 2-4 for discussion, a full paragraph only for writing models. Exemplars cite a specific detail from the text when the question is about the text.
+- ask: one open question tied to the part's standard; prefer how/why questions over recall. Exemplar length: 1-2 sentences for quick checks (about 15-30 words), 2-4 for discussion, a full paragraph only for writing models. Exemplars cite a specific detail from the text when the question is about the text.
 - routine: name the routine (turn_and_talk, think_pair_share, quick_write, language_study, ...). Use "other" with a label only when nothing fits.
 - display: a model sentence, a weak/strong pair or a model paragraph the teacher shows, written fresh for this lesson and using the lesson's target move.
 - list: a recap such as "To <do the skill>, we:" followed by 3-6 short items starting with a verb.
@@ -52,9 +52,9 @@ Section content (for a 50-minute lesson)
 
 Objectives, questions and connections
 - Objectives start "Students will..." and name one observable action: content (skill and text), language (the named language structure and its purpose), foundational skills (from the outline's foundational skills column; leave it out on flex days).
-- Essential questions come from the arc and unit, not invented per lesson (1-2).
+- Essential questions: at most 2 (one line that names both). Take them from the outline's text-dependent question (the outline column is "Text Dependent Question tied to the EQ") where there is one, otherwise from the arc and unit; do not invent new ones per lesson.
 - Connections: one or two sentences each. Knowledge building = what students build on; enduring understanding = the lasting idea; future lessons = what the next lesson does with this; unit performance task = which skill this rehearses.
-- Vocabulary: "addressed" uses the outline's vocabulary terms with student-friendly definitions; "support" adds 2-4 helpful words from the reading.
+- Vocabulary: "addressed" lists at most 6 of the outline's vocabulary terms, only words this lesson actually uses in its blocks, with student-friendly definitions; "support" adds 2-4 helpful words from the reading.
 
 ELD instructions
 - purpose: one sentence starting "Support students in..." naming the language task and why it matters.
@@ -71,7 +71,7 @@ Student support
 - 1 row of kind "extension" with one or two harder tasks.
 
 Pulse check
-- The stem asks for the lesson's target skill on today's text. Vary the position of the correct option. Wrong options reflect real misconceptions: a detail instead of the main idea, a partial answer, a surface similarity, a confusion with another meaning or genre. Incorrect rationales explain the misconception ("A student may choose this if...").`
+- The stem asks for the lesson's target skill on today's text. Put the correct answer in the position the request names. Wrong options reflect real misconceptions: a detail instead of the main idea, a partial answer, a surface similarity, a confusion with another meaning or genre. Incorrect rationales explain the misconception ("A student may choose this if...").`
 
 const TYPE_GUIDANCE: PromptTemplate['typeGuidance'] = {
   spark:

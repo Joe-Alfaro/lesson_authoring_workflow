@@ -1,6 +1,10 @@
 // R7 / R8 / R5 / R10: what goes into a lesson's prompt. Contract: src/generation/README.md.
 import { describe, expect, it } from 'vitest'
-import { buildLessonPrompt, type LessonPromptInput } from './prompt_builder'
+import {
+  buildLessonPrompt,
+  pulseCheckCorrectOption,
+  type LessonPromptInput,
+} from './prompt_builder'
 import { DEFAULT_PROMPT_TEMPLATE, PromptTemplate } from './prompt_template'
 
 const TEMPLATE: PromptTemplate = {
@@ -170,5 +174,93 @@ describe('DEFAULT_PROMPT_TEMPLATE (R8, R10)', () => {
 
   it('asks Academic Discussion for a discussion protocol', () => {
     expect(DEFAULT_PROMPT_TEMPLATE.typeGuidance.academic_discussion ?? '').toMatch(/protocol/i)
+  })
+})
+
+describe('buildLessonPrompt: a code listed as focus and as additional (R7)', () => {
+  it('lists the code once, as a focus standard', () => {
+    const base = input()
+    const text = fullText(
+      buildLessonPrompt({
+        ...base,
+        standards: [
+          ...base.standards,
+          { code: 'RL.6.1', kind: 'supporting', text: 'FULL-TEXT-RL-6-1' },
+        ],
+      }),
+    )
+    expect(text.match(/^- RL\.6\.1\b(?!\.)/gm)).toHaveLength(1)
+    expect(text.split('FULL-TEXT-RL-6-1')).toHaveLength(2)
+    const focusHeading = text.indexOf('Focus standards')
+    const supportingHeading = text.indexOf('Supporting standards')
+    const line = text.search(/^- RL\.6\.1:/m)
+    expect(line).toBeGreaterThan(focusHeading)
+    expect(line).toBeLessThan(supportingHeading)
+  })
+})
+
+describe('pulse check answer position (prompt tuning)', () => {
+  it('assigns each lesson a target option A-D that varies across consecutive lessons', () => {
+    const letters = [1, 2, 3, 4].map((n) => pulseCheckCorrectOption(n))
+    letters.forEach((letter) => expect(['A', 'B', 'C', 'D']).toContain(letter))
+    expect(new Set(letters).size).toBe(4)
+  })
+
+  it('is deterministic for a lesson number and defined for a flex day', () => {
+    expect(pulseCheckCorrectOption(7)).toBe(pulseCheckCorrectOption(7))
+    expect(['A', 'B', 'C', 'D']).toContain(pulseCheckCorrectOption(null))
+  })
+
+  it.each([1, 2, 3, 4, 5])('tells the model where the correct option goes in lesson %i', (n) => {
+    const base = input()
+    const text = fullText(
+      buildLessonPrompt({ ...base, lesson: { ...base.lesson, lessonNumber: n } }),
+    )
+    const letter = pulseCheckCorrectOption(n)
+    const line = text.split('\n').find((l) => /pulse.?check/i.test(l) && /\boption [A-D]\b/.test(l))
+    expect(line, "a prompt line naming the pulse check's correct option").toBeDefined()
+    expect(line).toMatch(new RegExp(`\\boption ${letter}\\b`))
+  })
+})
+
+describe('DEFAULT_PROMPT_TEMPLATE: tuning from the M2 smoke run', () => {
+  function defaultText(overrides: Partial<LessonPromptInput['lesson']> = {}) {
+    const base = input({
+      promptVersion: { id: 'pv-default', version: 1, template: DEFAULT_PROMPT_TEMPLATE },
+    })
+    return fullText(buildLessonPrompt({ ...base, lesson: { ...base.lesson, ...overrides } }))
+  }
+
+  it("takes the essential questions from the outline's text-dependent question tied to the EQ", () => {
+    const lines = defaultText({ textDependentQuestion: 'Why do people tell stories?' }).split('\n')
+    expect(
+      lines.some(
+        (line) => /essential question/i.test(line) && /text[- ]dependent question/i.test(line),
+      ),
+    ).toBe(true)
+  })
+
+  it('asks for at most 2 essential questions', () => {
+    const lines = defaultText().split('\n')
+    expect(
+      lines.some((line) => /essential question/i.test(line) && /at most (2|two)\b/i.test(line)),
+    ).toBe(true)
+  })
+
+  it('limits quick-check exemplars to 1-2 sentences', () => {
+    expect(defaultText()).toMatch(/exemplar[^\n]*1-2 sentences for quick checks/i)
+  })
+
+  it('labels Learning in Action parts "Part A", "Part B"', () => {
+    expect(defaultText()).toMatch(/"Part A"[^\n]*"Part B"/)
+  })
+
+  it('limits the addressed vocabulary to words the lesson uses, at most 6', () => {
+    const line = defaultText()
+      .split('\n')
+      .find((l) => /addressed/i.test(l) && /vocabulary/i.test(l))
+    expect(line).toBeDefined()
+    expect(line).toMatch(/at most (6|six)\b/i)
+    expect(line).toMatch(/\buses?\b/i)
   })
 })

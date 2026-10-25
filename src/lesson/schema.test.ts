@@ -236,6 +236,47 @@ describe('validateLesson: focus standards (R7)', () => {
   })
 })
 
+describe('validateLesson: flex days without focus standards (R6, R7)', () => {
+  // The sample's six flex rows list no focus standards, so a flex day's front matter has none and
+  // its huddles may carry no standard tags.
+  function flexWithoutFocus(): LessonContent {
+    const content = flexLessonContent()
+    content.frontMatter.focusStandards = []
+    content.frontMatter.supportingStandards = []
+    learningInAction(content).parts.forEach((part) => {
+      part.standards = []
+    })
+    return content
+  }
+
+  it('accepts a flex day whose front matter has no focus standards', () => {
+    expect(LessonContent.safeParse(flexWithoutFocus()).success).toBe(true)
+  })
+
+  it('passes validation when the outline row lists no focus standards (the tag check is vacuous)', () => {
+    const result = validateLesson(flexWithoutFocus(), { focusStandards: [], days: 1 })
+    expect(result).toEqual({ ok: true, lesson: expect.objectContaining({ schemaVersion: 1 }) })
+  })
+
+  it('still requires at least one focus standard on a numbered lesson', () => {
+    const content = coreLessonContent()
+    content.frontMatter.focusStandards = []
+
+    expect(errorsOf(content, { focusStandards: [], days: 1 })).toContainEqual(
+      expect.objectContaining({ code: 'schema', path: 'frontMatter.focusStandards' }),
+    )
+  })
+
+  it('still checks focus standards a flex row does list', () => {
+    const content = flexWithoutFocus()
+    content.frontMatter.focusStandards = ['RL.6.1']
+
+    expect(errorsOf(content, { focusStandards: ['RL.6.1'], days: 1 })).toContainEqual(
+      expect.objectContaining({ code: 'focus_standard_untagged' }),
+    )
+  })
+})
+
 describe('lessonBodyJsonSchema (structured output)', () => {
   it('is a plain JSON schema object for the generated body', () => {
     const schema = lessonBodyJsonSchema()

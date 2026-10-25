@@ -5,7 +5,7 @@ import type { PgBoss } from 'pg-boss'
 import type { Database } from '../db/client'
 import { generationJobs, generationRuns, lessons, promptVersions } from '../db/schema'
 import { estimateCostUsd, MODEL_PRICES, priceFor, type PriceTable } from './llm'
-import { getUnitProgress, notifyLessonProgressAll, runStatusLabel } from './progress'
+import { notifyLessonProgressAll, runStatusLabel } from './progress'
 import { getCurrentPromptVersion } from './prompt_versions'
 import { GENERATE_LESSON_QUEUE, type GenerateLessonJobData } from './queue'
 import { getGenerationSettings, getGlobalSpendCapUsd } from './settings'
@@ -228,7 +228,10 @@ export async function generateFlexDay(
   return { runId, jobCount }
 }
 
-/** Regenerates the selected lessons, or every lesson whose latest job failed (R11). */
+/**
+ * Regenerates the selected lessons, or every lesson in the Failed workflow status (R11), even when
+ * a later cancelled run made its latest job `cancelled`.
+ */
 export async function regenerateLessons(
   deps: GenerationDeps,
   options: RunOptions & {
@@ -240,9 +243,12 @@ export async function regenerateLessons(
 ): Promise<{ runId: string; jobCount: number }> {
   priceFor(options.model ?? getGenerationSettings().model, deps.prices ?? MODEL_PRICES)
   const selected = options.failed
-    ? (await getUnitProgress(deps.db, options.unitId)).lessons
-        .filter((lesson) => lesson.status === 'failed')
-        .map((lesson) => lesson.lessonId)
+    ? (
+        await deps.db
+          .select({ id: lessons.id })
+          .from(lessons)
+          .where(and(eq(lessons.unitId, options.unitId), eq(lessons.status, 'failed')))
+      ).map((lesson) => lesson.id)
     : (options.lessonIds ?? [])
 
   const rows =

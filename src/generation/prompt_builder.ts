@@ -7,7 +7,13 @@ export type StandardKind = 'focus' | 'supporting' | 'media' | 'eld'
 
 export interface LessonPromptInput {
   promptVersion: { id: string; version: number; template: PromptTemplate }
-  unit: { grade: number; unitNumber: number; anchorTextTitle: string }
+  unit: {
+    grade: number
+    unitNumber: number
+    anchorTextTitle: string
+    /** The anchor text's author from the outline banner, when it names one. */
+    author?: string | null
+  }
   arc: { name: string; description: string } | null
   lesson: {
     id: string
@@ -44,10 +50,36 @@ const STANDARD_HEADINGS: Record<StandardKind, string> = {
   eld: 'Designated ELD standards (drive the language objective and ELD blocks)',
 }
 
+/**
+ * A code the outline lists as focus and again as additional is a focus standard only (R7), so it is
+ * listed once.
+ */
+export function withoutFocusDuplicates<T extends { code: string; kind: StandardKind }>(
+  standards: T[],
+): T[] {
+  const focus = new Set(standards.filter((s) => s.kind === 'focus').map((s) => s.code))
+  return standards.filter((standard) => standard.kind === 'focus' || !focus.has(standard.code))
+}
+
+const PULSE_CHECK_LETTERS = ['A', 'B', 'C', 'D'] as const
+export type PulseCheckOption = (typeof PULSE_CHECK_LETTERS)[number]
+
+/**
+ * Where the pulse check's correct option goes in a lesson: cycles A-D by lesson number so
+ * consecutive lessons differ (the model alone put it at C every time); flex days use A.
+ */
+export function pulseCheckCorrectOption(lessonNumber: number | null): PulseCheckOption {
+  if (lessonNumber === null) {
+    return 'A'
+  }
+  const index = (((lessonNumber - 1) % 4) + 4) % 4
+  return PULSE_CHECK_LETTERS[index]!
+}
+
 function standardsSection(standards: LessonPromptInput['standards']): string {
   return (Object.keys(STANDARD_HEADINGS) as StandardKind[])
     .map((kind) => {
-      const items = standards.filter((standard) => standard.kind === kind)
+      const items = withoutFocusDuplicates(standards).filter((standard) => standard.kind === kind)
       if (items.length === 0) {
         return null
       }
@@ -114,6 +146,7 @@ export function buildLessonPrompt(input: LessonPromptInput): LessonPrompt {
     eld.length > 0 ? `# ELD input from the author\n\n${eld.join('\n')}` : null,
     `# Neighbouring lessons\n\n${neighbour('Previous lesson', input.previousLesson)}\n${neighbour('Next lesson', input.nextLesson)}`,
     guidance ? `# Guidance for this lesson type (${lessonType})\n\n${guidance}` : null,
+    `In every pulse check of this lesson, the correct answer is option ${pulseCheckCorrectOption(lesson.lessonNumber)}; the wrong options fill the other positions.`,
     `Return only the JSON lesson body. The front matter (number, arc, type, duration, standards, texts) is filled in from the outline, so do not repeat it.`,
   ]
     .filter(Boolean)
