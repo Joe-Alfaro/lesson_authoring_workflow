@@ -113,7 +113,8 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
   const visible = rows.filter((row) => matchesFilters(row, filters))
   // Rows that left the table (filtered out, or gone) don't stay selected.
   const selectedRows = rows.filter((row) => selected.has(row.id))
-  const failedRows = rows.filter((row) => row.generation === 'failed')
+  // What "Retry N failed" regenerates: lessons in the Failed status (the service's `failed: true`).
+  const failedRows = rows.filter((row) => row.status === 'failed')
   // Lessons never generated; failed ones have their own Retry.
   const missing = numbered.filter(
     (row) =>
