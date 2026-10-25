@@ -6,3 +6,5 @@ package-lock.json
 data/sample_unit
 docs/requirements
 docs/design/**/*.html
+test-results
+playwright-report
