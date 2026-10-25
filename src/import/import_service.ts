@@ -138,7 +138,7 @@ async function readSource(source: ImportSource, fetchImpl?: FetchLike): Promise<
 export async function previewImport(
   db: Database,
   source: ImportSource,
-  options: { userId?: string; fetch?: FetchLike },
+  options: { userId?: string; fetch?: FetchLike } = {},
 ): Promise<ImportPreview> {
   const outline = parseOutline(await readSource(source, options.fetch))
   const known = await loadKnownCodes(db)
@@ -165,7 +165,7 @@ export async function previewImport(
 export async function confirmImport(
   db: Database,
   importId: string,
-  options: { userId?: string },
+  options: { userId?: string } = {},
 ): Promise<{ unitId: string }> {
   if (!isUuid(importId)) {
     throw new ImportNotFoundError(importId)
