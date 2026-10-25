@@ -16,6 +16,7 @@ import {
   snapshotIfChanged,
   type Transaction,
 } from './lesson_rows'
+import { notifyContentReplaced, notifyStatusChanged } from './lesson_events'
 import { isBlankNote, planTransition, type WorkflowAction } from './transitions'
 
 export interface Actor {
@@ -92,6 +93,8 @@ async function recordTransition(
       at: clockNow,
     })
     .returning({ id: workflowEvents.id })
+  // The collab server applies or lifts the edit lock (R23, D-032 (1)).
+  await notifyStatusChanged(tx, values.lessonId)
   return event!.id
 }
 
@@ -161,6 +164,10 @@ export async function applySystemTransition(
       actorId: null,
       note: isBlankNote(input.note) ? null : input.note!.trim(),
     })
+    if (input.to === 'draft') {
+      // Generation wrote lessons.content before this move: open editors show the new lesson.
+      await notifyContentReplaced(tx, lesson.id)
+    }
   })
 }
 

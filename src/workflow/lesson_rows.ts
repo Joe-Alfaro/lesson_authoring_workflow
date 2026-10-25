@@ -70,9 +70,9 @@ export async function snapshotIfChanged(
   tx: Transaction,
   lesson: LockedLesson,
   authorId: string,
-): Promise<void> {
+): Promise<boolean> {
   if (lesson.content == null) {
-    return
+    return false
   }
   const [latest] = await tx
     .select({ content: lessonVersions.content })
@@ -81,7 +81,8 @@ export async function snapshotIfChanged(
     .orderBy(desc(lessonVersions.createdAt))
     .limit(1)
   if (latest && isDeepStrictEqual(latest.content, lesson.content)) {
-    return
+    return false
   }
   await insertVersion(tx, { lessonId: lesson.id, content: lesson.content, authorId })
+  return true
 }

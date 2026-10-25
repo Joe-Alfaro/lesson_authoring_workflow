@@ -1,8 +1,10 @@
+import { isDeepStrictEqual } from 'node:util'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { lessonVersions, lessons, users } from '../db/schema'
 import { isUuid } from '../import/is_uuid'
-import { VersionNotFoundError } from './errors'
+import { LessonLockedError, VersionNotFoundError } from './errors'
+import { notifyContentReplaced } from './lesson_events'
 import {
   assertEditable,
   assertLessonExists,
@@ -134,6 +136,55 @@ export async function restoreVersion(
       content: version.content,
       authorId: input.userId,
     })
+    // Open editors switch to the restored content; the stored Yjs state is dropped.
+    await notifyContentReplaced(tx, lesson.id)
     return { versionId }
+  })
+}
+
+/**
+ * The collab server's store of a validated editor snapshot (R17, R18): sets the content and last
+ * editor without a version. Unchanged content writes nothing. Throws LessonLockedError when the
+ * lesson is approved or generating (D-032 (1)).
+ */
+export async function saveEditorSnapshot(
+  db: Database,
+  input: { lessonId: string; userId: string | null; content: unknown },
+): Promise<{ saved: boolean }> {
+  return db.transaction(async (tx) => {
+    const lesson = await lockLesson(tx, input.lessonId)
+    assertEditable(lesson)
+    if (isDeepStrictEqual(lesson.content, input.content)) {
+      return { saved: false }
+    }
+    await tx
+      .update(lessons)
+      .set({
+        content: input.content,
+        ...(input.userId ? { lastEditedBy: input.userId } : {}),
+        updatedAt: sql`now()`,
+      })
+      .where(eq(lessons.id, lesson.id))
+    return { saved: true }
+  })
+}
+
+/**
+ * The version after 30 s of idle editing (D-024 (4)): the current content, authored by the last
+ * editor, unless it equals the latest version. Nothing for a locked lesson.
+ */
+export async function saveIdleVersion(
+  db: Database,
+  input: { lessonId: string; userId: string },
+): Promise<{ saved: boolean }> {
+  return db.transaction(async (tx) => {
+    const lesson = await lockLesson(tx, input.lessonId)
+    try {
+      assertEditable(lesson)
+    } catch (error) {
+      if (error instanceof LessonLockedError) return { saved: false }
+      throw error
+    }
+    return { saved: await snapshotIfChanged(tx, lesson, input.userId) }
   })
 }
