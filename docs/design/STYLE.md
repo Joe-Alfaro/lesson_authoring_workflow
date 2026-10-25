@@ -31,10 +31,10 @@ soft shadows, no all-caps eyebrow labels, no monospace data labels.
 
 ## Typefaces
 
-| Role | Family | Fallback | Notes |
-| --- | --- | --- | --- |
-| Interface, data, labels, tables | **Atkinson Hyperlegible Next** (400, 600, 700) | `system-ui, sans-serif` | Built for legibility; distinct letterforms keep codes such as `L.6.4.b` and `ELD.PI.6.6` unambiguous without a monospace face. Use `font-variant-numeric: tabular-nums` in tables, counts and costs. |
-| Lesson content (editor and lesson view) | **Literata** (400, 600, italic 400) | `Georgia, serif` | A reading serif with optical sizes. Teacher-facing and spoken text in roman; **exemplar student responses in italic**, so the student voice is distinguishable at a glance. |
+| Role                                    | Family                                         | Fallback                | Notes                                                                                                                                                                                                |
+| --------------------------------------- | ---------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Interface, data, labels, tables         | **Atkinson Hyperlegible Next** (400, 600, 700) | `system-ui, sans-serif` | Built for legibility; distinct letterforms keep codes such as `L.6.4.b` and `ELD.PI.6.6` unambiguous without a monospace face. Use `font-variant-numeric: tabular-nums` in tables, counts and costs. |
+| Lesson content (editor and lesson view) | **Literata** (400, 600, italic 400)            | `Georgia, serif`        | A reading serif with optical sizes. Teacher-facing and spoken text in roman; **exemplar student responses in italic**, so the student voice is distinguishable at a glance.                          |
 
 Both are free Google Fonts; production loads them with `next/font/google`.
 
@@ -42,16 +42,16 @@ Both are free Google Fonts; production loads them with `next/font/google`.
 
 A classical scale (12, 14, 16, 18, 21, 24, 36). Sentence case everywhere; no all-caps labels.
 
-| Token | Size / line height | Family, weight | Used for |
-| --- | --- | --- | --- |
-| `--t-caption` | 12 / 16 | Atkinson 400 | timestamps, helper text, table meta |
-| `--t-ui` | 14 / 20 | Atkinson 400, 600 for emphasis | controls, table cells, panels |
-| `--t-ui-lg` | 16 / 24 | Atkinson 400 / 600 | form inputs, dialog body, panel titles |
-| `--t-body` | 17 / 28 | Literata 400 | lesson body text (measure 64-68ch) |
-| `--t-h3` | 18 / 26 | Atkinson 600 | section parts ("Part A: ..."), dialog titles |
-| `--t-h2` | 21 / 28 | Literata 600 | lesson section headings, page subtitles |
-| `--t-h1` | 24 / 32 | Atkinson 700 | page titles (unit, prompt editor) |
-| `--t-display` | 36 / 42 | Literata 600, -0.01em | lesson title in editor and lesson view, sign-in |
+| Token         | Size / line height | Family, weight                 | Used for                                        |
+| ------------- | ------------------ | ------------------------------ | ----------------------------------------------- |
+| `--t-caption` | 12 / 16            | Atkinson 400                   | timestamps, helper text, table meta             |
+| `--t-ui`      | 14 / 20            | Atkinson 400, 600 for emphasis | controls, table cells, panels                   |
+| `--t-ui-lg`   | 16 / 24            | Atkinson 400 / 600             | form inputs, dialog body, panel titles          |
+| `--t-body`    | 17 / 28            | Literata 400                   | lesson body text (measure 64-68ch)              |
+| `--t-h3`      | 18 / 26            | Atkinson 600                   | section parts ("Part A: ..."), dialog titles    |
+| `--t-h2`      | 21 / 28            | Literata 600                   | lesson section headings, page subtitles         |
+| `--t-h1`      | 24 / 32            | Atkinson 700                   | page titles (unit, prompt editor)               |
+| `--t-display` | 36 / 42            | Literata 600, -0.01em          | lesson title in editor and lesson view, sign-in |
 
 Gutter labels ("Say", "Ask", "Directions", "Exemplar") are Atkinson 600 at 13/20 in the section
 or block colour.
@@ -63,17 +63,17 @@ the spec).
 
 ### Base
 
-| Token | Hex | Use |
-| --- | --- | --- |
-| `--ink` | `#1C2430` | primary text, primary button fill |
-| `--ink-2` | `#4A5568` | secondary text |
-| `--ink-3` | `#5F6B7A` | muted text, placeholders (5.4:1 on paper, 4.8:1 on desk) |
-| `--paper` | `#FFFFFF` | document, panels, tables |
-| `--desk` | `#EEF1F4` | app background behind the document and panels |
-| `--rule` | `#D5DBE2` | borders, table rules |
-| `--rule-strong` | `#AEB7C2` | input borders, focusable outlines |
-| `--focus` | `#1F6FEB` | 2px focus ring, 2px offset, on every focusable element |
-| `--select` | `#DCE8FD` | text selection, selected rows |
+| Token           | Hex       | Use                                                      |
+| --------------- | --------- | -------------------------------------------------------- |
+| `--ink`         | `#1C2430` | primary text, primary button fill                        |
+| `--ink-2`       | `#4A5568` | secondary text                                           |
+| `--ink-3`       | `#5F6B7A` | muted text, placeholders (5.4:1 on paper, 4.8:1 on desk) |
+| `--paper`       | `#FFFFFF` | document, panels, tables                                 |
+| `--desk`        | `#EEF1F4` | app background behind the document and panels            |
+| `--rule`        | `#D5DBE2` | borders, table rules                                     |
+| `--rule-strong` | `#AEB7C2` | input borders, focusable outlines                        |
+| `--focus`       | `#1F6FEB` | 2px focus ring, 2px offset, on every focusable element   |
+| `--select`      | `#DCE8FD` | text selection, selected rows                            |
 
 ### Pacing (section) colours, categorical, fixed order
 
@@ -84,29 +84,29 @@ Small text in a section colour (the block gutter labels) uses the `-ink` variant
 below 4.5:1: `--sec-launch-ink` `#8A5B00` (5.9:1) and `--sec-lab-ink` `#00715F` (6.0:1); Learning
 in Action (6.9:1) and Look Back (5.2:1) are used as is.
 
-| Order | Token | Hex | Tint (backgrounds) | Section |
-| --- | --- | --- | --- | --- |
-| 1 | `--sec-launch` | `#B87A00` | `#FBF1DC` | Launch |
-| 2 | `--sec-lab` | `#008A7A` | `#DDF3EF` | Literacy Lab |
-| 3 | `--sec-action` | `#4F46C8` | `#E8E7FA` | Learning in Action |
-| 4 | `--sec-lookback` | `#C23A62` | `#FAE3EA` | Look Back |
-| — | `--sec-homework` | `#5E6B7A` | `#ECEFF3` | Homework (outside the 50 minutes, not in the ribbon) |
+| Order | Token            | Hex       | Tint (backgrounds) | Section                                              |
+| ----- | ---------------- | --------- | ------------------ | ---------------------------------------------------- |
+| 1     | `--sec-launch`   | `#B87A00` | `#FBF1DC`          | Launch                                               |
+| 2     | `--sec-lab`      | `#008A7A` | `#DDF3EF`          | Literacy Lab                                         |
+| 3     | `--sec-action`   | `#4F46C8` | `#E8E7FA`          | Learning in Action                                   |
+| 4     | `--sec-lookback` | `#C23A62` | `#FAE3EA`          | Look Back                                            |
+| —     | `--sec-homework` | `#5E6B7A` | `#ECEFF3`          | Homework (outside the 50 minutes, not in the ribbon) |
 
 ### Status colours, reserved for workflow and generation state
 
 Pill: tint background, text colour foreground, icon on the left. Text colour on tint ≥ 4.5:1.
 
-| Status | Text / icon | Tint | Icon |
-| --- | --- | --- | --- |
-| Not generated | `#4A5568` | `#EEF1F4` | hollow circle |
-| Queued | `#4A5568` | `#EEF1F4` | clock |
-| Generating | `#0B5CAD` | `#E1EEFB` | dot that breathes (see Motion) |
-| Draft | `#334155` | `#FFFFFF` + 1px `--rule-strong` border | pencil |
-| In review | `#7A4E00` | `#FCEFCF` | eye |
-| Changes requested | `#9A3412` | `#FDE7DA` | pen mark |
-| Approved | `#166534` | `#DCF2E3` | check |
-| Failed | `#A11D1D` | `#FBE2E2` | filled warning triangle |
-| Warning (import, standards) | `#7A4E00` | `#FCEFCF` | triangle outline |
+| Status                      | Text / icon | Tint                                   | Icon                           |
+| --------------------------- | ----------- | -------------------------------------- | ------------------------------ |
+| Not generated               | `#4A5568`   | `#EEF1F4`                              | hollow circle                  |
+| Queued                      | `#4A5568`   | `#EEF1F4`                              | clock                          |
+| Generating                  | `#0B5CAD`   | `#E1EEFB`                              | dot that breathes (see Motion) |
+| Draft                       | `#334155`   | `#FFFFFF` + 1px `--rule-strong` border | pencil                         |
+| In review                   | `#7A4E00`   | `#FCEFCF`                              | eye                            |
+| Changes requested           | `#9A3412`   | `#FDE7DA`                              | pen mark                       |
+| Approved                    | `#166534`   | `#DCF2E3`                              | check                          |
+| Failed                      | `#A11D1D`   | `#FBE2E2`                              | filled warning triangle        |
+| Warning (import, standards) | `#7A4E00`   | `#FCEFCF`                              | triangle outline               |
 
 Collaborator colours (presence avatars, remote cursors and selections) are a separate set so they
 never read as a section or status: `#7C3AED`, `#0E7490`, `#BE185D`, `#4D7C0F`, `#C2410C`,
@@ -142,17 +142,17 @@ real values formatted as `$0.00`.
 Motion only answers an action or shows live state. All of it is disabled or replaced under
 `prefers-reduced-motion: reduce`.
 
-| Motion | Trigger | Duration | Easing | Reduced-motion fallback |
-| --- | --- | --- | --- | --- |
-| Generating dot breathes (opacity 1 → .35 → 1) | lesson status is Generating | 1600ms, infinite | ease-in-out | static dot; the word "Generating" carries the state |
-| Status tile / pill colour change | live status update (R9) | 240ms | ease-out | instant change |
-| Unit strip tile "just finished" ring (2px ring fades out) | a lesson changes to Generated or Failed | 900ms, once | ease-out | no ring; row stays highlighted for 3s with `--select` instead |
-| Menu, popover, selection toolbar appear (fade + 4px rise) | open | 140ms | cubic-bezier(.2,.7,.3,1) | fade only, 80ms |
-| Side panel open/close (slide 16px + fade) | panel toggle | 180ms | cubic-bezier(.2,.7,.3,1) | instant |
-| Dialog appear (fade + scale .98 → 1) | open | 160ms | cubic-bezier(.2,.7,.3,1) | fade only |
-| Suggestion inserted (accepted text background fades from `--select` to none) | accept AI suggestion | 1200ms | ease-out | static tint for 2s, then removed |
-| Remote cursor name label fades out | 3s without that user moving | 300ms | ease-out | label hides without fading |
-| Indeterminate progress bar (stripe moves) | import parsing, AI request pending | 1200ms, infinite | linear | static half-filled bar plus "Parsing..." text |
+| Motion                                                                       | Trigger                                 | Duration         | Easing                   | Reduced-motion fallback                                       |
+| ---------------------------------------------------------------------------- | --------------------------------------- | ---------------- | ------------------------ | ------------------------------------------------------------- |
+| Generating dot breathes (opacity 1 → .35 → 1)                                | lesson status is Generating             | 1600ms, infinite | ease-in-out              | static dot; the word "Generating" carries the state           |
+| Status tile / pill colour change                                             | live status update (R9)                 | 240ms            | ease-out                 | instant change                                                |
+| Unit strip tile "just finished" ring (2px ring fades out)                    | a lesson changes to Generated or Failed | 900ms, once      | ease-out                 | no ring; row stays highlighted for 3s with `--select` instead |
+| Menu, popover, selection toolbar appear (fade + 4px rise)                    | open                                    | 140ms            | cubic-bezier(.2,.7,.3,1) | fade only, 80ms                                               |
+| Side panel open/close (slide 16px + fade)                                    | panel toggle                            | 180ms            | cubic-bezier(.2,.7,.3,1) | instant                                                       |
+| Dialog appear (fade + scale .98 → 1)                                         | open                                    | 160ms            | cubic-bezier(.2,.7,.3,1) | fade only                                                     |
+| Suggestion inserted (accepted text background fades from `--select` to none) | accept AI suggestion                    | 1200ms           | ease-out                 | static tint for 2s, then removed                              |
+| Remote cursor name label fades out                                           | 3s without that user moving             | 300ms            | ease-out                 | label hides without fading                                    |
+| Indeterminate progress bar (stripe moves)                                    | import parsing, AI request pending      | 1200ms, infinite | linear                   | static half-filled bar plus "Parsing..." text                 |
 
 ## Components (shared vocabulary)
 

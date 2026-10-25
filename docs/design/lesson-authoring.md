@@ -19,31 +19,31 @@ of them share [`lesson-authoring/studio.css`](lesson-authoring/studio.css), whic
 
 ## Requirement index
 
-| Req | Mockups (`lesson-authoring/<name>.html` + `.png`) |
-| --- | --- |
-| R1 | `R1-units-empty`, `R1-import-empty`, `R1-import-error`, `R1-import-parsing` |
-| R3 | `R4-import-preview` (normalized codes, unknown-code warning), `R15-standard-picker` (warning chip style) |
-| R4 | `R4-import-preview` |
-| R5 | `R1-import-empty` (attach ELD file), `R4-import-preview` (ELD summary and unmatched rows) |
-| R6 | `R12-start-generation` (scope: 41 lessons, flex days excluded), `R9-dashboard-generating` |
-| R9 | `R9-dashboard-generating` |
-| R10 | `R10-prompt-editor`, `R10-prompt-version`; the prompt version shows in the lesson bar of every editor mockup |
+| Req | Mockups (`lesson-authoring/<name>.html` + `.png`)                                                                           |
+| --- | --------------------------------------------------------------------------------------------------------------------------- |
+| R1  | `R1-units-empty`, `R1-import-empty`, `R1-import-error`, `R1-import-parsing`                                                 |
+| R3  | `R4-import-preview` (normalized codes, unknown-code warning), `R15-standard-picker` (warning chip style)                    |
+| R4  | `R4-import-preview`                                                                                                         |
+| R5  | `R1-import-empty` (attach ELD file), `R4-import-preview` (ELD summary and unmatched rows)                                   |
+| R6  | `R12-start-generation` (scope: 41 lessons, flex days excluded), `R9-dashboard-generating`                                   |
+| R9  | `R9-dashboard-generating`                                                                                                   |
+| R10 | `R10-prompt-editor`, `R10-prompt-version`; the prompt version shows in the lesson bar of every editor mockup                |
 | R11 | `R11-row-actions`, `R11-regenerate-confirm`, `R11-cancel-run`, retry in `R9-dashboard-generating` and `R23-workflow-states` |
-| R12 | `R12-start-generation`, `R9-dashboard-generating` (running cost), `R12-dashboard-spend-cap` |
-| R14 | `R14-version-history`, `R14-restore-confirm` |
-| R15 | `R17-lesson-editor` (standard popover on RL.6.2), `R15-standard-picker` |
-| R16 | `R24-dashboard-complete` (unit download), `R11-row-actions` (lesson download), `R19-lesson-view` (HTML) |
-| R17 | `R17-lesson-editor`, `R15-standard-picker` |
-| R18 | `R17-lesson-editor` (presence avatars, two remote cursors, one remote selection) |
-| R19 | `R19-lesson-view`, `R19-lesson-view-mobile` |
-| R20 | `R20-ai-toolbar`, `R20-ai-instruction`, `R20-ai-pending`, `R20-ai-suggestion` |
-| R21 | `R21-regenerate-section`, `R21-section-preview` |
-| R22 | `R22-alignment-check` |
-| R23 | `R23-workflow-states`, `R23-request-changes`, `R23-history`, `R23-approved-locked` |
-| R24 | `R24-dashboard-review`, `R24-dashboard-complete`, `R24-dashboard-mobile` |
-| R25 | `R25-bulk-assign`, `R25-my-lessons` |
-| R26 | `R26-comments` (low fidelity) |
-| R27 | `R27-sign-in`, `R27-sign-in-error` |
+| R12 | `R12-start-generation`, `R9-dashboard-generating` (running cost), `R12-dashboard-spend-cap`                                 |
+| R14 | `R14-version-history`, `R14-restore-confirm`                                                                                |
+| R15 | `R17-lesson-editor` (standard popover on RL.6.2), `R15-standard-picker`                                                     |
+| R16 | `R24-dashboard-complete` (unit download), `R11-row-actions` (lesson download), `R19-lesson-view` (HTML)                     |
+| R17 | `R17-lesson-editor`, `R15-standard-picker`                                                                                  |
+| R18 | `R17-lesson-editor` (presence avatars, two remote cursors, one remote selection)                                            |
+| R19 | `R19-lesson-view`, `R19-lesson-view-mobile`                                                                                 |
+| R20 | `R20-ai-toolbar`, `R20-ai-instruction`, `R20-ai-pending`, `R20-ai-suggestion`                                               |
+| R21 | `R21-regenerate-section`, `R21-section-preview`                                                                             |
+| R22 | `R22-alignment-check`                                                                                                       |
+| R23 | `R23-workflow-states`, `R23-request-changes`, `R23-history`, `R23-approved-locked`                                          |
+| R24 | `R24-dashboard-review`, `R24-dashboard-complete`, `R24-dashboard-mobile`                                                    |
+| R25 | `R25-bulk-assign`, `R25-my-lessons`                                                                                         |
+| R26 | `R26-comments` (low fidelity)                                                                                               |
+| R27 | `R27-sign-in`, `R27-sign-in-error`                                                                                          |
 
 Not drawn: R13 (bonus, watching a lesson stream in); see the open questions. R2, R7, R8 and R28-R35
 have no UI of their own.
@@ -68,12 +68,14 @@ have no UI of their own.
 **States.** The default form, and the error state after a failed attempt.
 
 **Behaviour**
+
 - Email and password only.
 - A failed sign-in shows one alert above the form: "Email or password is incorrect." Neither field
   is marked, so the message doesn't reveal which field was wrong.
 - Signed-out visits to any page redirect here and keep the `callbackUrl`.
 
 **Accessibility**
+
 - Both inputs have visible labels, `autocomplete="username"` and `"current-password"`.
 - The error is `role="alert"`. On error, focus moves to the password field.
 - Focus order: email, password, Sign in. Enter submits.
@@ -107,6 +109,7 @@ have no UI of their own.
   - A sticky footer holds "Cancel import" (discards everything) and "Create unit with 41 lessons".
 
 **Accessibility**
+
 - The segmented control is a `tablist`.
 - Warnings use an icon plus text, never colour alone.
 - The preview table has real `<th>` headers. Arc rows are group headers.
@@ -149,6 +152,7 @@ have no UI of their own.
     with unit JSON and HTML downloads (R16).
 
 **Actions**
+
 - **Row menu** (`R11-row-actions`): Open in editor, Open lesson view, Assign..., Version history,
   Regenerate with prompt v4..., and the JSON and HTML downloads.
 - **Bulk actions** (`R25-bulk-assign`): selecting rows replaces the filter row with a dark
@@ -165,10 +169,12 @@ have no UI of their own.
   counts.
 
 **Narrow width** (`R24-dashboard-mobile`)
+
 - The table becomes stacked rows: number, title, type, then status, assignee and updated.
 - The strip wraps by arc. Filters collapse into one Filters button next to search.
 
 **Accessibility**
+
 - The summary region is `aria-live="polite"`. It announces count changes, not every tile.
 - Each tile has an `aria-label` such as "Lesson 17, Draft".
 - Count chips are buttons with `aria-pressed`.
@@ -181,6 +187,7 @@ have no UI of their own.
 ## R10 Prompt editor
 
 **Layout and behaviour**
+
 - Three columns: a version list, the editable template, and a read-only list of what is added to
   every lesson automatically (outline row, full standard texts, ELD fields, arc description,
   previous and next lessons).
@@ -194,6 +201,7 @@ have no UI of their own.
 - Every lesson bar shows "Prompt v3, Haiku-class" (R10's "each lesson shows the version").
 
 **Accessibility**
+
 - Editable areas are `role="textbox"` with `aria-multiline` and are labelled by their headings.
 - The version list is a nav with `aria-current` on the open version.
 - A Save or Discard prompt appears when leaving the page with unsaved changes.
@@ -227,12 +235,14 @@ have no UI of their own.
   heading.
 
 **Standards (R15)**
+
 - Hovering or focusing a chip opens a popover with the code, strand and full text.
 - Adding a standard (`R15-standard-picker`) uses a combobox over the grade 6 reference data only:
   code, strand and the start of the text. Free text can't be added (R17).
 - Unknown codes carried over from import show the warning chip.
 
 **Collaboration (R18)**
+
 - Presence avatars (Reviewer 07, Approver 01) appear in the lesson bar.
 - Each remote cursor shows a name tag in that user's collaborator colour. A remote selection is
   tinted at 20%.
@@ -240,12 +250,14 @@ have no UI of their own.
 - Collaborator colours are separate from section and status colours.
 
 **Lesson view (R19)**
+
 - A read-only, teacher-facing layout of the same content. Labels sit inline the way a printed
   guide reads ("Say:", "Ask:", "Exemplar response"). ELD and support boxes are expanded.
 - The bar offers an HTML download and "Open editor".
 - At 390 wide the front matter stacks, and a sticky chip row jumps between sections.
 
 **Accessibility**
+
 - The outline rail is a nav of in-page links.
 - Block labels are visible text, not colour. Small coloured labels use the `-ink` tokens
   (≥ 4.5:1).
@@ -258,6 +270,7 @@ have no UI of their own.
 ## R20, R21, R22 AI assist
 
 **Selection actions (R20)**
+
 - Selecting text shows a floating toolbar (`R20-ai-toolbar`): Rewrite, Shorten, Simplify for
   grade 6, Ask AI..., then Comment.
 - Ask AI... turns the toolbar into an instruction field with Run (`R20-ai-instruction`).
@@ -270,12 +283,14 @@ have no UI of their own.
   (see Motion in `STYLE.md`).
 
 **Regenerate a section (R21)**
+
 - Regenerate on a section heading opens a dialog (`R21-regenerate-section`) with an optional
   instruction. It explains that only this section changes and that the result is reviewed first.
 - The proposal replaces the section in place (`R21-section-preview`), with highlighted blocks and
   a notice offering Accept, Reject, Try again and Show current version. Minutes are unchanged.
 
 **Alignment check (R22)**
+
 - Side panel, Alignment tab (`R22-alignment-check`). Each focus standard shows its full text and a
   verdict: Addressed, Partly addressed or Missing.
 - Each verdict has a one-line reason and chips that jump to the parts of the lesson that address
@@ -283,6 +298,7 @@ have no UI of their own.
 - "Check again" re-runs the check. The panel says the check suggests and doesn't edit.
 
 **Accessibility**
+
 - The toolbar is `role="toolbar"` with arrow-key movement. It opens with Alt+/ when text is
   selected, as well as on mouse selection.
 - The diff spans carry `aria-label`s ("Removed text", "Suggested text").
@@ -292,30 +308,34 @@ have no UI of their own.
 
 **Status bar by status and role** (`R23-workflow-states`)
 
-| Status | Role | What the bar offers |
-| --- | --- | --- |
-| Generating | anyone | Read-only, with a note that the lesson opens when generation finishes |
-| Draft | reviewer | Submit for review |
-| In review | reviewer | "Waiting for an approver" |
-| In review | approver | Request changes, Approve lesson |
-| Changes requested | reviewer | Resubmit for review |
-| Approved | approver | Reopen for edits |
-| Approved | reviewer | "Locked. Ask an approver to reopen." |
-| Failed | author | Retry generation |
+| Status            | Role     | What the bar offers                                                   |
+| ----------------- | -------- | --------------------------------------------------------------------- |
+| Generating        | anyone   | Read-only, with a note that the lesson opens when generation finishes |
+| Draft             | reviewer | Submit for review                                                     |
+| In review         | reviewer | "Waiting for an approver"                                             |
+| In review         | approver | Request changes, Approve lesson                                       |
+| Changes requested | reviewer | Resubmit for review                                                   |
+| Approved          | approver | Reopen for edits                                                      |
+| Approved          | reviewer | "Locked. Ask an approver to reopen."                                  |
+| Failed            | author   | Retry generation                                                      |
 
 **Request changes** (`R23-request-changes`)
+
 - The note is required. Submitting empty shows "Add a note so the reviewer knows what to change."
   and sets `aria-invalid`.
 
 **Approved and locked** (`R23-approved-locked`)
+
 - A banner explains the lock and who approved it. The document is read-only and editing
   affordances are hidden. Reopening returns the lesson to In review.
 
 **History** (`R23-history`)
+
 - The side panel History tab is a timeline of who, what and when, with change-request notes
   quoted.
 
 **Versions (R14)** (`R14-version-history`)
+
 - The Versions tab lists saved versions (who, when, what changed). A version is saved after
   30 seconds of idle editing and before any regenerate or restore.
 - Selecting a version shows it read-only, with differences highlighted, and offers "Restore this
@@ -324,10 +344,12 @@ have no UI of their own.
   version first.
 
 **Comments (R26, low fidelity)** (`R26-comments`)
+
 - The comment box at the top is for the whole lesson. Comments on a passage quote it and highlight
   it in the document. Resolve sits on each comment, and resolved comments are dimmed.
 
 **Accessibility**
+
 - The side panel tabs are a `tablist`, and the timeline is an ordered list.
 - Confirmation dialogs are `alertdialog`. Focus starts on Cancel.
 
