@@ -4,7 +4,11 @@ import { startWorker } from './worker'
 
 loadLocalEnv()
 const worker = await startWorker({ databaseUrl: getDatabaseUrl(), port: getPort(4100) })
-console.log(`[worker] running, health at ${worker.url}/health`)
+console.log(`[worker] health at ${worker.url}/health`)
+worker.ready.then(
+  () => console.log('[worker] pg-boss running'),
+  () => undefined,
+)
 
 function shutdown() {
   worker.stop().then(
