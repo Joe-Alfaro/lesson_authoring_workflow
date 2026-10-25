@@ -96,6 +96,8 @@ export const units = pgTable('units', {
   anchorTextTitle: text('anchor_text_title').notNull(),
   isbn: text('isbn'),
   banner: text('banner').notNull(),
+  /** ELD rows that matched no lesson, from the last attached ELD file (R5, D-028). */
+  eldWarnings: jsonb('eld_warnings').$type<ImportWarning[]>().notNull().default([]),
   createdBy: uuid('created_by').references(() => users.id),
   createdAt: createdAt(),
 })

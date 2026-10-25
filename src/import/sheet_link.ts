@@ -19,29 +19,40 @@ export class SheetAccessError extends Error {
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
 
-const SHEET_PATH = /^\/spreadsheets\/d\/([A-Za-z0-9_-]+)(?:\/|$)/
+// Both forms may sit under an account segment (`/spreadsheets/u/<n>/...`, D-028).
+const SHEET_PATH = /^\/spreadsheets(?:\/u\/\d+)?\/d\/([A-Za-z0-9_-]+)(?:\/|$)/
+const PUBLISHED_PATH = /^\/spreadsheets(?:\/u\/\d+)?\/d\/e\/([A-Za-z0-9_-]+)\/pub(?:html)?(?:\/|$)/
 
 /**
- * Turns a Google Sheets link (share, edit, view or export) into its CSV export URL, keeping the
- * tab (`gid`) when the link names one (R1).
+ * Turns a Google Sheets link (share, edit, view, export or "Publish to the web") into its CSV
+ * export URL, keeping the tab (`gid`) when the link names one (R1, D-028).
  */
 export function toCsvExportUrl(link: string): string {
   const url = URL.parse(link.trim())
-  const id = url?.pathname.match(SHEET_PATH)?.[1]
-  if (
-    !url ||
-    !['https:', 'http:'].includes(url.protocol) ||
-    url.hostname !== 'docs.google.com' ||
-    !id
-  ) {
-    throw new SheetLinkError(
-      'Enter a Google Sheets link (https://docs.google.com/spreadsheets/d/…) or upload a CSV file.',
-    )
+  if (!url || !['https:', 'http:'].includes(url.protocol) || url.hostname !== 'docs.google.com') {
+    throw invalidLink()
   }
-  const gid =
+  const gidParam =
     new URLSearchParams(url.hash.slice(1)).get('gid') ?? url.searchParams.get('gid') ?? null
+  const gid = gidParam && /^\d+$/.test(gidParam) ? gidParam : null
+
+  const publishedId = url.pathname.match(PUBLISHED_PATH)?.[1]
+  if (publishedId) {
+    const exportUrl = `https://docs.google.com/spreadsheets/d/e/${publishedId}/pub?output=csv`
+    return gid ? `${exportUrl}&gid=${gid}&single=true` : exportUrl
+  }
+  const id = url.pathname.match(SHEET_PATH)?.[1]
+  if (!id || id === 'e') {
+    throw invalidLink()
+  }
   const exportUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv`
-  return gid && /^\d+$/.test(gid) ? `${exportUrl}&gid=${gid}` : exportUrl
+  return gid ? `${exportUrl}&gid=${gid}` : exportUrl
+}
+
+function invalidLink(): SheetLinkError {
+  return new SheetLinkError(
+    'Enter a Google Sheets link (https://docs.google.com/spreadsheets/d/…) or upload a CSV file.',
+  )
 }
 
 function looksLikeHtml(contentType: string, body: string): boolean {
