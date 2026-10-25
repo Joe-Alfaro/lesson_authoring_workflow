@@ -10,7 +10,8 @@ npm run test:e2e -- tests/e2e/import.spec.ts -g "preview"
 
 - `server.ts` is Playwright's `webServer`: it starts a throwaway Postgres 16 with Testcontainers
   (Docker must be running), migrates it, seeds the demo accounts and standards, then runs
-  `next dev` on port 3100 (`E2E_PORT`) with a test-only `AUTH_SECRET`. Set `E2E_DATABASE_URL`
+  `next dev` on port 3410 (override with `E2E_PORT`, e.g. `E2E_PORT=3420 npm run test:e2e`) with a
+  test-only `AUTH_SECRET`. Set `E2E_DATABASE_URL`
   to use an existing empty database instead.
 - Each test starts with no units or pending imports (`support.ts` truncates them). Specs run one
   at a time because they share the database.

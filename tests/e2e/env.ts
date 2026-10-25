@@ -1,8 +1,11 @@
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-/** Port for the app under test; away from the dev default (3000) so both can run. */
-export const E2E_PORT = Number(process.env.E2E_PORT ?? 3100)
+/**
+ * Port for the app under test (`E2E_PORT`, default 3410); away from the dev default (3000) and
+ * from 3100, which another local app uses.
+ */
+export const E2E_PORT = Number(process.env.E2E_PORT ?? 3410)
 
 export const E2E_BASE_URL = `http://localhost:${E2E_PORT}`
 
