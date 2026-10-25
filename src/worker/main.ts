@@ -1,7 +1,7 @@
 import { getDatabaseUrl, getPort } from '../config/env'
 import { loadLocalEnv } from '../config/load_env'
 import { createAnthropicLlmClient } from '../generation/anthropic_client'
-import { getGenerationSettings } from '../generation/settings'
+import { getGenerationEffort, getGenerationSettings } from '../generation/settings'
 import { startWorker } from './worker'
 
 loadLocalEnv()
@@ -13,7 +13,10 @@ const worker = await startWorker({
   databaseUrl: getDatabaseUrl(),
   port: getPort(4100),
   generation: apiKey
-    ? { llm: createAnthropicLlmClient({ apiKey }), settings: getGenerationSettings() }
+    ? {
+        llm: createAnthropicLlmClient({ apiKey, effort: getGenerationEffort() }),
+        settings: getGenerationSettings(),
+      }
     : undefined,
 })
 console.log(`[worker] health at ${worker.url}/health`)

@@ -50,3 +50,18 @@ export function getGenerationSettings(env: Env = process.env): GenerationSetting
 export function getGlobalSpendCapUsd(env: Env = process.env): number {
   return nonNegative(env, 'SPEND_CAP_USD', 20)
 }
+
+const EFFORTS = ['low', 'medium', 'high'] as const
+
+/** Model thinking effort for generation: `GENERATION_EFFORT`, default low. */
+export function getGenerationEffort(env: Env = process.env): (typeof EFFORTS)[number] {
+  const raw = env.GENERATION_EFFORT?.trim()
+  if (!raw) {
+    return 'low'
+  }
+  const effort = EFFORTS.find((value) => value === raw)
+  if (!effort) {
+    throw new Error(`GENERATION_EFFORT must be one of ${EFFORTS.join(', ')}, got "${raw}"`)
+  }
+  return effort
+}

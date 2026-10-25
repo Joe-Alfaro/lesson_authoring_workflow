@@ -1,70 +1,98 @@
 // Anthropic implementation of LlmClient (R7). Only src/worker constructs it; tests use a fake.
+//
+// The lesson schema is too large for constrained decoding (structured outputs reject it: too
+// many optional properties, then "compiled grammar is too large"), so the schema is passed as
+// the input schema of a non-strict tool. The model follows it closely; validateLesson in the
+// worker is the real gate and drives the repair retry (D-028).
 import Anthropic from '@anthropic-ai/sdk'
-import type { LlmClient, LlmRequest, LlmResponse } from './llm'
+import type { LlmClient, LlmRequest, LlmResponse, LlmUsage } from './llm'
 
-/** Keywords structured outputs do not accept; validateLesson checks them after the call. */
-const UNSUPPORTED_KEYWORDS = new Set([
-  '$schema',
-  'minLength',
-  'maxLength',
-  'pattern',
-  'minimum',
-  'maximum',
-  'exclusiveMinimum',
-  'exclusiveMaximum',
-  'multipleOf',
-  'maxItems',
-  'uniqueItems',
-])
-
-/**
- * Adapts a Zod-generated JSON schema to what structured outputs accept: no numeric/string
- * constraints, `minItems` only 0 or 1, `anyOf` instead of `oneOf`, closed objects.
- */
-export function toStructuredOutputSchema(schema: unknown): unknown {
-  if (Array.isArray(schema)) {
-    return schema.map(toStructuredOutputSchema)
-  }
-  if (!schema || typeof schema !== 'object') {
-    return schema
-  }
-  const entries = Object.entries(schema as Record<string, unknown>)
-    .filter(([key]) => !UNSUPPORTED_KEYWORDS.has(key))
-    .filter(([key, value]) => key !== 'minItems' || (typeof value === 'number' && value <= 1))
-    .map(([key, value]) => [key === 'oneOf' ? 'anyOf' : key, toStructuredOutputSchema(value)])
-  const result = Object.fromEntries(entries) as Record<string, unknown>
-  if (result.type === 'object' && result.properties) {
-    result.additionalProperties = false
-  }
-  return result
-}
+const TOOL_NAME = 'write_lesson'
+const DEFAULT_MAX_TOKENS = 32_000
 
 export class LlmOutputError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    /** Tokens the failed call still used (and cost). */
+    readonly usage: LlmUsage,
+  ) {
     super(message)
     this.name = 'LlmOutputError'
   }
 }
 
-export function createAnthropicLlmClient({ apiKey }: { apiKey: string }): LlmClient {
+export type Effort = 'low' | 'medium' | 'high'
+
+/** Tool input schemas take plain JSON schema; only the `$schema` marker is dropped. */
+function toolInputSchema(schema: Record<string, unknown>): Anthropic.Tool.InputSchema {
+  return Object.fromEntries(
+    Object.entries(schema).filter(([key]) => key !== '$schema'),
+  ) as Anthropic.Tool.InputSchema
+}
+
+function expectsStructure(schema: unknown): boolean {
+  if (!schema || typeof schema !== 'object') {
+    return false
+  }
+  const { type, anyOf } = schema as { type?: unknown; anyOf?: unknown[] }
+  return type === 'array' || type === 'object' || (anyOf ?? []).some(expectsStructure)
+}
+
+/**
+ * With large tool inputs the model sometimes sends a nested array or object as a JSON string
+ * (`"sections": "[{...}]"`). Parses those back where the schema expects structure; anything
+ * that still does not fit is left for validateLesson to report.
+ */
+export function parseStringifiedFields(input: unknown, schema: unknown): unknown {
+  if (!input || typeof input !== 'object' || Array.isArray(input) || !schema) {
+    return input
+  }
+  const properties = (schema as { properties?: Record<string, unknown> }).properties ?? {}
+  return Object.fromEntries(
+    Object.entries(input as Record<string, unknown>).map(([key, value]) => {
+      const propertySchema = properties[key]
+      if (typeof value === 'string' && expectsStructure(propertySchema)) {
+        try {
+          return [key, JSON.parse(value) as unknown]
+        } catch {
+          return [key, value]
+        }
+      }
+      return [key, parseStringifiedFields(value, propertySchema)]
+    }),
+  )
+}
+
+export function createAnthropicLlmClient({
+  apiKey,
+  effort = 'low',
+}: {
+  apiKey: string
+  /** Thinking effort; lessons are mostly writing, so low keeps thinking tokens down (D-028). */
+  effort?: Effort
+}): LlmClient {
   const client = new Anthropic({ apiKey })
   return {
     async generateStructured(request: LlmRequest): Promise<LlmResponse> {
+      const maxTokens = request.maxTokens ?? DEFAULT_MAX_TOKENS
       // Streaming keeps long generations clear of HTTP timeouts.
       const stream = client.messages.stream({
         model: request.model,
-        max_tokens: request.maxTokens ?? 32_000,
-        system: request.system,
+        max_tokens: maxTokens,
+        system: `${request.system}\n\nDeliver the lesson by calling the ${TOOL_NAME} tool exactly once with the complete lesson body. Do not write anything else.`,
         messages: [{ role: 'user', content: request.prompt }],
-        output_config: {
-          format: {
-            type: 'json_schema',
-            schema: toStructuredOutputSchema(request.schema) as Record<string, unknown>,
+        tools: [
+          {
+            name: TOOL_NAME,
+            description: 'Saves the complete lesson body. Its input must match the schema exactly.',
+            input_schema: toolInputSchema(request.schema),
           },
-        },
+        ],
+        tool_choice: { type: 'auto' },
+        output_config: { effort },
       })
       const message = await stream.finalMessage()
-      const usage = {
+      const usage: LlmUsage = {
         inputTokens:
           message.usage.input_tokens +
           (message.usage.cache_creation_input_tokens ?? 0) +
@@ -72,24 +100,22 @@ export function createAnthropicLlmClient({ apiKey }: { apiKey: string }): LlmCli
         outputTokens: message.usage.output_tokens,
       }
       if (message.stop_reason === 'refusal') {
-        throw Object.assign(new LlmOutputError('The model declined to write this lesson'), {
-          usage,
-        })
+        throw new LlmOutputError('The model declined to write this lesson', usage)
       }
       if (message.stop_reason === 'max_tokens') {
-        throw Object.assign(
-          new LlmOutputError(`Output hit the ${request.maxTokens ?? 32_000} token limit`),
-          { usage },
-        )
+        throw new LlmOutputError(`Output hit the ${maxTokens} token limit`, usage)
       }
-      const text = message.content
-        .filter((block) => block.type === 'text')
-        .map((block) => block.text)
-        .join('')
-      try {
-        return { output: JSON.parse(text), usage, model: message.model }
-      } catch {
-        throw Object.assign(new LlmOutputError('The model returned invalid JSON'), { usage })
+      const call = message.content.find(
+        (block): block is Anthropic.ToolUseBlock =>
+          block.type === 'tool_use' && block.name === TOOL_NAME,
+      )
+      if (!call) {
+        throw new LlmOutputError(`The model did not call ${TOOL_NAME}`, usage)
+      }
+      return {
+        output: parseStringifiedFields(call.input, request.schema),
+        usage,
+        model: message.model,
       }
     },
   }

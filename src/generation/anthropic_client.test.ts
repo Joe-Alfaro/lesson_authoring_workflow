@@ -1,46 +1,22 @@
-// The adapter's schema conversion for structured outputs (no network calls).
+// The adapter's repair of stringified tool input (no network calls).
 import { describe, expect, it } from 'vitest'
-import { lessonBodyJsonSchema } from '../lesson/schema'
-import { toStructuredOutputSchema } from './anthropic_client'
+import { coreLessonBody } from '../../tests/fixtures/lesson/lesson_fixture'
+import { LessonBody, lessonBodyJsonSchema } from '../lesson/schema'
+import { parseStringifiedFields } from './anthropic_client'
 
-function walk(node: unknown, visit: (value: Record<string, unknown>) => void): void {
-  if (Array.isArray(node)) {
-    node.forEach((item) => walk(item, visit))
-    return
-  }
-  if (node && typeof node === 'object') {
-    visit(node as Record<string, unknown>)
-    Object.values(node).forEach((value) => walk(value, visit))
-  }
-}
+describe('parseStringifiedFields', () => {
+  it('parses a nested array the model sent as a JSON string', () => {
+    const body = coreLessonBody()
+    const sent = { ...body, sections: JSON.stringify(body.sections) }
 
-describe('toStructuredOutputSchema', () => {
-  const schema = toStructuredOutputSchema(lessonBodyJsonSchema())
+    const repaired = parseStringifiedFields(sent, lessonBodyJsonSchema())
 
-  it('drops constraints structured outputs reject', () => {
-    walk(schema, (node) => {
-      ;['$schema', 'minLength', 'maximum', 'exclusiveMinimum', 'maxItems', 'oneOf'].forEach((key) =>
-        expect(node).not.toHaveProperty(key),
-      )
-      if ('minItems' in node) {
-        expect(node.minItems).toBeLessThanOrEqual(1)
-      }
-    })
+    expect(LessonBody.safeParse(repaired).success).toBe(true)
   })
 
-  it('closes every object', () => {
-    walk(schema, (node) => {
-      if (node.type === 'object' && node.properties) {
-        expect(node.additionalProperties).toBe(false)
-      }
-    })
-  })
+  it('leaves text fields and unparseable strings alone', () => {
+    const body = { ...coreLessonBody(), title: '[not json', materials: 'not json either' }
 
-  it('keeps the block discriminators and required fields', () => {
-    const text = JSON.stringify(schema)
-    expect(text).toContain('"pulse_check"')
-    expect(schema).toEqual(
-      expect.objectContaining({ required: expect.arrayContaining(['title', 'sections']) }),
-    )
+    expect(parseStringifiedFields(body, lessonBodyJsonSchema())).toEqual(body)
   })
 })
