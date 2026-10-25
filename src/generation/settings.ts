@@ -65,3 +65,18 @@ export function getGenerationEffort(env: Env = process.env): (typeof EFFORTS)[nu
   }
   return effort
 }
+
+/**
+ * pg-boss heartbeat window for generation jobs (R6 crash recovery, D-039):
+ * `GENERATION_HEARTBEAT_SECONDS`, an integer >= 10 (the pg-boss minimum), default 60. A live job
+ * refreshes its heartbeat every half window; the job of a dead worker is retried after one window.
+ */
+export function getGenerationHeartbeatSeconds(env: Env = process.env): number {
+  return readNumber(
+    env,
+    'GENERATION_HEARTBEAT_SECONDS',
+    60,
+    (v) => Number.isInteger(v) && v >= 10,
+    'an integer >= 10',
+  )
+}

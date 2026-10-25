@@ -3,7 +3,8 @@ import { and, asc, desc, eq, gt, isNotNull, lt } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { arcs, lessons, lessonStandards, standards, units } from '../db/schema'
 import { getLessonEldInput } from '../import/eld_service'
-import type { LessonPromptInput, StandardKind } from './prompt_builder'
+import { authorFromBanner } from './front_matter_texts'
+import { withoutFocusDuplicates, type LessonPromptInput, type StandardKind } from './prompt_builder'
 import { getCurrentPromptVersion, getPromptVersion } from './prompt_versions'
 
 export type GetEldInput = (db: Database, lessonId: string) => Promise<Record<string, string> | null>
@@ -79,7 +80,7 @@ export async function loadLessonPromptInput(
     .leftJoin(standards, eq(standards.code, lessonStandards.code))
     .where(eq(lessonStandards.lessonId, lessonId))
     .orderBy(asc(lessonStandards.position), asc(lessonStandards.code))
-  const sortedStandards = [...standardRows].sort(
+  const sortedStandards = withoutFocusDuplicates(standardRows).sort(
     (a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind),
   )
 
@@ -95,7 +96,12 @@ export async function loadLessonPromptInput(
       version: promptVersion.version,
       template: promptVersion.template,
     },
-    unit: { grade: unit.grade, unitNumber: unit.unitNumber, anchorTextTitle: unit.anchorTextTitle },
+    unit: {
+      grade: unit.grade,
+      unitNumber: unit.unitNumber,
+      anchorTextTitle: unit.anchorTextTitle,
+      author: authorFromBanner(unit.banner),
+    },
     arc: arc ? { name: arc.name, description: arc.description } : null,
     lesson: {
       id: lesson.id,

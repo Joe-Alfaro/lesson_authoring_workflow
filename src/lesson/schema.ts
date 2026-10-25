@@ -206,28 +206,43 @@ const Homework = z.object({
 const VocabularyEntry = z.object({ term: Text, definition: Text })
 
 /** Copied from the outline row, not generated. */
-export const LessonFrontMatter = z.object({
-  unitTitle: z.string(),
-  /** Null for flex days. */
-  number: z.number().int().positive().nullable(),
-  arc: z.string(),
-  type: LessonType,
-  title: z.string(),
-  durationMinutes: z.number().int().positive(),
-  focusStandards: z.array(StandardCode).min(1),
-  supportingStandards: z.array(StandardCode),
-  eldStandards: z.array(
-    z.object({ code: StandardCode, levels: z.array(z.enum(['Em', 'Ex', 'Br'])).min(1) }),
-  ),
-  texts: z.array(
-    z.object({
-      title: z.string(),
-      source: z.string().optional(),
-      kind: z.enum(['novel', 'short_form', 'other']),
-      pages: z.string().optional(),
-    }),
-  ),
-})
+export const LessonFrontMatter = z
+  .object({
+    unitTitle: z.string(),
+    /** Null for flex days. */
+    number: z.number().int().positive().nullable(),
+    arc: z.string(),
+    type: LessonType,
+    title: z.string(),
+    durationMinutes: z.number().int().positive(),
+    /** At least one, except on a flex day (the sample's flex rows list no standards). */
+    focusStandards: z.array(StandardCode),
+    supportingStandards: z.array(StandardCode),
+    eldStandards: z.array(
+      z.object({ code: StandardCode, levels: z.array(z.enum(['Em', 'Ex', 'Br'])).min(1) }),
+    ),
+    texts: z.array(
+      z.object({
+        title: z.string(),
+        source: z.string().optional(),
+        kind: z.enum(['novel', 'short_form', 'other']),
+        pages: z.string().optional(),
+      }),
+    ),
+  })
+  .superRefine((frontMatter, ctx) => {
+    if (frontMatter.type !== 'flex' && frontMatter.focusStandards.length === 0) {
+      ctx.addIssue({
+        code: 'too_small',
+        origin: 'array',
+        minimum: 1,
+        inclusive: true,
+        input: frontMatter.focusStandards,
+        path: ['focusStandards'],
+        message: 'Too small: expected array to have >=1 items (only a flex day may have none)',
+      })
+    }
+  })
 export type LessonFrontMatter = z.infer<typeof LessonFrontMatter>
 
 /** What the model generates. */
