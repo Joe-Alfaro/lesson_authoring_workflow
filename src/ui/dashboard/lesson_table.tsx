@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Fragment, useEffect, useRef, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef } from 'react'
 import type { DashboardRow } from '../../units/dashboard_data'
 import { Who } from '../avatar'
 import {
@@ -35,8 +35,6 @@ interface LessonTableProps {
   onSelect: (ids: string[], selected: boolean) => void
   now: Date
   actions: RowActions
-  /** The row whose menu anchors the open assign popover, and the popover itself. */
-  assignAnchor?: { rowId: string; popover: ReactNode } | null
 }
 
 function rowName(row: DashboardRow): string {
@@ -133,14 +131,12 @@ function LessonRow({
   onSelect,
   now,
   actions,
-  assignPopover,
 }: {
   row: DashboardRow
   selected: boolean
   onSelect: LessonTableProps['onSelect']
   now: Date
   actions: RowActions
-  assignPopover: ReactNode
 }) {
   const showTime = row.hasContent || row.status === 'failed'
   const busy = row.status === 'queued' || row.status === 'generating'
@@ -203,7 +199,6 @@ function LessonRow({
       </td>
       <td className="actcell more">
         <RowMenu label={`More actions for ${rowName(row)}`} entries={menuEntries(row, actions)} />
-        {assignPopover}
       </td>
     </tr>
   )
@@ -213,15 +208,7 @@ function LessonRow({
  * The lesson table (R24): select, #, lesson, type, status, assignee, last edited by, updated,
  * row action and the more menu, grouped by arc. At narrow widths the rows stack (CSS).
  */
-export function LessonTable({
-  rows,
-  arcs,
-  selected,
-  onSelect,
-  now,
-  actions,
-  assignAnchor,
-}: LessonTableProps) {
+export function LessonTable({ rows, arcs, selected, onSelect, now, actions }: LessonTableProps) {
   const groups =
     arcs === null
       ? [{ id: 'all', name: null, rows }]
@@ -275,7 +262,6 @@ export function LessonTable({
                   onSelect={onSelect}
                   now={now}
                   actions={actions}
-                  assignPopover={assignAnchor?.rowId === row.id ? assignAnchor.popover : null}
                 />
               ))}
             </Fragment>

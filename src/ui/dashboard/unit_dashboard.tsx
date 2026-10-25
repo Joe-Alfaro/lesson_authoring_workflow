@@ -37,7 +37,12 @@ type Dialog =
   | { kind: 'regenerate'; rows: DashboardRow[]; error?: string }
 
 /** Where the assign popover is anchored: under the selection bar or a row's menu. */
-type AssignTarget = { anchor: 'bulk' | string; rows: DashboardRow[] }
+type AssignTarget = {
+  anchor: 'bulk' | HTMLElement | null
+  rows: DashboardRow[]
+  saving?: boolean
+  error?: string
+}
 
 const STATUS_FILTERS: RowStatus[] = [
   'not_generated',
@@ -237,16 +242,17 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
     if (!assign) {
       return
     }
-    // The list closes on the pick; the table shows the new assignee once it is saved.
-    setAssign(null)
+    // The list stays open (and busy) until the assignment is saved.
+    setAssign({ ...assign, saving: true, error: undefined })
     const result = await call('/api/lessons/assign', {
       lessonIds: assign.rows.map((row) => row.id),
       assigneeId: reviewer.id,
     })
     if (!result.ok) {
-      setPageError(errorText(result))
+      setAssign({ ...assign, saving: false, error: errorText(result) })
       return
     }
+    setAssign(null)
     if (assign.anchor === 'bulk') {
       setSelected(new Set())
     }
@@ -259,7 +265,12 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
     promptVersion: data.prompt.version,
     onRetry: (row) => void regenerate({ lessonIds: [row.id] }, false),
     onRegenerate: (row) => setDialog({ kind: 'regenerate', rows: [row] }),
-    onAssign: (row) => setAssign({ anchor: row.id, rows: [row] }),
+    // The row menu has just returned focus to its button: the list opens under it.
+    onAssign: (row) =>
+      setAssign({
+        anchor: document.activeElement instanceof HTMLElement ? document.activeElement : null,
+        rows: [row],
+      }),
     onGenerateFlex: (row) => void generateFlex(row),
   }
 
@@ -275,6 +286,9 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
         lessonCount={target.rows.length}
         onAssign={(reviewer) => void assignTo(reviewer)}
         onClose={closeAssign}
+        saving={target.saving}
+        error={target.error}
+        anchor={target.anchor === 'bulk' ? undefined : target.anchor}
       />
     )
   }
@@ -585,12 +599,8 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
         onSelect={select}
         now={now}
         actions={actions}
-        assignAnchor={
-          assign && assign.anchor !== 'bulk'
-            ? { rowId: assign.anchor, popover: assignPopover(assign) }
-            : null
-        }
       />
+      {assign && assign.anchor !== 'bulk' ? assignPopover(assign) : null}
 
       {dialog?.kind === 'start' ? (
         <StartGenerationDialog

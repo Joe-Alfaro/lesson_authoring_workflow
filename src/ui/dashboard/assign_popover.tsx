@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { avatarColour, initials } from '../avatar'
 import { SearchIcon } from '../icons'
 
@@ -16,13 +17,40 @@ interface AssignPopoverProps {
   lessonCount: number
   onAssign: (reviewer: Reviewer) => void
   onClose: () => void
+  /** Set while the assignment is being saved: the list stays open and can't be used. */
+  saving?: boolean
+  /** Shown below the list when saving failed. */
+  error?: string | null
+  /**
+   * Render in document.body under this element (a row's menu button) instead of in place, so the
+   * list is not part of the table row.
+   */
+  anchor?: HTMLElement | null
+}
+
+/** Page coordinates under the right edge of `anchor`. */
+function placeUnder(anchor: HTMLElement): { top: number; right: number } {
+  const box = anchor.getBoundingClientRect()
+  return {
+    top: box.bottom + window.scrollY + 4,
+    right: document.documentElement.clientWidth - box.right - window.scrollX,
+  }
 }
 
 /**
  * R25: a searchable reviewer list with each reviewer's current load (R25-bulk-assign). Picking a
- * reviewer assigns the lessons and closes it; Escape closes without assigning.
+ * reviewer assigns the lessons; the owner closes it once that is saved. Escape closes without
+ * assigning.
  */
-export function AssignPopover({ title, lessonCount, onAssign, onClose }: AssignPopoverProps) {
+export function AssignPopover({
+  title,
+  lessonCount,
+  onAssign,
+  onClose,
+  saving = false,
+  error,
+  anchor,
+}: AssignPopoverProps) {
   const id = useId()
   const ref = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -31,6 +59,14 @@ export function AssignPopover({ title, lessonCount, onAssign, onClose }: AssignP
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
   const onCloseRef = useRef(onClose)
+  useLayoutEffect(() => {
+    // Positioned on the DOM node itself: it only depends on where the anchor is on screen.
+    if (anchor && ref.current) {
+      const { top, right } = placeUnder(anchor)
+      ref.current.style.top = `${top}px`
+      ref.current.style.right = `${right}px`
+    }
+  }, [anchor])
 
   useEffect(() => {
     onCloseRef.current = onClose
@@ -87,14 +123,21 @@ export function AssignPopover({ title, lessonCount, onAssign, onClose }: AssignP
     } else if (event.key === 'ArrowUp') {
       event.preventDefault()
       setActive((index) => Math.max(index - 1, 0))
-    } else if (event.key === 'Enter' && current) {
+    } else if (event.key === 'Enter' && current && !saving) {
       event.preventDefault()
       onAssign(current)
     }
   }
 
-  return (
-    <div ref={ref} className="float assign" role="dialog" aria-label={title} onKeyDown={onKeyDown}>
+  const popover = (
+    <div
+      ref={ref}
+      className={`float assign${anchor ? ' anchored' : ''}`}
+      role="dialog"
+      aria-label={title}
+      aria-busy={saving || undefined}
+      onKeyDown={onKeyDown}
+    >
       <div className="search">
         <SearchIcon />
         <input
@@ -130,7 +173,12 @@ export function AssignPopover({ title, lessonCount, onAssign, onClose }: AssignP
             role="option"
             aria-selected={reviewer === current}
             className={`row option${reviewer === current ? ' on' : ''}`}
-            onClick={() => onAssign(reviewer)}
+            aria-disabled={saving || undefined}
+            onClick={() => {
+              if (!saving) {
+                onAssign(reviewer)
+              }
+            }}
           >
             <span className={`av sm ${avatarColour(reviewer.id)}`} aria-hidden="true">
               {initials(reviewer.name)}
@@ -141,10 +189,17 @@ export function AssignPopover({ title, lessonCount, onAssign, onClose }: AssignP
           </li>
         ))}
       </ul>
+      {error ? (
+        <p className="errmsg" role="alert">
+          {error}
+        </p>
+      ) : null}
       <p className="caption note">
-        Assigning replaces the current assignee on{' '}
-        {lessonCount === 1 ? 'this lesson' : `all ${lessonCount} lessons`}.
+        {saving
+          ? 'Assigning...'
+          : `Assigning replaces the current assignee on ${lessonCount === 1 ? 'this lesson' : `all ${lessonCount} lessons`}.`}
       </p>
     </div>
   )
+  return anchor ? createPortal(popover, document.body) : popover
 }
