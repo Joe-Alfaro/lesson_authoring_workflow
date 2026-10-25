@@ -1,13 +1,14 @@
 'use client'
 
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
+import type { BadInputReason } from '../../import/http'
 import type { ImportPreview } from '../../import/import_service'
 import { ImportForm, type FormErrors, type ImportFormValues } from './import_form'
 import { ImportPreviewView } from './import_preview'
 import { OutlineHelp } from './outline_help'
 import { ParsingPanel } from './parsing_panel'
+import { Breadcrumbs } from '../breadcrumbs'
 
 /** R1: the copy for a sheet that can't be read without signing in to Google. */
 const SHARE_ERROR =
@@ -20,7 +21,7 @@ type Phase =
 
 interface ApiError {
   error?: string
-  reason?: 'sheet_not_shared' | 'sheet_link' | 'eld_file' | 'input'
+  reason?: BadInputReason
 }
 
 /** Puts a 400 answer from POST /api/imports under the field it is about. */
@@ -29,8 +30,14 @@ function errorsFrom(body: ApiError, values: ImportFormValues): FormErrors {
   if (body.reason === 'sheet_not_shared') {
     return { link: SHARE_ERROR }
   }
+  if (body.reason === 'eld_sheet_not_shared') {
+    return { eldLink: SHARE_ERROR }
+  }
+  if (body.reason === 'eld_link') {
+    return { eldLink: message }
+  }
   if (body.reason === 'eld_file') {
-    return { eld: message }
+    return values.eldLink === null ? { eld: message } : { eldLink: message }
   }
   return values.source === 'link' ? { link: message } : { csv: message }
 }
@@ -41,6 +48,9 @@ function missingInput(values: ImportFormValues): FormErrors | null {
   }
   if (values.source === 'csv' && !values.csvFile) {
     return { csv: 'Choose the outline CSV file.' }
+  }
+  if (values.eldLink !== null && values.eldLink.trim() === '') {
+    return { eldLink: 'Paste the link to the ELD tab, or remove it.' }
   }
   return null
 }
@@ -54,6 +64,8 @@ function requestBody(values: ImportFormValues): FormData {
   }
   if (values.eldFile) {
     form.append('eld', values.eldFile)
+  } else if (values.eldLink) {
+    form.append('eldUrl', values.eldLink.trim())
   }
   return form
 }
@@ -69,6 +81,7 @@ export function ImportFlow() {
     link: '',
     csvFile: null,
     eldFile: null,
+    eldLink: null,
   })
   const [phase, setPhase] = useState<Phase>({ kind: 'form', errors: {} })
   const [busy, setBusy] = useState<'create' | 'cancel' | null>(null)
@@ -152,9 +165,7 @@ export function ImportFlow() {
 
   return (
     <main className="page">
-      <div className="crumbs">
-        <Link href="/units">Units</Link> / Import
-      </div>
+      <Breadcrumbs trail={[{ label: 'Units', href: '/units' }, { label: 'Import' }]} />
       <h1 className="h1">Import an outline</h1>
       <div className="imp">
         {phase.kind === 'parsing' ? (

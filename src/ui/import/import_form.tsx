@@ -11,6 +11,7 @@ export interface FormErrors {
   link?: string
   csv?: string
   eld?: string
+  eldLink?: string
 }
 
 export interface ImportFormValues {
@@ -18,6 +19,8 @@ export interface ImportFormValues {
   link: string
   csvFile: File | null
   eldFile: File | null
+  /** The ELD tab's sheet link; null while the author hasn't chosen to give one. */
+  eldLink: string | null
 }
 
 interface ImportFormProps {
@@ -36,6 +39,8 @@ const SOURCES: { id: OutlineSource; label: string; icon: ReactNode }[] = [
 /** R1 import form. Mockups: R1-import-empty.html and R1-import-error.html. */
 export function ImportForm({ values, errors, onChange, onSubmit, onCancel }: ImportFormProps) {
   const linkInput = useRef<HTMLInputElement>(null)
+  const eldLinkInput = useRef<HTMLInputElement>(null)
+  const eldLinkOpen = values.eldLink !== null
   const tabs = useRef<Record<OutlineSource, HTMLButtonElement | null>>({ link: null, csv: null })
 
   // An error on the link moves focus there so it is read with its message.
@@ -44,6 +49,19 @@ export function ImportForm({ values, errors, onChange, onSubmit, onCancel }: Imp
       linkInput.current?.focus()
     }
   }, [errors.link])
+
+  useEffect(() => {
+    if (errors.eldLink) {
+      eldLinkInput.current?.focus()
+    }
+  }, [errors.eldLink])
+
+  // Opening the ELD link field moves focus into it.
+  useEffect(() => {
+    if (eldLinkOpen) {
+      eldLinkInput.current?.focus()
+    }
+  }, [eldLinkOpen])
 
   function selectSource(source: OutlineSource) {
     onChange({ ...values, source })
@@ -157,15 +175,71 @@ export function ImportForm({ values, errors, onChange, onSubmit, onCancel }: Imp
           }
           prompt={
             <>
-              <b>Attach an ELD file</b> as a CSV export of its tab.
+              <b>Attach an ELD file</b> as a CSV or a{' '}
+              <button
+                className="inline-link"
+                type="button"
+                aria-expanded={eldLinkOpen}
+                aria-controls="eld-link-field"
+                onClick={() =>
+                  onChange({ ...values, eldFile: null, eldLink: values.eldLink ?? '' })
+                }
+              >
+                link to its tab
+              </button>
+              .
             </>
           }
           hint="Rows are matched to lessons by arc, lesson number and type. Empty fields are ignored."
           file={values.eldFile}
-          onFile={(eldFile) => onChange({ ...values, eldFile })}
+          // A file and a link are alternatives; choosing a file drops the link.
+          onFile={(eldFile) =>
+            onChange({ ...values, eldFile, eldLink: eldFile ? null : values.eldLink })
+          }
           error={errors.eld}
         />
       </div>
+
+      {eldLinkOpen ? (
+        <div className="field eld-link" id="eld-link-field">
+          <label className="lbl" htmlFor="eld-link">
+            ELD sheet link
+          </label>
+          <div className="row">
+            <input
+              ref={eldLinkInput}
+              className={`input${errors.eldLink ? ' err' : ''}`}
+              id="eld-link"
+              name="eldUrl"
+              type="url"
+              inputMode="url"
+              autoComplete="off"
+              placeholder="https://docs.google.com/spreadsheets/d/..."
+              value={values.eldLink ?? ''}
+              onChange={(event) => onChange({ ...values, eldLink: event.target.value })}
+              aria-invalid={errors.eldLink ? true : undefined}
+              aria-describedby={errors.eldLink ? 'eld-link-error' : 'eld-link-help'}
+            />
+            <button
+              className="btn quiet sm"
+              type="button"
+              onClick={() => onChange({ ...values, eldLink: null })}
+            >
+              Remove link
+            </button>
+          </div>
+          {errors.eldLink ? (
+            <p className="errmsg" id="eld-link-error">
+              <ErrorIcon />
+              <span>{errors.eldLink}</span>
+            </p>
+          ) : (
+            <p className="help" id="eld-link-help">
+              A link to the ELD tab, shared the same way as the outline.
+            </p>
+          )}
+        </div>
+      ) : null}
 
       <div className="row actions">
         <button className="btn primary" type="submit">

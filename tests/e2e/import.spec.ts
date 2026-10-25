@@ -223,7 +223,7 @@ test.describe('R4 import preview', () => {
     await expect(main).toContainText(/41\s*lessons/)
     await expect(main).toContainText(/4\s*arcs/)
     await expect(main).toContainText(/6\s*flex days, not generated/)
-    await expect(main).toContainText(/1\s*standards warning/)
+    await expect(main).toContainText(/1\s*unknown standard code in 3 lessons/)
 
     const table = page.getByRole('table')
     await expect(table.getByRole('columnheader')).toHaveText([

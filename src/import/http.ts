@@ -1,3 +1,4 @@
+import { EldSheetError } from './import_service'
 import { EldParseError } from './parse_eld'
 import { OutlineParseError } from './parse_outline'
 import { SheetAccessError, SheetLinkError } from './sheet_link'
@@ -17,6 +18,7 @@ const BAD_INPUT = [
   BadInputError,
   OutlineParseError,
   EldParseError,
+  EldSheetError,
   SheetLinkError,
   SheetAccessError,
 ]
@@ -35,9 +37,13 @@ export function badRequest(error: unknown): Response {
   throw error
 }
 
-export type BadInputReason = 'sheet_not_shared' | 'sheet_link' | 'eld_file' | 'input'
+export type BadInputReason =
+  'sheet_not_shared' | 'sheet_link' | 'eld_file' | 'eld_sheet_not_shared' | 'eld_link' | 'input'
 
 function reasonOf(error: Error): BadInputReason {
+  if (error instanceof EldSheetError) {
+    return error.notShared ? 'eld_sheet_not_shared' : 'eld_link'
+  }
   if (error instanceof SheetAccessError) {
     return 'sheet_not_shared'
   }
