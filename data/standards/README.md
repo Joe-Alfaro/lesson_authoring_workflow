@@ -3,11 +3,11 @@
 Reference data for R15 (and R3's "unknown code" warning). Each file is a JSON array of objects
 with at least `{ code, framework, grade, strand, text }`; extra fields are listed below.
 
-| File | Framework | Entries | Contents |
-| --- | --- | --- | --- |
-| `ccss_ela_grade6.json` | `CCSS_ELA` | 101 | CA CCSS for ELA/Literacy, grade 6: RL, RI, W, SL, L (incl. lettered sub-standards and CA additions), plus grades 6–8 RH and RST |
-| `ca_eld_grade6.json` | `CA_ELD` | 30 | CA ELD Standards, grade 6: Part I (PI.6.1–12) and Part II (PII.6.1–7), plus lettered sub-parts |
-| `ca_school_library_grade6.json` | `CA_SCHOOL_LIBRARY` | 59 | Model School Library Standards, grade 6 (the outline's "CA Media Literacy Standards" column) |
+| File                            | Framework           | Entries | Contents                                                                                                                        |
+| ------------------------------- | ------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `ccss_ela_grade6.json`          | `CCSS_ELA`          | 101     | CA CCSS for ELA/Literacy, grade 6: RL, RI, W, SL, L (incl. lettered sub-standards and CA additions), plus grades 6–8 RH and RST |
+| `ca_eld_grade6.json`            | `CA_ELD`            | 30      | CA ELD Standards, grade 6: Part I (PI.6.1–12) and Part II (PII.6.1–7), plus lettered sub-parts                                  |
+| `ca_school_library_grade6.json` | `CA_SCHOOL_LIBRARY` | 59      | Model School Library Standards, grade 6 (the outline's "CA Media Literacy Standards" column)                                    |
 
 ## Codes and fields
 
@@ -31,11 +31,11 @@ with at least `{ code, framework, grade, strand, text }`; extra fields are liste
 
 All three are official California Department of Education (CDE) publications:
 
-| Data | Document | URL | SHA-256 of the PDF used |
-| --- | --- | --- | --- |
-| CCSS | California Common Core State Standards: English Language Arts & Literacy in History/Social Studies, Science, and Technical Subjects (CDE, updated 2013) | https://www.cde.ca.gov/be/st/ss/documents/finalelaccssstandards.pdf | `ea32971229c9a6a40371c48fd6069efb40c71822904475ea11791ec641e5d256` |
-| ELD | California English Language Development Standards: Kindergarten Through Grade 12 (CDE, 2014) | https://www.cde.ca.gov/sp/el/er/documents/eldstndspublication14.pdf | `8d9e57db0935a3e81339fa3031b4ff07c77bcab26ad526b5f39f0f561064db52` |
-| School library | Model School Library Standards for California Public Schools, Kindergarten Through Grade Twelve (CDE, adopted 2010) | https://www.cde.ca.gov/be/st/ss/documents/librarystandards.pdf | `833c69d66b87599bab672f72e0ad1786e5b58312e1df397964831546e3e945ad` |
+| Data           | Document                                                                                                                                                | URL                                                                 | SHA-256 of the PDF used                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| CCSS           | California Common Core State Standards: English Language Arts & Literacy in History/Social Studies, Science, and Technical Subjects (CDE, updated 2013) | https://www.cde.ca.gov/be/st/ss/documents/finalelaccssstandards.pdf | `ea32971229c9a6a40371c48fd6069efb40c71822904475ea11791ec641e5d256` |
+| ELD            | California English Language Development Standards: Kindergarten Through Grade 12 (CDE, 2014)                                                            | https://www.cde.ca.gov/sp/el/er/documents/eldstndspublication14.pdf | `8d9e57db0935a3e81339fa3031b4ff07c77bcab26ad526b5f39f0f561064db52` |
+| School library | Model School Library Standards for California Public Schools, Kindergarten Through Grade Twelve (CDE, adopted 2010)                                     | https://www.cde.ca.gov/be/st/ss/documents/librarystandards.pdf      | `833c69d66b87599bab672f72e0ad1786e5b58312e1df397964831546e3e945ad` |
 
 Fetched 2026-10-25. The CCSS were checked against the CDE edition (which carries the CA
 additions such as `SL.6.4.a` and `RI.6.5.a`), not the national corestandards.org text.
@@ -86,6 +86,6 @@ Result: 85 distinct codes, 84 resolve.
 
 ### Known unresolved codes
 
-| Code | Where | Why |
-| --- | --- | --- |
+| Code       | Where                                | Why                                                                                                                                                                                                                                   |
+| ---------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `RL.6.9.a` | Focus and Additional columns, 4 rows | Not a grade 6 standard: RL.6.9 has no lettered parts in the CA CCSS. Probably meant `W.6.9.a` ("Apply grade 6 Reading standards to literature"), which the same rows also list, or plain `RL.6.9`. Kept by R3 and shown as a warning. |
