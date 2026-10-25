@@ -1,22 +1,21 @@
-// The adapter's repair of stringified tool input (no network calls).
+// Reading the JSON answer (no network calls).
 import { describe, expect, it } from 'vitest'
-import { coreLessonBody } from '../../tests/fixtures/lesson/lesson_fixture'
-import { LessonBody, lessonBodyJsonSchema } from '../lesson/schema'
-import { parseStringifiedFields } from './anthropic_client'
+import { extractJson } from './anthropic_client'
 
-describe('parseStringifiedFields', () => {
-  it('parses a nested array the model sent as a JSON string', () => {
-    const body = coreLessonBody()
-    const sent = { ...body, sections: JSON.stringify(body.sections) }
-
-    const repaired = parseStringifiedFields(sent, lessonBodyJsonSchema())
-
-    expect(LessonBody.safeParse(repaired).success).toBe(true)
+describe('extractJson', () => {
+  it('reads a bare JSON object', () => {
+    expect(extractJson('{"title":"A"}')).toEqual({ title: 'A' })
   })
 
-  it('leaves text fields and unparseable strings alone', () => {
-    const body = { ...coreLessonBody(), title: '[not json', materials: 'not json either' }
+  it('reads an object wrapped in a Markdown fence or surrounded by text', () => {
+    expect(extractJson('Here it is:\n```json\n{"title":"A","n":[1]}\n```\n')).toEqual({
+      title: 'A',
+      n: [1],
+    })
+  })
 
-    expect(parseStringifiedFields(body, lessonBodyJsonSchema())).toEqual(body)
+  it('throws for malformed JSON or no object at all', () => {
+    expect(() => extractJson('{"sections": [}')).toThrow(SyntaxError)
+    expect(() => extractJson('no json here')).toThrow(SyntaxError)
   })
 })

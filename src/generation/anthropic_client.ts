@@ -1,14 +1,16 @@
 // Anthropic implementation of LlmClient (R7). Only src/worker constructs it; tests use a fake.
 //
 // The lesson schema is too large for constrained decoding (structured outputs reject it: too
-// many optional properties, then "compiled grammar is too large"), so the schema is passed as
-// the input schema of a non-strict tool. The model follows it closely; validateLesson in the
-// worker is the real gate and drives the repair retry (D-028).
+// many optional properties, then "compiled grammar is too large"), and as tool input the model
+// sometimes sends the nested `sections` array as a malformed JSON string. So the schema goes in
+// the system prompt and the model answers with the JSON object as text; validateLesson in the
+// worker is the gate and drives the repair retry (D-028).
 import Anthropic from '@anthropic-ai/sdk'
 import type { LlmClient, LlmRequest, LlmResponse, LlmUsage } from './llm'
 
-const TOOL_NAME = 'write_lesson'
-const DEFAULT_MAX_TOKENS = 32_000
+const DEFAULT_MAX_TOKENS = 64_000
+
+export type Effort = 'low' | 'medium' | 'high'
 
 export class LlmOutputError extends Error {
   constructor(
@@ -21,54 +23,32 @@ export class LlmOutputError extends Error {
   }
 }
 
-export type Effort = 'low' | 'medium' | 'high'
+function jsonInstructions(schema: Record<string, unknown>): string {
+  const { $schema: _marker, ...rest } = schema
+  void _marker
+  return `# Output format
 
-/** Tool input schemas take plain JSON schema; only the `$schema` marker is dropped. */
-function toolInputSchema(schema: Record<string, unknown>): Anthropic.Tool.InputSchema {
-  return Object.fromEntries(
-    Object.entries(schema).filter(([key]) => key !== '$schema'),
-  ) as Anthropic.Tool.InputSchema
+Answer with one JSON object and nothing else: no Markdown fences, no commentary. It must match this JSON schema exactly (every "required" field present, arrays as arrays, no extra fields):
+
+${JSON.stringify(rest)}`
 }
 
-function expectsStructure(schema: unknown): boolean {
-  if (!schema || typeof schema !== 'object') {
-    return false
+/** The JSON object in a text answer, tolerating a Markdown fence or stray text around it. */
+export function extractJson(text: string): unknown {
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start === -1 || end < start) {
+    throw new SyntaxError('no JSON object in the answer')
   }
-  const { type, anyOf } = schema as { type?: unknown; anyOf?: unknown[] }
-  return type === 'array' || type === 'object' || (anyOf ?? []).some(expectsStructure)
-}
-
-/**
- * With large tool inputs the model sometimes sends a nested array or object as a JSON string
- * (`"sections": "[{...}]"`). Parses those back where the schema expects structure; anything
- * that still does not fit is left for validateLesson to report.
- */
-export function parseStringifiedFields(input: unknown, schema: unknown): unknown {
-  if (!input || typeof input !== 'object' || Array.isArray(input) || !schema) {
-    return input
-  }
-  const properties = (schema as { properties?: Record<string, unknown> }).properties ?? {}
-  return Object.fromEntries(
-    Object.entries(input as Record<string, unknown>).map(([key, value]) => {
-      const propertySchema = properties[key]
-      if (typeof value === 'string' && expectsStructure(propertySchema)) {
-        try {
-          return [key, JSON.parse(value) as unknown]
-        } catch {
-          return [key, value]
-        }
-      }
-      return [key, parseStringifiedFields(value, propertySchema)]
-    }),
-  )
+  return JSON.parse(text.slice(start, end + 1))
 }
 
 export function createAnthropicLlmClient({
   apiKey,
-  effort = 'low',
+  effort = 'medium',
 }: {
   apiKey: string
-  /** Thinking effort; lessons are mostly writing, so low keeps thinking tokens down (D-028). */
+  /** Thinking effort; medium gave valid lessons on the first attempt in the smoke run (D-028). */
   effort?: Effort
 }): LlmClient {
   const client = new Anthropic({ apiKey })
@@ -79,16 +59,8 @@ export function createAnthropicLlmClient({
       const stream = client.messages.stream({
         model: request.model,
         max_tokens: maxTokens,
-        system: `${request.system}\n\nDeliver the lesson by calling the ${TOOL_NAME} tool exactly once with the complete lesson body. Do not write anything else.`,
+        system: `${request.system}\n\n${jsonInstructions(request.schema)}`,
         messages: [{ role: 'user', content: request.prompt }],
-        tools: [
-          {
-            name: TOOL_NAME,
-            description: 'Saves the complete lesson body. Its input must match the schema exactly.',
-            input_schema: toolInputSchema(request.schema),
-          },
-        ],
-        tool_choice: { type: 'auto' },
         output_config: { effort },
       })
       const message = await stream.finalMessage()
@@ -105,17 +77,17 @@ export function createAnthropicLlmClient({
       if (message.stop_reason === 'max_tokens') {
         throw new LlmOutputError(`Output hit the ${maxTokens} token limit`, usage)
       }
-      const call = message.content.find(
-        (block): block is Anthropic.ToolUseBlock =>
-          block.type === 'tool_use' && block.name === TOOL_NAME,
-      )
-      if (!call) {
-        throw new LlmOutputError(`The model did not call ${TOOL_NAME}`, usage)
-      }
-      return {
-        output: parseStringifiedFields(call.input, request.schema),
-        usage,
-        model: message.model,
+      const text = message.content
+        .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+        .map((block) => block.text)
+        .join('')
+      try {
+        return { output: extractJson(text), usage, model: message.model }
+      } catch (error) {
+        throw new LlmOutputError(
+          `The answer was not valid JSON (${(error as Error).message}); return one complete JSON object`,
+          usage,
+        )
       }
     },
   }

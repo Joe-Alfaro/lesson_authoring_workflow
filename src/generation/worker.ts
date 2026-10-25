@@ -55,8 +55,8 @@ type RunRow = typeof generationRuns.$inferSelect
 const FINAL_JOB_STATUSES = ['generated', 'failed', 'cancelled'] as const
 const ACTIVE_RUN_STATUSES = ['queued', 'running'] as const
 
-/** Output tokens are capped well above a full lesson (~10k) plus thinking. */
-const DEFAULT_MAX_TOKENS = 32_000
+/** Output ceiling per call: a lesson is ~7-10k tokens of JSON plus up to ~20k of thinking. */
+const DEFAULT_MAX_TOKENS = 64_000
 
 /**
  * Lesson status moves go through the review workflow (R23) so each one is a workflow event. A

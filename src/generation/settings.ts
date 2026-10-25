@@ -53,11 +53,11 @@ export function getGlobalSpendCapUsd(env: Env = process.env): number {
 
 const EFFORTS = ['low', 'medium', 'high'] as const
 
-/** Model thinking effort for generation: `GENERATION_EFFORT`, default low. */
+/** Model thinking effort for generation: `GENERATION_EFFORT`, default medium. */
 export function getGenerationEffort(env: Env = process.env): (typeof EFFORTS)[number] {
   const raw = env.GENERATION_EFFORT?.trim()
   if (!raw) {
-    return 'low'
+    return 'medium'
   }
   const effort = EFFORTS.find((value) => value === raw)
   if (!effort) {

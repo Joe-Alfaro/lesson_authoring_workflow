@@ -39,8 +39,11 @@ export const MODEL_PRICES: PriceTable = {
 /** Haiku-class default for development (D-026); the full-unit run picks Sonnet explicitly. */
 export const DEFAULT_MODEL = 'claude-haiku-5-5'
 
-/** Expected tokens for one lesson including thinking, until a unit has measured lessons. */
-export const ESTIMATED_TOKENS_PER_LESSON: LlmUsage = { inputTokens: 12_000, outputTokens: 12_000 }
+/**
+ * Expected tokens for one lesson including thinking, until a unit has measured lessons. Measured
+ * in the M2 smoke run (Haiku, effort medium, first attempts): ~9k in, ~23k out (7-10k of it JSON).
+ */
+export const ESTIMATED_TOKENS_PER_LESSON: LlmUsage = { inputTokens: 9_000, outputTokens: 23_000 }
 
 export class UnknownModelError extends Error {
   constructor(readonly model: string) {

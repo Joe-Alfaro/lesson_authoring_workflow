@@ -181,7 +181,7 @@ export const Part = z.object({
   id: Id,
   label: z.string().optional(),
   title: z.string().optional(),
-  standards: z.array(StandardCode),
+  standards: z.array(StandardCode).default([]),
   minutes: z.number().int().positive().optional(),
   purpose: z.string().optional(),
   blocks: z.array(Block).min(1),
@@ -251,7 +251,7 @@ export const LessonBody = z.object({
   }),
   materials: z.array(Text),
   sections: z.array(Section).min(3),
-  homework: Homework.nullable(),
+  homework: Homework.nullable().default(null),
 })
 export type LessonBody = z.infer<typeof LessonBody>
 
