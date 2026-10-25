@@ -114,8 +114,10 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
   // Rows that left the table (filtered out, or gone) don't stay selected.
   const selectedRows = rows.filter((row) => selected.has(row.id))
   const failedRows = rows.filter((row) => row.generation === 'failed')
+  // Lessons never generated; failed ones have their own Retry.
   const missing = numbered.filter(
-    (row) => !row.hasContent && row.status !== 'queued' && row.status !== 'generating',
+    (row) =>
+      !row.hasContent && (row.generation === 'not_started' || row.generation === 'cancelled'),
   )
   const anyContent = rows.some((row) => row.hasContent)
   // A run cancelled before every lesson was generated keeps the generation summary.
@@ -391,7 +393,7 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
             Generate lessons...
           </button>
         ) : null}
-        {anyContent && !active ? (
+        {anyContent && !active && !stopped ? (
           <button type="button" className="btn" disabled title="Export arrives with R16">
             <DownloadIcon />
             Export
