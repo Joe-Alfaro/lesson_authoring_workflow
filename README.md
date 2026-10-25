@@ -13,6 +13,13 @@ One npm package with three processes:
 Each process reads `PORT` and `DATABASE_URL` from the environment and answers `GET /health` with
 200 only when it can reach the database (503 otherwise).
 
+The worker keeps answering `/health` with 503 and retries starting its queue (with backoff) while
+the database is unreachable, rather than exiting.
+
+The collab server only accepts connections that present a collab token. Signed-in users get one
+from `GET /api/collab-token` (valid for 10 minutes, signed with `AUTH_SECRET`), so web and collab
+must share the same `AUTH_SECRET`.
+
 ## Requirements
 
 - Node 24 and npm
