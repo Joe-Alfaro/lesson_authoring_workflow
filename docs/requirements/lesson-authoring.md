@@ -50,12 +50,15 @@ Each generated lesson has:
 2. Student learning objectives: content, language, foundational skills.
 3. Essential question(s) and connections (knowledge-building, enduring understanding, future
    lessons, unit performance task).
-4. Lesson pacing: Launch, Learning in Action (one or more parts, each tagged with standards), Look
-   Back, with minutes per section summing to the lesson duration, and the routines used.
+4. Lesson pacing: Launch, Literacy Lab (core lessons), Learning in Action (one or more parts, each
+   tagged with standards), Look Back, with minutes per section summing to the lesson duration, and
+   the routines used. Typical splits: Spark 15/30/5; core lessons 5 Launch, 10 Literacy Lab, 30
+   Learning in Action, 5 Look Back; flex days 5/40/5.
 5. Lesson sequence, one block per section: teacher moves, "Say", "Say these directions", "Ask"
    prompts with exemplar student responses, teacher tips, a pulse check (multiple choice with
    rationales), integrated ELD instructions (purpose, sentence frames, watch-for/support,
-   success criteria), additional student support (struggling / extension), reflection.
+   success criteria), additional student support (struggling / extension), reflection, and
+   materials and target vocabulary where the lesson uses them.
 6. Homework (when the outline gives one).
 
 ## Requirements
