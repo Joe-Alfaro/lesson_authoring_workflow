@@ -98,7 +98,7 @@ const FILENAME_NUMBER = /^L(\d+)_/i
 export function matchEldRows(
   rows: EldRow[],
   items: EldItem[],
-): { matches: EldMatch[]; warnings: ImportWarning[] } {
+): { matches: EldMatch[]; warnings: ImportWarning[]; unmatched: EldRow[] } {
   const itemsByGroup = new Map<string, EldItem[]>()
   ;[...items]
     .sort((a, b) => a.position - b.position)
@@ -145,9 +145,11 @@ export function matchEldRows(
 
   const matches: EldMatch[] = []
   const warnings: ImportWarning[] = []
+  const unmatched: EldRow[] = []
   rows.forEach((row, index) => {
     const item = matched[index]
     if (!item) {
+      unmatched.push(row)
       const name = row.filename || '(no filename)'
       warnings.push({
         message:
@@ -158,5 +160,5 @@ export function matchEldRows(
     }
     matches.push({ position: item.position, fields: row.fields })
   })
-  return { matches, warnings }
+  return { matches, warnings, unmatched }
 }

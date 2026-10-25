@@ -5,18 +5,18 @@ paths and return shapes are what the tests import; anything not listed is up to 
 
 ## Modules
 
-| File                                        | Exports                                                                                                | Kind         |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------ |
-| `src/import/parse_outline.ts`               | `parseOutline(csv): ParsedOutline`, `OutlineParseError`, types below                                   | pure         |
-| `src/import/normalize_standards.ts`         | `normalizeStandards(cell, { kind, grade, isKnown }): { codes, unknownCodes }`                          | pure         |
-| `src/import/sheet_link.ts`                  | `toCsvExportUrl(link)`, `fetchSheetCsv(link, fetchImpl = fetch)`, `SheetLinkError`, `SheetAccessError` | pure + fetch |
-| `src/import/parse_eld.ts`                   | `parseEldFile(csv): EldRow[]`, `matchEldRows(rows, items): { matches, warnings }`                      | pure         |
-| `src/import/import_service.ts`              | `previewImport`, `confirmImport`, `cancelImport`, `getLessonWarnings`, `ImportNotFoundError`           | DB           |
-| `src/import/eld_service.ts`                 | `attachEldFile(db, unitId, csv)`, `getLessonEldInput(db, lessonId)`, `getUnitEldWarnings(db, unitId)`  | DB           |
-| `src/app/api/imports/route.ts`              | `POST` (JSON `{ url }` or multipart field `file`) -> 200 preview, 400 `{ error }`                      | route        |
-| `src/app/api/imports/[id]/confirm/route.ts` | `POST` -> 201 `{ unitId }`, 404 when the import is unknown                                             | route        |
-| `src/app/api/imports/[id]/route.ts`         | `DELETE` -> 204 (cancel)                                                                               | route        |
-| `src/app/api/units/[id]/eld/route.ts`       | `POST` (multipart field `file`) -> 200 `{ matched, warnings }`                                         | route        |
+| File                                        | Exports                                                                                                           | Kind         |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------ |
+| `src/import/parse_outline.ts`               | `parseOutline(csv): ParsedOutline`, `OutlineParseError`, types below                                              | pure         |
+| `src/import/normalize_standards.ts`         | `normalizeStandards(cell, { kind, grade, isKnown }): { codes, unknownCodes }`                                     | pure         |
+| `src/import/sheet_link.ts`                  | `toCsvExportUrl(link)`, `fetchSheetCsv(link, fetchImpl = fetch)`, `SheetLinkError`, `SheetAccessError`            | pure + fetch |
+| `src/import/parse_eld.ts`                   | `parseEldFile(csv): EldRow[]`, `matchEldRows(rows, items): { matches, warnings }`                                 | pure         |
+| `src/import/import_service.ts`              | `previewImport`, `confirmImport`, `cancelImport`, `getLessonWarnings`, `ImportNotFoundError`                      | DB           |
+| `src/import/eld_service.ts`                 | `attachEldFile(db, unitId, csv)`, `getLessonEldInput(db, lessonId)`, `getUnitEldWarnings(db, unitId)`             | DB           |
+| `src/app/api/imports/route.ts`              | `POST` (JSON `{ url }`, or multipart `file` or `url` plus optional `eld`) -> 200 preview, 400 `{ error, reason }` | route        |
+| `src/app/api/imports/[id]/confirm/route.ts` | `POST` -> 201 `{ unitId }`, 404 when the import is unknown                                                        | route        |
+| `src/app/api/imports/[id]/route.ts`         | `DELETE` -> 204 (cancel)                                                                                          | route        |
+| `src/app/api/units/[id]/eld/route.ts`       | `POST` (multipart field `file`) -> 200 `{ matched, warnings }`                                                    | route        |
 
 Every route calls `requireRole(['author'])` from `src/auth/require_role.ts` first and passes the
 user's id as `userId`. Errors from parsing or fetching (`OutlineParseError`, `SheetLinkError`,
@@ -105,7 +105,7 @@ type ImportWarning = { message: string; lessonNumber?: number | null; code?: str
 
 ```ts
 type ImportSource = { kind: 'csv'; csv: string } | { kind: 'sheet'; url: string }
-previewImport(db, source, { userId?: string; fetch?: typeof fetch }): Promise<ImportPreview>
+previewImport(db, source, { userId?: string; fetch?: typeof fetch; eldCsv?: string }): Promise<ImportPreview>
 confirmImport(db, importId, { userId?: string }): Promise<{ unitId: string }>
 cancelImport(db, importId): Promise<void>
 getLessonWarnings(db, lessonId): Promise<ImportWarning[]>
@@ -117,12 +117,20 @@ type ImportPreview = {
   lessons: PreviewItem[] // the 41 numbered lessons
   flexDays: PreviewItem[] // the 6 flex days
   warnings: ImportWarning[] // all warnings, including every unknown standard code
+  eld: EldPreview | null // only when an ELD file came with the import (R5)
+}
+type EldPreview = {
+  rows: number; rowsWithContent: number; matched: number
+  unmatchedRows: string[] // filenames, in file order
+  warnings: ImportWarning[]
 }
 type PreviewItem = {
   position: number; lessonNumber: number | null; arcName: string; lessonType: string
   title: string // first line of the description
+  pages: string | null // first page range in the description, e.g. "pp. 1–8"
   description: string
   focusStandards: string[] // normalized
+  focusStandardsText: string // the focus cell as written, so the UI can show what was normalized
   warnings: ImportWarning[]
 }
 ```
@@ -134,6 +142,11 @@ type PreviewItem = {
   number) and `lesson_standards` (one row per normalized code, `kind` per column, `position` in
   cell order) in one transaction, then drops the pending import. Unknown codes are stored and
   their warnings are kept per lesson (`getLessonWarnings`).
+- With `eldCsv`, the ELD file is parsed up front (an `EldParseError` rejects and stores nothing),
+  kept on the pending import and summarized in `preview.eld`. `confirmImport` then stores the
+  matched fields per lesson and the unmatched-row warnings on the unit, as `attachEldFile` does.
+- The route's 400 `reason` tells the UI which field an error belongs to: `sheet_not_shared`
+  (`SheetAccessError`), `sheet_link` (`SheetLinkError`), `eld_file` (`EldParseError`) or `input`.
 - `cancelImport` drops the pending import; confirming it afterwards rejects with
   `ImportNotFoundError`.
 
@@ -145,7 +158,7 @@ type PreviewItem = {
   n in the same arc, unless that lesson is already matched (D-028). A row without a match yields
   a warning naming its filename.
 - `matchEldRows(rows, items)` returns `matches: { position, fields }[]` (the outline item's
-  `position`) and `warnings`. `fields` keeps only non-empty content fields:
+  `position`), `warnings` and `unmatched` (the rows behind the warnings). `fields` keeps only non-empty content fields:
   `eldStandards, languageObjective, contentObjective, ideasLaunch, ideasLiteracyLab,
 ideasLearningInAction, ideasLookBack, routines`.
 - `attachEldFile` stores those fields per lesson and returns `{ matched, warnings }`;

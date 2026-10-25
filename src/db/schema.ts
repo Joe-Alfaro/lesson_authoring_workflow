@@ -14,7 +14,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
-import type { EldFields } from '../import/parse_eld'
+import type { EldFields, EldRow } from '../import/parse_eld'
 import type { ImportWarning, ParsedOutline } from '../import/parse_outline'
 
 const bytea = customType<{ data: Uint8Array; driverData: Buffer }>({
@@ -181,6 +181,8 @@ export interface PendingImportPayload {
     codes: Record<'focus' | 'supporting' | 'media' | 'eld', string[]>
     warnings: ImportWarning[]
   }[]
+  /** An ELD file attached at import time (R5); matched to lessons on confirm. */
+  eld?: { rows: EldRow[] }
 }
 
 export const lessonVersions = pgTable(

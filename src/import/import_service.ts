@@ -10,6 +10,7 @@ import {
   type PendingImportPayload,
 } from '../db/schema'
 import { isUuid } from './is_uuid'
+import { matchEldRows, parseEldFile, type EldRow } from './parse_eld'
 import { normalizeStandards, type StandardKind } from './normalize_standards'
 import {
   parseOutline,
@@ -37,8 +38,23 @@ export interface PreviewItem {
   lessonType: string
   /** First line of the description. */
   title: string
+  /** The first page range in the description ("pp. 1–8"), or null. */
+  pages: string | null
   description: string
   focusStandards: string[]
+  /** The focus standards cell as written, so the UI can show what was normalized (R3). */
+  focusStandardsText: string
+  warnings: ImportWarning[]
+}
+
+/** R5: what an ELD file attached to the import adds, shown on the preview. */
+export interface EldPreview {
+  rows: number
+  /** Rows with at least one non-empty content field. */
+  rowsWithContent: number
+  matched: number
+  /** Filenames of the rows that matched no lesson, in file order. */
+  unmatchedRows: string[]
   warnings: ImportWarning[]
 }
 
@@ -49,6 +65,7 @@ export interface ImportPreview {
   lessons: PreviewItem[]
   flexDays: PreviewItem[]
   warnings: ImportWarning[]
+  eld: EldPreview | null
 }
 
 // Pending imports nobody confirmed or cancelled are dropped after this long.
@@ -96,6 +113,19 @@ async function loadKnownCodes(db: Database): Promise<Set<string>> {
   return new Set(rows.map((row) => row.code))
 }
 
+const PAGE_RANGE = /\bpp?\.\s*\d+(?:\s*[–-]\s*\d+)?/
+
+function toEldPreview(rows: EldRow[], items: ParsedItem[]): EldPreview {
+  const { matches, warnings, unmatched } = matchEldRows(rows, items)
+  return {
+    rows: rows.length,
+    rowsWithContent: rows.filter((row) => Object.keys(row.fields).length > 0).length,
+    matched: matches.length,
+    unmatchedRows: unmatched.map((row) => row.filename || '(no filename)'),
+    warnings,
+  }
+}
+
 function toPreview(importId: string, payload: PendingImportPayload): ImportPreview {
   const { outline } = payload
   const previewItems = outline.items.map((item, index) => {
@@ -108,8 +138,10 @@ function toPreview(importId: string, payload: PendingImportPayload): ImportPrevi
         arcName: item.arcName,
         lessonType: item.lessonType,
         title: item.description.split('\n')[0]!.trim(),
+        pages: item.description.match(PAGE_RANGE)?.[0] ?? null,
         description: item.description,
         focusStandards: normalized.codes.focus,
+        focusStandardsText: item.focusStandards,
         warnings: normalized.warnings,
       },
     }
@@ -121,6 +153,7 @@ function toPreview(importId: string, payload: PendingImportPayload): ImportPrevi
     lessons: previewItems.filter((entry) => !entry.isFlex).map((entry) => entry.preview),
     flexDays: previewItems.filter((entry) => entry.isFlex).map((entry) => entry.preview),
     warnings: [...outline.warnings, ...payload.standards.flatMap((entry) => entry.warnings)],
+    eld: payload.eld ? toEldPreview(payload.eld.rows, outline.items) : null,
   }
 }
 
@@ -133,19 +166,22 @@ async function readSource(source: ImportSource, fetchImpl?: FetchLike): Promise<
 
 /**
  * Step 1 of R4: parses and normalizes an outline and keeps it as a pending import. Creates no
- * unit; parse and sheet errors reject before anything is stored.
+ * unit; parse and sheet errors reject before anything is stored. An optional ELD file (R5) is
+ * parsed now, previewed, and attached to the unit on confirm.
  */
 export async function previewImport(
   db: Database,
   source: ImportSource,
-  options: { userId?: string; fetch?: FetchLike } = {},
+  options: { userId?: string; fetch?: FetchLike; eldCsv?: string } = {},
 ): Promise<ImportPreview> {
+  const eldRows = options.eldCsv === undefined ? undefined : parseEldFile(options.eldCsv)
   const outline = parseOutline(await readSource(source, options.fetch))
   const known = await loadKnownCodes(db)
   const isKnown = (code: string) => known.has(code)
   const payload: PendingImportPayload = {
     outline,
     standards: outline.items.map((item) => normalizeItem(item, outline.unit.grade, isKnown)),
+    ...(eldRows ? { eld: { rows: eldRows } } : {}),
   }
 
   await db
@@ -180,11 +216,21 @@ export async function confirmImport(
     if (!pending) {
       throw new ImportNotFoundError(importId)
     }
-    const { outline, standards: normalized } = pending.payload
+    const { outline, standards: normalized, eld } = pending.payload
+    const eldMatch = eld ? matchEldRows(eld.rows, outline.items) : null
+    const eldByPosition = new Map(
+      (eldMatch?.matches ?? [])
+        .filter((match) => Object.keys(match.fields).length > 0)
+        .map((match) => [match.position, match.fields]),
+    )
 
     const [unit] = await tx
       .insert(units)
-      .values({ ...outline.unit, createdBy: options.userId ?? pending.createdBy })
+      .values({
+        ...outline.unit,
+        eldWarnings: eldMatch?.warnings ?? [],
+        createdBy: options.userId ?? pending.createdBy,
+      })
       .returning({ id: units.id })
     const unitId = unit!.id
 
@@ -202,6 +248,7 @@ export async function confirmImport(
           unitId,
           arcId: arcIdByName.get(arcName) ?? null,
           importWarnings: normalized[index]!.warnings,
+          eldInput: eldByPosition.get(item.position) ?? null,
         })),
       )
       .returning({ id: lessons.id, position: lessons.position })
