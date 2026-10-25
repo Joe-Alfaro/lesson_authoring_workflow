@@ -1,10 +1,10 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Fragment } from 'react'
 import { getDb } from '../../../../db/client'
 import { WarningIcon } from '../../../../ui/icons'
 import { bannerAuthor } from '../../../../units/banner'
 import { getUnitOverview, type UnitLessonRow } from '../../../../units/queries'
+import { Breadcrumbs } from '../../../../ui/breadcrumbs'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,9 +39,9 @@ export default async function UnitPage({ params }: { params: Promise<{ id: strin
 
   return (
     <main className="page unit-page">
-      <div className="crumbs">
-        <Link href="/units">Units</Link> / Unit {unit.unitNumber}
-      </div>
+      <Breadcrumbs
+        trail={[{ label: 'Units', href: '/units' }, { label: `Unit ${unit.unitNumber}` }]}
+      />
       <h1 className="h1">
         Unit {unit.unitNumber}: {unit.anchorTextTitle}
       </h1>

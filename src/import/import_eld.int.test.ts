@@ -1,7 +1,7 @@
 // R4, R5: an ELD file sent with the import is previewed, then attached when the unit is created.
 // Contract: src/import/README.md.
 import { eq } from 'drizzle-orm'
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { connectTestDb } from '../../tests/db'
 import {
   STANDARDS_DIR,
@@ -13,7 +13,7 @@ import { runMigrations } from '../db/migrate'
 import { lessons, pendingImports, standards, units } from '../db/schema'
 import { loadStandards } from '../db/seed/standards'
 import { attachEldFile, getUnitEldWarnings } from './eld_service'
-import { confirmImport, previewImport } from './import_service'
+import { EldSheetError, confirmImport, previewImport } from './import_service'
 import { EldParseError } from './parse_eld'
 
 describe('an ELD file sent with the import (R5)', () => {
@@ -84,5 +84,67 @@ describe('an ELD file sent with the import (R5)', () => {
       previewImport(db, { kind: 'csv', csv: sampleOutlineCsv() }, { eldCsv: 'Name,Age\nBob,3\n' }),
     ).rejects.toThrow(EldParseError)
     expect(await db.select().from(pendingImports)).toHaveLength(0)
+  })
+
+  describe('from a sheet link (R1, R5)', () => {
+    const ELD_URL = 'https://docs.google.com/spreadsheets/d/1Eld-sheet_123456789xyz/edit#gid=42'
+    const ELD_EXPORT =
+      'https://docs.google.com/spreadsheets/d/1Eld-sheet_123456789xyz/export?format=csv&gid=42'
+
+    function fetchReturning(response: () => Response) {
+      return vi.fn(async () => response()) as unknown as typeof fetch
+    }
+
+    it('fetches the ELD tab from its link and previews it like an uploaded file', async () => {
+      const fetchStub = fetchReturning(
+        () => new Response(sampleEldCsv(), { headers: { 'content-type': 'text/csv' } }),
+      )
+      const fromLink = await previewImport(
+        db,
+        { kind: 'csv', csv: sampleOutlineCsv() },
+        { eldUrl: ELD_URL, fetch: fetchStub },
+      )
+      const fromFile = await previewImport(
+        db,
+        { kind: 'csv', csv: sampleOutlineCsv() },
+        { eldCsv: sampleEldCsv() },
+      )
+
+      expect(fetchStub).toHaveBeenCalledTimes(1)
+      expect(String(vi.mocked(fetchStub).mock.calls[0]?.[0])).toBe(ELD_EXPORT)
+      expect(fromLink.eld).toEqual(fromFile.eld)
+    })
+
+    it('rejects an ELD link that is not shared, says so, and stores nothing', async () => {
+      const signInPage = fetchReturning(
+        () =>
+          new Response('<!DOCTYPE html><html><title>Sign in</title></html>', {
+            headers: { 'content-type': 'text/html' },
+          }),
+      )
+      const error = await previewImport(
+        db,
+        { kind: 'csv', csv: sampleOutlineCsv() },
+        { eldUrl: ELD_URL, fetch: signInPage },
+      ).catch((caught: unknown) => caught)
+
+      expect(error).toBeInstanceOf(EldSheetError)
+      expect((error as EldSheetError).notShared).toBe(true)
+      expect((error as Error).message).toMatch(/must be shared.*anyone with the link/i)
+      expect(await db.select().from(pendingImports)).toHaveLength(0)
+    })
+
+    it('rejects an ELD link that is not a Google Sheets link', async () => {
+      const fetchStub = fetchReturning(() => new Response(''))
+      const error = await previewImport(
+        db,
+        { kind: 'csv', csv: sampleOutlineCsv() },
+        { eldUrl: 'https://example.com/eld.csv', fetch: fetchStub },
+      ).catch((caught: unknown) => caught)
+
+      expect(error).toBeInstanceOf(EldSheetError)
+      expect((error as EldSheetError).notShared).toBe(false)
+      expect(fetchStub).not.toHaveBeenCalled()
+    })
   })
 })

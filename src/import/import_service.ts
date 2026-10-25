@@ -18,7 +18,7 @@ import {
   type ParsedItem,
   type ParsedOutline,
 } from './parse_outline'
-import { fetchSheetCsv, type FetchLike } from './sheet_link'
+import { SheetAccessError, SheetLinkError, fetchSheetCsv, type FetchLike } from './sheet_link'
 
 export type { ImportWarning }
 
@@ -26,6 +26,17 @@ export class ImportNotFoundError extends Error {
   constructor(importId: string) {
     super(`Import ${importId} does not exist, or it was already confirmed or cancelled.`)
     this.name = 'ImportNotFoundError'
+  }
+}
+
+/** The ELD sheet link couldn't be read; `notShared` tells a private sheet from a bad link. */
+export class EldSheetError extends Error {
+  readonly notShared: boolean
+
+  constructor(cause: SheetAccessError | SheetLinkError) {
+    super(cause.message, { cause })
+    this.name = 'EldSheetError'
+    this.notShared = cause instanceof SheetAccessError
   }
 }
 
@@ -164,18 +175,40 @@ async function readSource(source: ImportSource, fetchImpl?: FetchLike): Promise<
   return fetchSheetCsv(source.url, fetchImpl)
 }
 
+/** Reads the optional ELD file (R5) from its CSV text or its sheet link. */
+async function readEldRows(options: {
+  eldCsv?: string
+  eldUrl?: string
+  fetch?: FetchLike
+}): Promise<EldRow[] | undefined> {
+  if (options.eldCsv !== undefined) {
+    return parseEldFile(options.eldCsv)
+  }
+  if (options.eldUrl === undefined) {
+    return undefined
+  }
+  const csv = await fetchSheetCsv(options.eldUrl, options.fetch).catch((error: unknown) => {
+    if (error instanceof SheetAccessError || error instanceof SheetLinkError) {
+      throw new EldSheetError(error)
+    }
+    throw error
+  })
+  return parseEldFile(csv)
+}
+
 /**
  * Step 1 of R4: parses and normalizes an outline and keeps it as a pending import. Creates no
- * unit; parse and sheet errors reject before anything is stored. An optional ELD file (R5) is
- * parsed now, previewed, and attached to the unit on confirm.
+ * unit; parse and sheet errors reject before anything is stored. An optional ELD file (R5), as
+ * CSV text or a sheet link, is parsed now, previewed, and attached to the unit on confirm.
  */
 export async function previewImport(
   db: Database,
   source: ImportSource,
-  options: { userId?: string; fetch?: FetchLike; eldCsv?: string } = {},
+  options: { userId?: string; fetch?: FetchLike; eldCsv?: string; eldUrl?: string } = {},
 ): Promise<ImportPreview> {
-  const eldRows = options.eldCsv === undefined ? undefined : parseEldFile(options.eldCsv)
+  // The outline first: when both fail, its error is the one to fix first.
   const outline = parseOutline(await readSource(source, options.fetch))
+  const eldRows = await readEldRows(options)
   const known = await loadKnownCodes(db)
   const isKnown = (code: string) => known.has(code)
   const payload: PendingImportPayload = {

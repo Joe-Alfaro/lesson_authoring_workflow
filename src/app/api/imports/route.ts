@@ -14,6 +14,7 @@ export const dynamic = 'force-dynamic'
 interface PreviewRequest {
   source: ImportSource
   eldCsv?: string
+  eldUrl?: string
 }
 
 function sheetSource(url: unknown): ImportSource {
@@ -25,7 +26,7 @@ function sheetSource(url: unknown): ImportSource {
 
 /**
  * JSON `{ url }`, or multipart with the outline as `file` or a `url` field, plus an optional
- * ELD scope-and-sequence file as `eld` (R5).
+ * ELD scope-and-sequence file as `eld` or a link to its tab as `eldUrl` (R5).
  */
 async function readPreviewRequest(request: Request): Promise<PreviewRequest> {
   if (!isMultipart(request)) {
@@ -35,9 +36,11 @@ async function readPreviewRequest(request: Request): Promise<PreviewRequest> {
   const form = await readForm(request)
   const csv = await readFormFile(form, 'file')
   const eldCsv = await readFormFile(form, 'eld')
+  const eldUrl = form.get('eldUrl')
   return {
     source: csv === null ? sheetSource(form.get('url')) : { kind: 'csv', csv },
     ...(eldCsv === null ? {} : { eldCsv }),
+    ...(typeof eldUrl === 'string' && eldUrl.trim() !== '' ? { eldUrl: eldUrl.trim() } : {}),
   }
 }
 
@@ -45,8 +48,8 @@ async function readPreviewRequest(request: Request): Promise<PreviewRequest> {
 export async function POST(request: Request): Promise<Response> {
   const user = await requireRole(['author'])
   try {
-    const { source, eldCsv } = await readPreviewRequest(request)
-    const preview = await previewImport(getDb(), source, { userId: user.id, eldCsv })
+    const { source, eldCsv, eldUrl } = await readPreviewRequest(request)
+    const preview = await previewImport(getDb(), source, { userId: user.id, eldCsv, eldUrl })
     return Response.json(preview)
   } catch (error) {
     return badRequest(error)
