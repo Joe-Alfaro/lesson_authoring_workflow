@@ -1,10 +1,10 @@
 'use client'
 
-import Link from 'next/link'
 import { Fragment, useEffect, useRef } from 'react'
 import type { EldPreview, ImportPreview, PreviewItem } from '../../import/import_service'
 import { bannerAuthor } from '../../units/banner'
 import { ErrorIcon, WarningIcon } from '../icons'
+import { Breadcrumbs } from '../breadcrumbs'
 
 function plural(count: number, one: string, many: string): string {
   return count === 1 ? one : many
@@ -144,9 +144,13 @@ export function ImportPreviewView({
   const title = useRef<HTMLHeadingElement>(null)
   const { unit } = preview
   const author = bannerAuthor(unit.banner)
-  const standardsWarnings = new Set(
+  const unknownCodeCount = new Set(
     preview.warnings.flatMap((warning) => (warning.code ? [warning.code] : [])),
   ).size
+  // A code can be unknown in several lessons; every one of them is flagged in the table (R3).
+  const flaggedLessons = [...preview.lessons, ...preview.flexDays].filter(
+    (item) => unknownCodes(item).length > 0,
+  ).length
   const outlineWarnings = preview.warnings.filter((warning) => !warning.code)
   const lessonCount = preview.lessons.length
 
@@ -158,9 +162,7 @@ export function ImportPreviewView({
   return (
     <>
       <main className="page preview" style={{ paddingBottom: 24 }}>
-        <div className="crumbs">
-          <Link href="/units">Units</Link> / Import
-        </div>
+        <Breadcrumbs trail={[{ label: 'Units', href: '/units' }, { label: 'Import' }]} />
         <h1 className="h1" ref={title} tabIndex={-1}>
           Check the outline before creating the unit
         </h1>
@@ -183,8 +185,13 @@ export function ImportPreviewView({
             <span>{plural(preview.flexDays.length, 'flex day', 'flex days')}, not generated</span>
           </div>
           <div>
-            <b className={standardsWarnings > 0 ? 'warned' : undefined}>{standardsWarnings}</b>
-            <span>{plural(standardsWarnings, 'standards warning', 'standards warnings')}</span>
+            <b className={unknownCodeCount > 0 ? 'warned' : undefined}>{unknownCodeCount}</b>
+            <span>
+              {plural(unknownCodeCount, 'unknown standard code', 'unknown standard codes')}
+              {flaggedLessons > 0
+                ? ` in ${flaggedLessons} ${plural(flaggedLessons, 'lesson', 'lessons')}`
+                : ''}
+            </span>
           </div>
         </div>
         {outlineWarnings.length > 0 ? (
