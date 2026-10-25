@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@hocuspocus/extension-database": "^4.7.1",
+    "@hocuspocus/provider": "^4.7.1",
     "@hocuspocus/server": "^4.7.1",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.4",

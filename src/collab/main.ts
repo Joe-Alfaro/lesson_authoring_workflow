@@ -1,9 +1,13 @@
-import { getDatabaseUrl, getPort } from '../config/env'
+import { getAuthSecret, getDatabaseUrl, getPort } from '../config/env'
 import { loadLocalEnv } from '../config/load_env'
 import { startCollabServer } from './server'
 
 loadLocalEnv()
-const collab = await startCollabServer({ databaseUrl: getDatabaseUrl(), port: getPort(4200) })
+const collab = await startCollabServer({
+  databaseUrl: getDatabaseUrl(),
+  port: getPort(4200),
+  authSecret: getAuthSecret(),
+})
 console.log(`[collab] running, health at ${collab.url}/health`)
 
 function shutdown() {

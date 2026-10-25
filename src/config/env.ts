@@ -45,3 +45,12 @@ export function getSeedPassword(): string {
   }
   return LOCAL_SEED_PASSWORD
 }
+
+/** AUTH_SECRET signs Auth.js sessions and the collab tokens, so web and collab must share it. */
+export function getAuthSecret(): string {
+  const secret = readEnv('AUTH_SECRET')
+  if (!secret) {
+    throw new Error('AUTH_SECRET is required (see .env.example)')
+  }
+  return secret
+}

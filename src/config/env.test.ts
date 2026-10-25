@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getDatabaseUrl, getPort, getSeedPassword, LOCAL_SEED_PASSWORD } from './env'
+import { getAuthSecret, getDatabaseUrl, getPort, getSeedPassword, LOCAL_SEED_PASSWORD } from './env'
 
 describe('env helpers', () => {
   afterEach(() => {
@@ -39,5 +39,12 @@ describe('env helpers', () => {
     expect(getPort(4100)).toBe(8080)
     vi.stubEnv('PORT', 'abc')
     expect(() => getPort(4100)).toThrow(/PORT/)
+  })
+
+  it('requires AUTH_SECRET', () => {
+    vi.stubEnv('AUTH_SECRET', '')
+    expect(() => getAuthSecret()).toThrow(/AUTH_SECRET/)
+    vi.stubEnv('AUTH_SECRET', 'abc')
+    expect(getAuthSecret()).toBe('abc')
   })
 })
