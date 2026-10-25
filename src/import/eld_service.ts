@@ -13,8 +13,8 @@ export class UnitNotFoundError extends Error {
 }
 
 /**
- * R5: attaches an ELD scope-and-sequence file to a unit. Replaces any earlier ELD input; only
- * matched rows with at least one non-empty field are stored.
+ * R5: attaches an ELD scope-and-sequence file to a unit. Replaces any earlier ELD input and
+ * unmatched-row warnings; only matched rows with at least one non-empty field are stored.
  */
 export async function attachEldFile(
   db: Database,
@@ -34,6 +34,7 @@ export async function attachEldFile(
         id: lessons.id,
         position: lessons.position,
         lessonType: lessons.lessonType,
+        lessonNumber: lessons.lessonNumber,
         arcName: arcs.name,
       })
       .from(lessons)
@@ -54,8 +55,21 @@ export async function attachEldFile(
             .where(eq(lessons.id, idByPosition.get(match.position)!)),
         ),
     )
+    await tx.update(units).set({ eldWarnings: warnings }).where(eq(units.id, unitId))
     return { matched: matches.length, warnings }
   })
+}
+
+/** The unmatched-row warnings of the unit's last ELD file; `[]` when none or the unit is unknown. */
+export async function getUnitEldWarnings(db: Database, unitId: string): Promise<ImportWarning[]> {
+  if (!isUuid(unitId)) {
+    return []
+  }
+  const [row] = await db
+    .select({ eldWarnings: units.eldWarnings })
+    .from(units)
+    .where(eq(units.id, unitId))
+  return row?.eldWarnings ?? []
 }
 
 /** The stored ELD fields of a lesson, or null when it has none. Generation (M2) reads this. */

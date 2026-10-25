@@ -76,6 +76,7 @@ upserted by code.
 | `npm run db:seed`                               | Seeds demo accounts and standards                            |
 | `npm run check`                                 | Format check, lint, type check, unit and integration tests   |
 | `npm run test:unit` / `test:integration`        | One test project                                             |
+| `npm run test:e2e`                              | Playwright end-to-end tests (see `tests/e2e/README.md`)      |
 
 Integration tests (`*.int.test.ts`) start a throwaway Postgres 16 container with Testcontainers,
 so Docker must be running. To use an existing empty database instead, set `TEST_DATABASE_URL`.

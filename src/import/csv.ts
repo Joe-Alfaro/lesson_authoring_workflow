@@ -50,7 +50,10 @@ export function parseCsv(text: string): string[][] {
   return rows
 }
 
-/** `String.prototype.trim` also strips U+00A0, which the sample outline uses as filler. */
+/**
+ * Trims a cell and turns every U+00A0 (the sample outline uses it as filler, also mid-cell) into a
+ * normal space (D-028).
+ */
 export function cleanCell(value: string | undefined): string {
-  return (value ?? '').trim()
+  return (value ?? '').replace(/\u00a0/g, ' ').trim()
 }

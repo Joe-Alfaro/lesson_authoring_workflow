@@ -25,6 +25,7 @@
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
+    "test:e2e": "playwright test",
     "scrub": "tsx scripts/scrub_check.ts",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run scrub"
   },
@@ -46,6 +47,8 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.64.1",
     "@testcontainers/postgresql": "^12.2.1",
     "@types/node": "^24.19.2",
     "@types/pg": "^8.23.1",

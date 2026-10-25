@@ -33,7 +33,7 @@ export interface EldMatch {
   fields: EldFields
 }
 
-type EldItem = Pick<ParsedItem, 'position' | 'arcName' | 'lessonType'>
+type EldItem = Pick<ParsedItem, 'position' | 'arcName' | 'lessonType' | 'lessonNumber'>
 
 const CONTENT_COLUMNS: { field: keyof EldFields; header: string }[] = [
   { field: 'eldStandards', header: 'eld standards' },
@@ -87,14 +87,18 @@ function groupKey(arc: string, lessonType: string): string {
   return `${arc.trim().toLowerCase()}\u0000${lessonType.trim().toLowerCase()}`
 }
 
+const FILENAME_NUMBER = /^L(\d+)_/i
+
 /**
  * Matches ELD rows to outline items (lessons and flex days): the n-th row of an arc and lesson
- * type goes to the n-th item of that arc and type, in outline order. Unmatched rows are warnings.
+ * type goes to the n-th item of that arc and type, in outline order. A row that finds no item
+ * that way falls back to the lesson numbered n in the same arc when its Filename starts with
+ * `L<n>_`, unless that lesson is already matched (D-028). Unmatched rows are warnings.
  */
 export function matchEldRows(
   rows: EldRow[],
   items: EldItem[],
-): { matches: EldMatch[]; warnings: ImportWarning[] } {
+): { matches: EldMatch[]; warnings: ImportWarning[]; unmatched: EldRow[] } {
   const itemsByGroup = new Map<string, EldItem[]>()
   ;[...items]
     .sort((a, b) => a.position - b.position)
@@ -104,13 +108,48 @@ export function matchEldRows(
     })
 
   const used = new Map<string, number>()
-  const matches: EldMatch[] = []
-  const warnings: ImportWarning[] = []
-  rows.forEach((row) => {
+  const byOrder = rows.map((row) => {
     const key = groupKey(row.arc, row.lessonType)
     const count = used.get(key) ?? 0
     const item = itemsByGroup.get(key)?.[count]
+    if (item) {
+      used.set(key, count + 1)
+    }
+    return item
+  })
+
+  // The number fallback runs after every order match, so it never takes an item a later row
+  // would have matched by arc and type.
+  const taken = new Set(byOrder.flatMap((item) => (item ? [item.position] : [])))
+  const matched = rows.map((row, index) => {
+    const ordered = byOrder[index]
+    if (ordered) {
+      return ordered
+    }
+    const number = row.filename.match(FILENAME_NUMBER)?.[1]
+    if (!number) {
+      return undefined
+    }
+    const arc = row.arc.trim().toLowerCase()
+    const item = items.find(
+      (candidate) =>
+        candidate.lessonNumber === Number(number) &&
+        candidate.arcName.trim().toLowerCase() === arc &&
+        !taken.has(candidate.position),
+    )
+    if (item) {
+      taken.add(item.position)
+    }
+    return item
+  })
+
+  const matches: EldMatch[] = []
+  const warnings: ImportWarning[] = []
+  const unmatched: EldRow[] = []
+  rows.forEach((row, index) => {
+    const item = matched[index]
     if (!item) {
+      unmatched.push(row)
       const name = row.filename || '(no filename)'
       warnings.push({
         message:
@@ -119,8 +158,7 @@ export function matchEldRows(
       })
       return
     }
-    used.set(key, count + 1)
     matches.push({ position: item.position, fields: row.fields })
   })
-  return { matches, warnings }
+  return { matches, warnings, unmatched }
 }
