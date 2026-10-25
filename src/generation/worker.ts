@@ -3,7 +3,7 @@
 import { and, eq, inArray, notInArray, sql } from 'drizzle-orm'
 import type { PgBoss } from 'pg-boss'
 import type { Database } from '../db/client'
-import { generationJobs, generationRuns, lessons, lessonVersions } from '../db/schema'
+import { generationJobs, generationRuns, lessons } from '../db/schema'
 import {
   lessonBodyJsonSchema,
   lessonDurationMinutes,
@@ -19,12 +19,25 @@ import {
   notifyLessonProgressAll,
   type LessonGenerationStatus,
 } from './progress'
-import { buildLessonPrompt, type LessonPromptInput } from './prompt_builder'
+import { textsFromOutline } from './front_matter_texts'
+import { normalizeLessonContent } from './post_process'
+import {
+  buildLessonPrompt,
+  pulseCheckCorrectOption,
+  withoutFocusDuplicates,
+  type LessonPromptInput,
+} from './prompt_builder'
 import { loadLessonPromptInput, type GetEldInput } from './prompt_input'
-import { ensureGenerationQueue, GENERATE_LESSON_QUEUE, type GenerateLessonJobData } from './queue'
+import {
+  ensureGenerationQueue,
+  failLostGenerationJobs,
+  GENERATE_LESSON_QUEUE,
+  type GenerateLessonJobData,
+} from './queue'
 import { getTotalSpendUsd } from './service'
-import { getGlobalSpendCapUsd } from './settings'
+import { getGenerationHeartbeatSeconds, getGlobalSpendCapUsd } from './settings'
 import { InvalidTransitionError } from '../workflow/errors'
+import { insertVersion, snapshotIfChanged } from '../workflow/lesson_rows'
 import { applySystemTransition, type SystemStatus } from '../workflow/service'
 
 export interface GenerationWorkerOptions {
@@ -42,6 +55,8 @@ export interface GenerationWorkerOptions {
   globalCapUsd?: number
   /** Output token ceiling per call. */
   maxTokens?: number
+  /** Queue heartbeat window; defaults to GENERATION_HEARTBEAT_SECONDS. */
+  heartbeatSeconds?: number
 }
 
 export interface GenerationWorker {
@@ -225,9 +240,9 @@ async function recordUsage(
 
 /** Front matter comes from the outline row, not the model. */
 export function frontMatterFromOutline(input: LessonPromptInput, title: string): LessonFrontMatter {
+  const standards = withoutFocusDuplicates(input.standards)
   const codes = (kind: LessonPromptInput['standards'][number]['kind']) =>
-    input.standards.filter((standard) => standard.kind === kind).map((standard) => standard.code)
-  const textSet = input.lesson.textSet.trim()
+    standards.filter((standard) => standard.kind === kind).map((standard) => standard.code)
   return {
     unitTitle: `Unit ${input.unit.unitNumber}: ${input.unit.anchorTextTitle}`,
     number: input.lesson.isFlex ? null : input.lesson.lessonNumber,
@@ -238,10 +253,12 @@ export function frontMatterFromOutline(input: LessonPromptInput, title: string):
     focusStandards: codes('focus'),
     supportingStandards: [...codes('supporting'), ...codes('media')],
     eldStandards: codes('eld').map((code) => ({ code, levels: ['Em', 'Ex', 'Br'] })),
-    texts: [
-      { title: input.unit.anchorTextTitle, kind: 'novel' },
-      ...(textSet ? [{ title: textSet, kind: 'other' as const }] : []),
-    ],
+    texts: textsFromOutline({
+      anchorTextTitle: input.unit.anchorTextTitle,
+      author: input.unit.author ?? null,
+      description: input.lesson.description,
+      textSet: input.lesson.textSet,
+    }),
   }
 }
 
@@ -273,30 +290,26 @@ async function saveLesson(
 ): Promise<void> {
   await db.transaction(async (tx) => {
     const [current] = await tx
-      .select({ content: lessons.content, lastEditedBy: lessons.lastEditedBy })
+      .select({
+        status: lessons.status,
+        content: lessons.content,
+        lastEditedBy: lessons.lastEditedBy,
+      })
       .from(lessons)
       .where(eq(lessons.id, job.lessonId))
       .for('update')
     const now = new Date()
-    // Overwriting human edits (confirmed in regenerateLessons): keep the edited version first.
-    if (current?.content != null && current.lastEditedBy) {
-      await tx.insert(lessonVersions).values({
-        lessonId: job.lessonId,
-        content: current.content,
-        authorId: current.lastEditedBy,
-        createdAt: now,
-      })
+    // Overwriting human edits (confirmed in regenerateLessons): keep the edited content as a
+    // version first, unless the editor's save (R14) already made it the latest one.
+    if (current?.lastEditedBy) {
+      await snapshotIfChanged(tx, { id: job.lessonId, ...current }, current.lastEditedBy)
     }
     await tx
       .update(lessons)
       .set({ content, lastEditedBy: null, updatedAt: now })
       .where(eq(lessons.id, job.lessonId))
-    await tx.insert(lessonVersions).values({
-      lessonId: job.lessonId,
-      content,
-      authorId: null,
-      createdAt: new Date(now.getTime() + 1),
-    })
+    // Same clock as the editor's versions, so "latest version" orders correctly.
+    await insertVersion(tx, { lessonId: job.lessonId, content, authorId: null })
     await tx
       .update(generationJobs)
       .set({ status: 'generated', error: null, updatedAt: now })
@@ -366,7 +379,11 @@ async function generateLesson(ctx: GenerationContext, job: JobRow, run: RunRow):
       }
       const result = validateLesson(content, expectations)
       if (result.ok) {
-        return { ok: true, content: result.lesson }
+        // Prompt tuning the code enforces (D-039): answer position, part labels, vocabulary.
+        const normalized = normalizeLessonContent(result.lesson, {
+          pulseCheckCorrectOption: pulseCheckCorrectOption(input.lesson.lessonNumber),
+        })
+        return { ok: true, content: normalized }
       }
       return {
         ok: false,
@@ -457,11 +474,35 @@ async function processJob(ctx: GenerationContext, jobId: string): Promise<void> 
   await finishRunIfDone(db, run.id)
 }
 
+/** Repeatedly fails lost-heartbeat jobs (`failLostGenerationJobs`); returns the stop function. */
+function startLostJobSweep(
+  db: Database,
+  boss: PgBoss,
+  heartbeatSeconds: number,
+): () => Promise<void> {
+  let running: Promise<unknown> = Promise.resolve()
+  const timer = setInterval(
+    () => {
+      running = running
+        .then(() => failLostGenerationJobs(db, boss))
+        .catch((error: unknown) =>
+          console.error('[generation] lost-heartbeat sweep failed', (error as Error).message),
+        )
+    },
+    Math.max(5, heartbeatSeconds / 2) * 1000,
+  )
+  return async () => {
+    clearInterval(timer)
+    await running
+  }
+}
+
 export async function registerGenerationWorker(
   options: GenerationWorkerOptions,
 ): Promise<GenerationWorker> {
   const ctx = new GenerationContext(options)
-  await ensureGenerationQueue(options.boss)
+  const heartbeatSeconds = options.heartbeatSeconds ?? getGenerationHeartbeatSeconds()
+  await ensureGenerationQueue(options.boss, { heartbeatSeconds })
   const workId = await options.boss.work<GenerateLessonJobData>(
     GENERATE_LESSON_QUEUE,
     {
@@ -473,8 +514,10 @@ export async function registerGenerationWorker(
       await Promise.all(jobs.map((job) => processJob(ctx, job.data.jobId)))
     },
   )
+  const stopSweep = startLostJobSweep(options.db, options.boss, heartbeatSeconds)
   return {
     async stop() {
+      await stopSweep()
       await options.boss.offWork(GENERATE_LESSON_QUEUE, { id: workId, wait: true })
     },
   }

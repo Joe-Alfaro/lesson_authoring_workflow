@@ -94,6 +94,9 @@ New or changed exports:
   fails and retries the job of a dead worker after one window.
 - A retried job finds its `generation_jobs` row still `generating` and generates it (a `generated`
   job is still never redone).
+- pg-boss only fails lost-heartbeat jobs on its monitor pass (`monitorIntervalSeconds`, default
+  60 s), so the worker also sweeps every max(5, heartbeat / 2) s (`failLostGenerationJobs` in
+  `queue.ts`) and fails the queue job of a `generating` row whose heartbeat is past its window (D-040).
 
 ### Flex days without focus standards (R6, R7)
 
