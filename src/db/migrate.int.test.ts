@@ -9,6 +9,7 @@ const EXPECTED_TABLES = [
   'lesson_standards',
   'lesson_versions',
   'lessons',
+  'pending_imports',
   'prompt_versions',
   'standards',
   'units',

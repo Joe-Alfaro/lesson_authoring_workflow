@@ -14,6 +14,8 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
+import type { EldFields } from '../import/parse_eld'
+import type { ImportWarning, ParsedOutline } from '../import/parse_outline'
 
 const bytea = customType<{ data: Uint8Array; driverData: Buffer }>({
   dataType() {
@@ -140,6 +142,10 @@ export const lessons = pgTable(
     eldStandards: text('eld_standards').notNull().default(''),
     rawRow: jsonb('raw_row').$type<Record<string, string>>().notNull(),
     isFlex: boolean('is_flex').notNull().default(false),
+    // R3: warnings from the import (unknown standard codes), shown on the lesson.
+    importWarnings: jsonb('import_warnings').$type<ImportWarning[]>().notNull().default([]),
+    // R5: non-empty fields of the matched ELD scope-and-sequence row; null when none.
+    eldInput: jsonb('eld_input').$type<EldFields>(),
     // A lesson that has not been generated yet is a Draft with null content.
     status: lessonStatus('status').notNull().default('draft'),
     assigneeId: uuid('assignee_id').references(() => users.id, { onDelete: 'set null' }),
@@ -156,6 +162,24 @@ export const lessons = pgTable(
     index('lessons_assignee_idx').on(table.assigneeId),
   ],
 )
+
+// R4: a parsed outline waiting for the author to confirm or cancel it; confirming or cancelling
+// deletes the row, so a pending import never becomes a unit on its own.
+export const pendingImports = pgTable('pending_imports', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'cascade' }),
+  payload: jsonb('payload').$type<PendingImportPayload>().notNull(),
+  createdAt: createdAt(),
+})
+
+export interface PendingImportPayload {
+  outline: ParsedOutline
+  /** Per outline item, in `outline.items` order. */
+  standards: {
+    codes: Record<'focus' | 'supporting' | 'media' | 'eld', string[]>
+    warnings: ImportWarning[]
+  }[]
+}
 
 export const lessonVersions = pgTable(
   'lesson_versions',
