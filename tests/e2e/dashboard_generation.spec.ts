@@ -463,6 +463,11 @@ test.describe('Unit dashboard: regenerate (R11)', () => {
     await seedReviewState(dash, unit)
     // Lessons 12 and 15 have human edits (seeded last editors); 18 has none.
     await dash.setLesson(unit, 18, { lastEditorEmail: null })
+    // Lesson 12's edit is a real content change, so regenerating must keep it as a version first.
+    await dash.pool.query(
+      `UPDATE lessons SET content = jsonb_set(content, '{body,title}', '"Edited title for lesson 12"') WHERE id = $1`,
+      [unit.lessonIds.get(12)],
+    )
     const assignee12 = (await dash.lessonRow(unit, 12)).assignee_id
     const versionsBefore = await dash.versionCount(unit, 12)
     await signIn(page)
