@@ -24,8 +24,8 @@ export function StatusChips({ counts, pressed, onToggle }: StatusChipsProps) {
           aria-label={`${STATUS_LOOKS[status].label}: ${counts[status]} lessons, filter`}
           onClick={() => onToggle(status)}
         >
-          <StatusPill status={status} />
-          {counts[status]}
+          {/* The space keeps the visible text ("Draft 24") inside the accessible name. */}
+          <StatusPill status={status} /> {counts[status]}
         </button>
       ))}
     </div>

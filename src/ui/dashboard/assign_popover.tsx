@@ -16,20 +16,13 @@ interface AssignPopoverProps {
   lessonCount: number
   onAssign: (reviewer: Reviewer) => void
   onClose: () => void
-  error?: string | null
 }
 
 /**
  * R25: a searchable reviewer list with each reviewer's current load (R25-bulk-assign). Picking a
  * reviewer assigns the lessons and closes it; Escape closes without assigning.
  */
-export function AssignPopover({
-  title,
-  lessonCount,
-  onAssign,
-  onClose,
-  error,
-}: AssignPopoverProps) {
+export function AssignPopover({ title, lessonCount, onAssign, onClose }: AssignPopoverProps) {
   const id = useId()
   const ref = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -148,11 +141,6 @@ export function AssignPopover({
           </li>
         ))}
       </ul>
-      {error ? (
-        <p className="errmsg" role="alert">
-          {error}
-        </p>
-      ) : null}
       <p className="caption note">
         Assigning replaces the current assignee on{' '}
         {lessonCount === 1 ? 'this lesson' : `all ${lessonCount} lessons`}.

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
 /** How often the page re-reads while a run is going, in case an event was missed. */
-const POLL_MS = 4_000
+const POLL_MS = 2_500
 /** Events come in bursts (a run start queues 41 lessons); one refresh covers a burst. */
 const DEBOUNCE_MS = 150
 
@@ -24,19 +24,9 @@ export function useLiveRefresh(unitId: string, active: boolean): void {
       timer = setTimeout(() => router.refresh(), DEBOUNCE_MS)
     }
     const source = new EventSource(`/api/units/${unitId}/generation/events`)
-    let opened = false
-    source.onopen = () => {
-      // A reconnect may have missed events; the first open is what the page was rendered from.
-      if (opened) {
-        refreshSoon()
-      }
-      opened = true
-    }
-    source.onmessage = (event: MessageEvent<string>) => {
-      if (!event.data.includes('"type":"snapshot"')) {
-        refreshSoon()
-      }
-    }
+    // Every message triggers a re-read, the first snapshot included: a change made while the
+    // page was loading and the feed was connecting is only in that snapshot.
+    source.onmessage = () => refreshSoon()
     return () => {
       clearTimeout(timer)
       source.close()

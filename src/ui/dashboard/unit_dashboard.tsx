@@ -100,7 +100,6 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [dialog, setDialog] = useState<Dialog | null>(null)
   const [assign, setAssign] = useState<AssignTarget | null>(null)
-  const [assignError, setAssignError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
   const [pageError, setPageError] = useState<string | null>(null)
@@ -114,6 +113,8 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
     (row) => !row.hasContent && row.status !== 'queued' && row.status !== 'generating',
   )
   const anyContent = rows.some((row) => row.hasContent)
+  // A run cancelled before every lesson was generated keeps the generation summary.
+  const cancelledEarly = run?.status === 'cancelled' && missing.length > 0
   const [defaultModel] = data.models
   const perLessonUsd = defaultModel?.perLessonUsd ?? 0
   const promptHref = `/units/${data.unit.id}/prompt`
@@ -134,10 +135,7 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
     setDialog(null)
     setStartError(null)
   }, [])
-  const closeAssign = useCallback(() => {
-    setAssign(null)
-    setAssignError(null)
-  }, [])
+  const closeAssign = useCallback(() => setAssign(null), [])
 
   function select(ids: string[], on: boolean) {
     setSelected((current) => {
@@ -239,15 +237,16 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
     if (!assign) {
       return
     }
+    // The list closes on the pick; the table shows the new assignee once it is saved.
+    setAssign(null)
     const result = await call('/api/lessons/assign', {
       lessonIds: assign.rows.map((row) => row.id),
       assigneeId: reviewer.id,
     })
     if (!result.ok) {
-      setAssignError(errorText(result))
+      setPageError(errorText(result))
       return
     }
-    setAssign(null)
     if (assign.anchor === 'bulk') {
       setSelected(new Set())
     }
@@ -276,7 +275,6 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
         lessonCount={target.rows.length}
         onAssign={(reviewer) => void assignTo(reviewer)}
         onClose={closeAssign}
-        error={assignError}
       />
     )
   }
@@ -413,7 +411,7 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
         </section>
       ) : null}
 
-      {!run || active || stopped ? (
+      {!run || active || stopped || cancelledEarly ? (
         <div className={`panel runp${stopped ? ' stopped' : ''}`}>
           <div className="l">
             <GenerationSummary progress={progress} />
@@ -448,7 +446,7 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
                     </>
                   ) : (
                     <>
-                      <dt>Stopped</dt>
+                      <dt>{stopped ? 'Stopped' : 'Cancelled'}</dt>
                       <dd suppressHydrationWarning>
                         {run.finishedAt ? formatClock(new Date(run.finishedAt)) : '–'}
                       </dd>
@@ -466,7 +464,7 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
                 </>
               )}
             </dl>
-            {active ? retryFailed : null}
+            {active || cancelledEarly ? retryFailed : null}
             {stopped && isAdmin ? (
               <button
                 type="button"

@@ -62,6 +62,24 @@ export function GenerationSummary({ progress }: { progress: UnitProgress }) {
     )
   }
 
+  if (run?.status === 'cancelled') {
+    const failed = counts.failed > 0 ? ` and ${counts.failed} failed` : ''
+    return (
+      <section className="gsum" aria-label="Generation progress" aria-live="polite">
+        <div className="row">
+          <span className="bigcount">
+            {counts.generated} of {counts.total} generated
+          </span>
+          <span className="pill none">Cancelled</span>
+        </div>
+        <p className="sub">
+          The run was cancelled: {counts.notGenerated} lessons were not generated{failed}. Finished
+          lessons are kept; generate the rest when you&apos;re ready.
+        </p>
+      </section>
+    )
+  }
+
   if (run?.status === 'queued' || run?.status === 'running') {
     return (
       <section className="gsum" aria-label="Generation progress" aria-live="polite">
