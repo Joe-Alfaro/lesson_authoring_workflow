@@ -4,7 +4,7 @@
 // many optional properties, then "compiled grammar is too large"), and as tool input the model
 // sometimes sends the nested `sections` array as a malformed JSON string. So the schema goes in
 // the system prompt and the model answers with the JSON object as text; validateLesson in the
-// worker is the gate and drives the repair retry (D-028).
+// worker is the gate and drives the repair retry (D-034).
 import Anthropic from '@anthropic-ai/sdk'
 import type { LlmClient, LlmRequest, LlmResponse, LlmUsage } from './llm'
 
@@ -48,7 +48,7 @@ export function createAnthropicLlmClient({
   effort = 'medium',
 }: {
   apiKey: string
-  /** Thinking effort; medium gave valid lessons on the first attempt in the smoke run (D-028). */
+  /** Thinking effort; medium gave valid lessons on the first attempt in the smoke run (D-034). */
   effort?: Effort
 }): LlmClient {
   const client = new Anthropic({ apiKey })

@@ -59,7 +59,7 @@ type PriceTable = Record<string, { inputPerMTok: number; outputPerMTok: number }
 - `estimateCostUsd(model, lessonCount, prices?)` = `lessonCount x computeCostUsd(model,
 ESTIMATED_TOKENS_PER_LESSON)`. Refine `ESTIMATED_TOKENS_PER_LESSON` after the first real run.
 - `output` is the raw structured JSON; validation happens in the worker, not the client.
-- The Anthropic adapter (D-028) puts the JSON schema in the system prompt and parses the JSON
+- The Anthropic adapter (D-034) puts the JSON schema in the system prompt and parses the JSON
   object from the text answer: structured outputs reject the lesson schema as too large, and as
   tool input the model sometimes sent `sections` as a malformed string. Thinking effort is
   `GENERATION_EFFORT` (default `medium`), output ceiling 64k tokens.
