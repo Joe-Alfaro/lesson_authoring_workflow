@@ -1,0 +1,883 @@
+[
+  {
+    "code": "RL.6.1",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RL",
+    "strand_name": "Reading Standards for Literature",
+    "text": "Cite textual evidence to support analysis of what the text says explicitly as well as inferences drawn from the text."
+  },
+  {
+    "code": "RL.6.2",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RL",
+    "strand_name": "Reading Standards for Literature",
+    "text": "Determine a theme or central idea of a text and how it is conveyed through particular details; provide a summary of the text distinct from personal opinions or judgments."
+  },
+  {
+    "code": "RL.6.3",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RL",
+    "strand_name": "Reading Standards for Literature",
+    "text": "Describe how a particular story’s or drama’s plot unfolds in a series of episodes as well as how the characters respond or change as the plot moves toward a resolution."
+  },
+  {
+    "code": "RL.6.4",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RL",
+    "strand_name": "Reading Standards for Literature",
+    "text": "Determine the meaning of words and phrases as they are used in a text, including figurative and connotative meanings; analyze the impact of a specific word choice on meaning and tone. (See grade 6 Language standards 4–6 for additional expectations.)",
+    "ca_addition": true
+  },
+  {
+    "code": "RL.6.5",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RL",
+    "strand_name": "Reading Standards for Literature",
+    "text": "Analyze how a particular sentence, chapter, scene, or stanza fits into the overall structure of a text and contributes to the development of the theme, setting, or plot."
+  },
+  {
+    "code": "RL.6.6",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RL",
+    "strand_name": "Reading Standards for Literature",
+    "text": "Explain how an author develops the point of view of the narrator or speaker in a text."
+  },
+  {
+    "code": "RL.6.7",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RL",
+    "strand_name": "Reading Standards for Literature",
+    "text": "Compare and contrast the experience of reading a story, drama, or poem to listening to or viewing an audio, video, or live version of the text, including contrasting what they “see” and “hear” when reading the text to what they perceive when they listen or watch."
+  },
+  {
+    "code": "RL.6.9",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RL",
+    "strand_name": "Reading Standards for Literature",
+    "text": "Compare and contrast texts in different forms or genres (e.g., stories and poems; historical novels and fantasy stories) in terms of their approaches to similar themes and topics."
+  },
+  {
+    "code": "RL.6.10",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RL",
+    "strand_name": "Reading Standards for Literature",
+    "text": "By the end of the year, read and comprehend literature, including stories, dramas, and poems, in the grades 6–8 text complexity band proficiently, with scaffolding as needed at the high end of the range."
+  },
+  {
+    "code": "RI.6.1",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RI",
+    "strand_name": "Reading Standards for Informational Text",
+    "text": "Cite textual evidence to support analysis of what the text says explicitly as well as inferences drawn from the text."
+  },
+  {
+    "code": "RI.6.2",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RI",
+    "strand_name": "Reading Standards for Informational Text",
+    "text": "Determine a central idea of a text and how it is conveyed through particular details; provide a summary of the text distinct from personal opinions or judgments."
+  },
+  {
+    "code": "RI.6.3",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RI",
+    "strand_name": "Reading Standards for Informational Text",
+    "text": "Analyze in detail how a key individual, event, or idea is introduced, illustrated, and elaborated in a text (e.g., through examples or anecdotes)."
+  },
+  {
+    "code": "RI.6.4",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RI",
+    "strand_name": "Reading Standards for Informational Text",
+    "text": "Determine the meaning of words and phrases as they are used in a text, including figurative, connotative, and technical meanings. (See grade 6 Language standards 4–6 for additional expectations.)",
+    "ca_addition": true
+  },
+  {
+    "code": "RI.6.5",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RI",
+    "strand_name": "Reading Standards for Informational Text",
+    "text": "Analyze how a particular sentence, paragraph, chapter, or section fits into the overall structure of a text and contributes to the development of the ideas."
+  },
+  {
+    "code": "RI.6.5.a",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RI",
+    "strand_name": "Reading Standards for Informational Text",
+    "text": "Analyze the use of text features (e.g., graphics, headers, captions) in popular media.",
+    "parent_code": "RI.6.5",
+    "ca_addition": true
+  },
+  {
+    "code": "RI.6.6",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RI",
+    "strand_name": "Reading Standards for Informational Text",
+    "text": "Determine an author’s point of view or purpose in a text and explain how it is conveyed in the text."
+  },
+  {
+    "code": "RI.6.7",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RI",
+    "strand_name": "Reading Standards for Informational Text",
+    "text": "Integrate information presented in different media or formats (e.g., visually, quantitatively) as well as in words to develop a coherent understanding of a topic or issue."
+  },
+  {
+    "code": "RI.6.8",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RI",
+    "strand_name": "Reading Standards for Informational Text",
+    "text": "Trace and evaluate the argument and specific claims in a text, distinguishing claims that are supported by reasons and evidence from claims that are not."
+  },
+  {
+    "code": "RI.6.9",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RI",
+    "strand_name": "Reading Standards for Informational Text",
+    "text": "Compare and contrast one author’s presentation of events with that of another (e.g., a memoir written by and a biography on the same person)."
+  },
+  {
+    "code": "RI.6.10",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RI",
+    "strand_name": "Reading Standards for Informational Text",
+    "text": "By the end of the year, read and comprehend literary nonfiction in the grades 6–8 text complexity band proficiently, with scaffolding as needed at the high end of the range."
+  },
+  {
+    "code": "W.6.1",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Write arguments to support claims with clear reasons and relevant evidence."
+  },
+  {
+    "code": "W.6.1.a",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Introduce claim(s) and organize the reasons and evidence clearly.",
+    "parent_code": "W.6.1"
+  },
+  {
+    "code": "W.6.1.b",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Support claim(s) with clear reasons and relevant evidence, using credible sources and demonstrating an understanding of the topic or text.",
+    "parent_code": "W.6.1"
+  },
+  {
+    "code": "W.6.1.c",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Use words, phrases, and clauses to clarify the relationships among claim(s) and reasons.",
+    "parent_code": "W.6.1"
+  },
+  {
+    "code": "W.6.1.d",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Establish and maintain a formal style.",
+    "parent_code": "W.6.1"
+  },
+  {
+    "code": "W.6.1.e",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Provide a concluding statement or section that follows from the argument presented.",
+    "parent_code": "W.6.1"
+  },
+  {
+    "code": "W.6.2",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Write informative/explanatory texts to examine a topic and convey ideas, concepts, and information through the selection, organization, and analysis of relevant content."
+  },
+  {
+    "code": "W.6.2.a",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Introduce a topic or thesis statement; organize ideas, concepts, and information, using strategies such as definition, classification, comparison/contrast, and cause/effect; include formatting (e.g., headings), graphics (e.g., charts, tables), and multimedia when useful to aiding comprehension.",
+    "parent_code": "W.6.2",
+    "ca_addition": true
+  },
+  {
+    "code": "W.6.2.b",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Develop the topic with relevant facts, definitions, concrete details, quotations, or other information and examples.",
+    "parent_code": "W.6.2"
+  },
+  {
+    "code": "W.6.2.c",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Use appropriate transitions to clarify the relationships among ideas and concepts.",
+    "parent_code": "W.6.2"
+  },
+  {
+    "code": "W.6.2.d",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Use precise language and domain-specific vocabulary to inform about or explain the topic.",
+    "parent_code": "W.6.2"
+  },
+  {
+    "code": "W.6.2.e",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Establish and maintain a formal style.",
+    "parent_code": "W.6.2"
+  },
+  {
+    "code": "W.6.2.f",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Provide a concluding statement or section that follows from the information or explanation presented.",
+    "parent_code": "W.6.2"
+  },
+  {
+    "code": "W.6.3",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Write narratives to develop real or imagined experiences or events using effective technique, relevant descriptive details, and well-structured event sequences."
+  },
+  {
+    "code": "W.6.3.a",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Engage and orient the reader by establishing a context and introducing a narrator and/or characters; organize an event sequence that unfolds naturally and logically.",
+    "parent_code": "W.6.3"
+  },
+  {
+    "code": "W.6.3.b",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Use narrative techniques, such as dialogue, pacing, and description, to develop experiences, events, and/or characters.",
+    "parent_code": "W.6.3"
+  },
+  {
+    "code": "W.6.3.c",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Use a variety of transition words, phrases, and clauses to convey sequence and signal shifts from one time frame or setting to another.",
+    "parent_code": "W.6.3"
+  },
+  {
+    "code": "W.6.3.d",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Use precise words and phrases, relevant descriptive details, and sensory language to convey experiences and events.",
+    "parent_code": "W.6.3"
+  },
+  {
+    "code": "W.6.3.e",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Provide a conclusion that follows from the narrated experiences or events.",
+    "parent_code": "W.6.3"
+  },
+  {
+    "code": "W.6.4",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Produce clear and coherent writing in which the development, organization, and style are appropriate to task, purpose, and audience. (Grade-specific expectations for writing types are defined in standards 1–3 above.)"
+  },
+  {
+    "code": "W.6.5",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "With some guidance and support from peers and adults, develop and strengthen writing as needed by planning, revising, editing, rewriting, or trying a new approach. (Editing for conventions should demonstrate command of Language standards 1–3 up to and including grade 6.)"
+  },
+  {
+    "code": "W.6.6",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Use technology, including the Internet, to produce and publish writing as well as to interact and collaborate with others; demonstrate sufficient command of keyboarding skills to type a minimum of three pages in a single sitting."
+  },
+  {
+    "code": "W.6.7",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Conduct short research projects to answer a question, drawing on several sources and refocusing the inquiry when appropriate."
+  },
+  {
+    "code": "W.6.8",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Gather relevant information from multiple print and digital sources; assess the credibility of each source; and quote or paraphrase the data and conclusions of others while avoiding plagiarism and providing basic bibliographic information for sources."
+  },
+  {
+    "code": "W.6.9",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Draw evidence from literary or informational texts to support analysis, reflection, and research."
+  },
+  {
+    "code": "W.6.9.a",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Apply grade 6 Reading standards to literature (e.g., “Compare and contrast texts in different forms or genres [e.g., stories and poems; historical novels and fantasy stories] in terms of their approaches to similar themes and topics”).",
+    "parent_code": "W.6.9"
+  },
+  {
+    "code": "W.6.9.b",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Apply grade 6 Reading standards to literary nonfiction (e.g., “Trace and evaluate the argument and specific claims in a text, distinguishing claims that are supported by reasons and evidence from claims that are not”).",
+    "parent_code": "W.6.9"
+  },
+  {
+    "code": "W.6.10",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "W",
+    "strand_name": "Writing",
+    "text": "Write routinely over extended time frames (time for research, reflection, and revision) and shorter time frames (a single sitting or a day or two) for a range of discipline-specific tasks, purposes, and audiences."
+  },
+  {
+    "code": "SL.6.1",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "SL",
+    "strand_name": "Speaking and Listening",
+    "text": "Engage effectively in a range of collaborative discussions (one-on-one, in groups, and teacher-led) with diverse partners on grade 6 topics, texts, and issues, building on others’ ideas and expressing their own clearly."
+  },
+  {
+    "code": "SL.6.1.a",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "SL",
+    "strand_name": "Speaking and Listening",
+    "text": "Come to discussions prepared, having read or studied required material; explicitly draw on that preparation by referring to evidence on the topic, text, or issue to probe and reflect on ideas under discussion.",
+    "parent_code": "SL.6.1"
+  },
+  {
+    "code": "SL.6.1.b",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "SL",
+    "strand_name": "Speaking and Listening",
+    "text": "Follow rules for collegial discussions, set specific goals and deadlines, and define individual roles as needed.",
+    "parent_code": "SL.6.1"
+  },
+  {
+    "code": "SL.6.1.c",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "SL",
+    "strand_name": "Speaking and Listening",
+    "text": "Pose and respond to specific questions with elaboration and detail by making comments that contribute to the topic, text, or issue under discussion.",
+    "parent_code": "SL.6.1"
+  },
+  {
+    "code": "SL.6.1.d",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "SL",
+    "strand_name": "Speaking and Listening",
+    "text": "Review the key ideas expressed and demonstrate understanding of multiple perspectives through reflection and paraphrasing.",
+    "parent_code": "SL.6.1"
+  },
+  {
+    "code": "SL.6.2",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "SL",
+    "strand_name": "Speaking and Listening",
+    "text": "Interpret information presented in diverse media and formats (e.g., visually, quantitatively, orally) and explain how it contributes to a topic, text, or issue under study."
+  },
+  {
+    "code": "SL.6.3",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "SL",
+    "strand_name": "Speaking and Listening",
+    "text": "Delineate a speaker’s argument and specific claims, distinguishing claims that are supported by reasons and evidence from claims that are not."
+  },
+  {
+    "code": "SL.6.4",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "SL",
+    "strand_name": "Speaking and Listening",
+    "text": "Present claims and findings (e.g., argument, narrative, informative, response to literature presentations), sequencing ideas logically and using pertinent descriptions, facts, and details and nonverbal elements to accentuate main ideas or themes; use appropriate eye contact, adequate volume, and clear pronunciation.",
+    "ca_addition": true
+  },
+  {
+    "code": "SL.6.4.a",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "SL",
+    "strand_name": "Speaking and Listening",
+    "text": "Plan and deliver an informative/explanatory presentation that: develops a topic with relevant facts, definitions, and concrete details; uses appropriate transitions to clarify relationships; uses precise language and domain specific vocabulary; and provides a strong conclusion.",
+    "parent_code": "SL.6.4",
+    "ca_addition": true
+  },
+  {
+    "code": "SL.6.5",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "SL",
+    "strand_name": "Speaking and Listening",
+    "text": "Include multimedia components (e.g., graphics, images, music, sound) and visual displays in presentations to clarify information."
+  },
+  {
+    "code": "SL.6.6",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "SL",
+    "strand_name": "Speaking and Listening",
+    "text": "Adapt speech to a variety of contexts and tasks, demonstrating command of formal English when indicated or appropriate. (See grade 6 Language standards 1 and 3 for specific expectations.)"
+  },
+  {
+    "code": "L.6.1",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Demonstrate command of the conventions of standard English grammar and usage when writing or speaking."
+  },
+  {
+    "code": "L.6.1.a",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Ensure that pronouns are in the proper case (subjective, objective, possessive).",
+    "parent_code": "L.6.1"
+  },
+  {
+    "code": "L.6.1.b",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Use all pronouns, including intensive pronouns (e.g., myself, ourselves) correctly.",
+    "parent_code": "L.6.1",
+    "ca_addition": true
+  },
+  {
+    "code": "L.6.1.c",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Recognize and correct inappropriate shifts in pronoun number and person.",
+    "parent_code": "L.6.1",
+    "language_progressive_skill": true
+  },
+  {
+    "code": "L.6.1.d",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Recognize and correct vague pronouns (i.e., ones with unclear or ambiguous antecedents).",
+    "parent_code": "L.6.1",
+    "language_progressive_skill": true
+  },
+  {
+    "code": "L.6.1.e",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Recognize variations from standard English in their own and others’ writing and speaking, and identify and use strategies to improve expression in conventional language.",
+    "parent_code": "L.6.1",
+    "language_progressive_skill": true
+  },
+  {
+    "code": "L.6.2",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Demonstrate command of the conventions of standard English capitalization, punctuation, and spelling when writing."
+  },
+  {
+    "code": "L.6.2.a",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Use punctuation (commas, parentheses, dashes) to set off nonrestrictive/parenthetical elements.",
+    "parent_code": "L.6.2",
+    "language_progressive_skill": true
+  },
+  {
+    "code": "L.6.2.b",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Spell correctly.",
+    "parent_code": "L.6.2"
+  },
+  {
+    "code": "L.6.3",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Use knowledge of language and its conventions when writing, speaking, reading, or listening."
+  },
+  {
+    "code": "L.6.3.a",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Vary sentence patterns for meaning, reader/listener interest, and style.",
+    "parent_code": "L.6.3",
+    "language_progressive_skill": true
+  },
+  {
+    "code": "L.6.3.b",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Maintain consistency in style and tone.",
+    "parent_code": "L.6.3",
+    "language_progressive_skill": true
+  },
+  {
+    "code": "L.6.4",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Determine or clarify the meaning of unknown and multiple-meaning words and phrases based on grade 6 reading and content, choosing flexibly from a range of strategies."
+  },
+  {
+    "code": "L.6.4.a",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Use context (e.g., the overall meaning of a sentence or paragraph; a word’s position or function in a sentence) as a clue to the meaning of a word or phrase.",
+    "parent_code": "L.6.4"
+  },
+  {
+    "code": "L.6.4.b",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Use common, grade-appropriate Greek or Latin affixes and roots as clues to the meaning of a word (e.g., audience, auditory, audible).",
+    "parent_code": "L.6.4"
+  },
+  {
+    "code": "L.6.4.c",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Consult reference materials (e.g., dictionaries, glossaries, thesauruses), both print and digital, to find the pronunciation of a word or determine or clarify its precise meaning or its part of speech.",
+    "parent_code": "L.6.4"
+  },
+  {
+    "code": "L.6.4.d",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Verify the preliminary determination of the meaning of a word or phrase (e.g., by checking the inferred meaning in context or in a dictionary).",
+    "parent_code": "L.6.4"
+  },
+  {
+    "code": "L.6.5",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Demonstrate understanding of figurative language, word relationships, and nuances in word meanings."
+  },
+  {
+    "code": "L.6.5.a",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Interpret figures of speech (e.g., personification) in context.",
+    "parent_code": "L.6.5"
+  },
+  {
+    "code": "L.6.5.b",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Use the relationship between particular words (e.g., cause/effect, part/whole, item/category) to better understand each of the words.",
+    "parent_code": "L.6.5"
+  },
+  {
+    "code": "L.6.5.c",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Distinguish among the connotations (associations) of words with similar denotations (definitions) (e.g., stingy, scrimping, economical, unwasteful, thrifty).",
+    "parent_code": "L.6.5"
+  },
+  {
+    "code": "L.6.6",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "L",
+    "strand_name": "Language",
+    "text": "Acquire and use accurately grade-appropriate general academic and domain-specific words and phrases; gather vocabulary knowledge when considering a word or phrase important to comprehension or expression."
+  },
+  {
+    "code": "RH.6-8.1",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RH",
+    "strand_name": "Reading Standards for Literacy in History/Social Studies",
+    "text": "Cite specific textual evidence to support analysis of primary and secondary sources.",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RH.6-8.2",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RH",
+    "strand_name": "Reading Standards for Literacy in History/Social Studies",
+    "text": "Determine the central ideas or information of a primary or secondary source; provide an accurate summary of the source distinct from prior knowledge or opinions.",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RH.6-8.3",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RH",
+    "strand_name": "Reading Standards for Literacy in History/Social Studies",
+    "text": "Identify key steps in a text’s description of a process related to history/social studies (e.g., how a bill becomes law, how interest rates are raised or lowered).",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RH.6-8.4",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RH",
+    "strand_name": "Reading Standards for Literacy in History/Social Studies",
+    "text": "Determine the meaning of words and phrases as they are used in a text, including vocabulary specific to domains related to history/social studies.",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RH.6-8.5",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RH",
+    "strand_name": "Reading Standards for Literacy in History/Social Studies",
+    "text": "Describe how a text presents information (e.g., sequentially, comparatively, causally).",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RH.6-8.6",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RH",
+    "strand_name": "Reading Standards for Literacy in History/Social Studies",
+    "text": "Identify aspects of a text that reveal an author’s point of view or purpose (e.g., loaded language, inclusion or avoidance of particular facts).",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RH.6-8.7",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RH",
+    "strand_name": "Reading Standards for Literacy in History/Social Studies",
+    "text": "Integrate visual information (e.g., in charts, graphs, photographs, videos, or maps) with other information in print and digital texts.",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RH.6-8.8",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RH",
+    "strand_name": "Reading Standards for Literacy in History/Social Studies",
+    "text": "Distinguish among fact, opinion, and reasoned judgment in a text.",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RH.6-8.9",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RH",
+    "strand_name": "Reading Standards for Literacy in History/Social Studies",
+    "text": "Analyze the relationship between a primary and secondary source on the same topic.",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RH.6-8.10",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RH",
+    "strand_name": "Reading Standards for Literacy in History/Social Studies",
+    "text": "By the end of grade 8, read and comprehend history/social studies texts in the grades 6–8 text complexity band independently and proficiently.",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RST.6-8.1",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RST",
+    "strand_name": "Reading Standards for Literacy in Science and Technical Subjects",
+    "text": "Cite specific textual evidence to support analysis of science and technical texts.",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RST.6-8.2",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RST",
+    "strand_name": "Reading Standards for Literacy in Science and Technical Subjects",
+    "text": "Determine the central ideas or conclusions of a text; provide an accurate summary of the text distinct from prior knowledge or opinions.",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RST.6-8.3",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RST",
+    "strand_name": "Reading Standards for Literacy in Science and Technical Subjects",
+    "text": "Follow precisely a multistep procedure when carrying out experiments, taking measurements, or performing technical tasks.",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RST.6-8.4",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RST",
+    "strand_name": "Reading Standards for Literacy in Science and Technical Subjects",
+    "text": "Determine the meaning of symbols, key terms, and other domain-specific words and phrases as they are used in a specific scientific or technical context relevant to grades 6–8 texts and topics.",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RST.6-8.5",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RST",
+    "strand_name": "Reading Standards for Literacy in Science and Technical Subjects",
+    "text": "Analyze the structure an author uses to organize a text, including how the major sections contribute to the whole and to an understanding of the topic.",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RST.6-8.6",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RST",
+    "strand_name": "Reading Standards for Literacy in Science and Technical Subjects",
+    "text": "Analyze the author’s purpose in providing an explanation, describing a procedure, or discussing an experiment in a text.",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RST.6-8.7",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RST",
+    "strand_name": "Reading Standards for Literacy in Science and Technical Subjects",
+    "text": "Integrate quantitative or technical information expressed in words in a text with a version of that information expressed visually (e.g., in a flowchart, diagram, model, graph, or table).",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RST.6-8.8",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RST",
+    "strand_name": "Reading Standards for Literacy in Science and Technical Subjects",
+    "text": "Distinguish among facts, reasoned judgment based on research findings, and speculation in a text.",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RST.6-8.9",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RST",
+    "strand_name": "Reading Standards for Literacy in Science and Technical Subjects",
+    "text": "Compare and contrast the information gained from experiments, simulations, video, or multimedia sources with that gained from reading a text on the same topic.",
+    "grade_band": "6-8"
+  },
+  {
+    "code": "RST.6-8.10",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "RST",
+    "strand_name": "Reading Standards for Literacy in Science and Technical Subjects",
+    "text": "By the end of grade 8, read and comprehend science/technical texts in the grades 6–8 text complexity band independently and proficiently.",
+    "grade_band": "6-8"
+  }
+]

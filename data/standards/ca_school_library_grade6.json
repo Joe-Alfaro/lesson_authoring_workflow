@@ -1,0 +1,579 @@
+[
+  {
+    "code": "LIB.6.1.1",
+    "outline_code": "1.1",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Recognize the need for information"
+  },
+  {
+    "code": "LIB.6.1.1.a",
+    "outline_code": "1.1.a",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Recognize that accurate and comprehensive information is the basis of informed decision making.",
+    "parent_code": "LIB.6.1.1"
+  },
+  {
+    "code": "LIB.6.1.1.b",
+    "outline_code": "1.1.b",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Determine and use appropriate “pre-search” strategies (e.g., brainstorming, recall of prior knowledge).",
+    "parent_code": "LIB.6.1.1"
+  },
+  {
+    "code": "LIB.6.1.2",
+    "outline_code": "1.2",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Formulate appropriate questions"
+  },
+  {
+    "code": "LIB.6.1.2.a",
+    "outline_code": "1.2.a",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Identify related key words, terms, and synonyms for the research topic and information needed.",
+    "parent_code": "LIB.6.1.2"
+  },
+  {
+    "code": "LIB.6.1.2.b",
+    "outline_code": "1.2.b",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Demonstrate the ability to create effective searches in print and online by identifying appropriate key words.",
+    "parent_code": "LIB.6.1.2"
+  },
+  {
+    "code": "LIB.6.1.3",
+    "outline_code": "1.3",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Identify and locate a variety of resources online and in other formats by using effective search strategies"
+  },
+  {
+    "code": "LIB.6.1.3.a",
+    "outline_code": "1.3.a",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Identify and locate multiple sources of information that provide a broad view of research topics and questions (e.g., books, reference materials, online sources, periodicals).",
+    "parent_code": "LIB.6.1.3"
+  },
+  {
+    "code": "LIB.6.1.3.b",
+    "outline_code": "1.3.b",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Perform a search of the automated library catalog to locate resources for a particular purpose.",
+    "parent_code": "LIB.6.1.3"
+  },
+  {
+    "code": "LIB.6.1.3.c",
+    "outline_code": "1.3.c",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Use the automated library catalog to locate resources in other libraries and use interlibrary loan, if available.",
+    "parent_code": "LIB.6.1.3"
+  },
+  {
+    "code": "LIB.6.1.3.d",
+    "outline_code": "1.3.d",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Use the World Wide Web, including search engines and browsers, to locate information.",
+    "parent_code": "LIB.6.1.3"
+  },
+  {
+    "code": "LIB.6.1.3.e",
+    "outline_code": "1.3.e",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Demonstrate proper and responsible use of technology and other library materials.",
+    "parent_code": "LIB.6.1.3"
+  },
+  {
+    "code": "LIB.6.1.3.f",
+    "outline_code": "1.3.f",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Demonstrate use of outside sources to obtain information (e.g., Web sites of public libraries and colleges, online databases).",
+    "parent_code": "LIB.6.1.3"
+  },
+  {
+    "code": "LIB.6.1.3.g",
+    "outline_code": "1.3.g",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Compare and contrast the benefits of using open-source media, subscription databases, print media, and visual media to answer a research question.",
+    "parent_code": "LIB.6.1.3"
+  },
+  {
+    "code": "LIB.6.1.3.h",
+    "outline_code": "1.3.h",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Demonstrate knowledge of current applications available online (e.g., photo organizer, presentation generator, document creator, video conferencing).",
+    "parent_code": "LIB.6.1.3"
+  },
+  {
+    "code": "LIB.6.1.3.i",
+    "outline_code": "1.3.i",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Recognize that specialized encyclopedias differ in arrangement, emphasis, and indexing.",
+    "parent_code": "LIB.6.1.3"
+  },
+  {
+    "code": "LIB.6.1.3.j",
+    "outline_code": "1.3.j",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Use Boolean search techniques and other limiters or expanders to locate appropriate resources.",
+    "parent_code": "LIB.6.1.3"
+  },
+  {
+    "code": "LIB.6.1.3.k",
+    "outline_code": "1.3.k",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Identify the authority of an author or sponsoring organization in print and online materials.",
+    "parent_code": "LIB.6.1.3"
+  },
+  {
+    "code": "LIB.6.1.3.l",
+    "outline_code": "1.3.l",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Identify information that supports the question but may not directly answer it.",
+    "parent_code": "LIB.6.1.3"
+  },
+  {
+    "code": "LIB.6.1.3.m",
+    "outline_code": "1.3.m",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Describe how articles and publications in print may appear different digitally.",
+    "parent_code": "LIB.6.1.3"
+  },
+  {
+    "code": "LIB.6.1.4",
+    "outline_code": "1.4",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Retrieve information in a timely, safe, and responsible manner"
+  },
+  {
+    "code": "LIB.6.1.4.a",
+    "outline_code": "1.4.a",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Understand and practice the basics of safe use of the Internet.",
+    "parent_code": "LIB.6.1.4"
+  },
+  {
+    "code": "LIB.6.1.4.b",
+    "outline_code": "1.4.b",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Accurately record citation information for each type of resource used.",
+    "parent_code": "LIB.6.1.4"
+  },
+  {
+    "code": "LIB.6.1.4.c",
+    "outline_code": "1.4.c",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Use several facts from visual or audio media to support a hypothesis.",
+    "parent_code": "LIB.6.1.4"
+  },
+  {
+    "code": "LIB.6.1.4.d",
+    "outline_code": "1.4.d",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 1",
+    "strand_name": "Students access information.",
+    "text": "Restate facts and details taken from an information source (print, nonprint, or digital) and organize those ideas for notetaking by using techniques such as outlining, webbing, flowcharting, and so on.",
+    "parent_code": "LIB.6.1.4"
+  },
+  {
+    "code": "LIB.6.2.1",
+    "outline_code": "2.1",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 2",
+    "strand_name": "Students evaluate information.",
+    "text": "Determine the relevance of the information"
+  },
+  {
+    "code": "LIB.6.2.1.a",
+    "outline_code": "2.1.a",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 2",
+    "strand_name": "Students evaluate information.",
+    "text": "Analyze information from illustrations, photographs, charts, graphs, maps, tables, and captions.",
+    "parent_code": "LIB.6.2.1"
+  },
+  {
+    "code": "LIB.6.2.1.b",
+    "outline_code": "2.1.b",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 2",
+    "strand_name": "Students evaluate information.",
+    "text": "Analyze evidence to support a research question.",
+    "parent_code": "LIB.6.2.1"
+  },
+  {
+    "code": "LIB.6.2.1.c",
+    "outline_code": "2.1.c",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 2",
+    "strand_name": "Students evaluate information.",
+    "text": "Identify unsupported statements in resources used.",
+    "parent_code": "LIB.6.2.1"
+  },
+  {
+    "code": "LIB.6.2.2",
+    "outline_code": "2.2",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 2",
+    "strand_name": "Students evaluate information.",
+    "text": "Assess the comprehensiveness, currency, credibility, authority, and accuracy of resources"
+  },
+  {
+    "code": "LIB.6.2.2.a",
+    "outline_code": "2.2.a",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 2",
+    "strand_name": "Students evaluate information.",
+    "text": "Identify how visual language creates an impression for the viewer (e.g., angle, lighting, special effects, camera movement).",
+    "parent_code": "LIB.6.2.2"
+  },
+  {
+    "code": "LIB.6.2.2.b",
+    "outline_code": "2.2.b",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 2",
+    "strand_name": "Students evaluate information.",
+    "text": "Recognize the importance of the publication date as an indicator of information currency.",
+    "parent_code": "LIB.6.2.2"
+  },
+  {
+    "code": "LIB.6.2.2.c",
+    "outline_code": "2.2.c",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 2",
+    "strand_name": "Students evaluate information.",
+    "text": "Explain the authority, timeliness, and/or accuracy of specific information resources.",
+    "parent_code": "LIB.6.2.2"
+  },
+  {
+    "code": "LIB.6.2.3",
+    "outline_code": "2.3",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 2",
+    "strand_name": "Students evaluate information.",
+    "text": "Consider the need for additional information"
+  },
+  {
+    "code": "LIB.6.2.3.a",
+    "outline_code": "2.3.a",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 2",
+    "strand_name": "Students evaluate information.",
+    "text": "Evaluate whether the information is sufficient to answer the question.",
+    "parent_code": "LIB.6.2.3"
+  },
+  {
+    "code": "LIB.6.3.1",
+    "outline_code": "3.1",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 3",
+    "strand_name": "Students use information.",
+    "text": "Demonstrate ethical, legal, and safe use of information in print, media, and online resources"
+  },
+  {
+    "code": "LIB.6.3.1.a",
+    "outline_code": "3.1.a",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 3",
+    "strand_name": "Students use information.",
+    "text": "Practice safe handling of personal information online.",
+    "parent_code": "LIB.6.3.1"
+  },
+  {
+    "code": "LIB.6.3.1.b",
+    "outline_code": "3.1.b",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 3",
+    "strand_name": "Students use information.",
+    "text": "Recognize academic uses of social networking sites and understand how to use them safely (e.g., know how to adjust privacy settings).",
+    "parent_code": "LIB.6.3.1"
+  },
+  {
+    "code": "LIB.6.3.1.c",
+    "outline_code": "3.1.c",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 3",
+    "strand_name": "Students use information.",
+    "text": "Articulate and follow the rules for online use at school.",
+    "parent_code": "LIB.6.3.1"
+  },
+  {
+    "code": "LIB.6.3.1.d",
+    "outline_code": "3.1.d",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 3",
+    "strand_name": "Students use information.",
+    "text": "Identify types of programs that can damage a computer (e.g., virus, worm, Trojan horse, spyware).",
+    "parent_code": "LIB.6.3.1"
+  },
+  {
+    "code": "LIB.6.3.1.e",
+    "outline_code": "3.1.e",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 3",
+    "strand_name": "Students use information.",
+    "text": "Practice ethical behavior in online interactions.",
+    "parent_code": "LIB.6.3.1"
+  },
+  {
+    "code": "LIB.6.3.1.f",
+    "outline_code": "3.1.f",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 3",
+    "strand_name": "Students use information.",
+    "text": "Identify what constitutes an “uncomfortable” interaction online and how to handle it effectively.",
+    "parent_code": "LIB.6.3.1"
+  },
+  {
+    "code": "LIB.6.3.1.g",
+    "outline_code": "3.1.g",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 3",
+    "strand_name": "Students use information.",
+    "text": "Identify urban legends and hoaxes spread through e-mail and the Internet.",
+    "parent_code": "LIB.6.3.1"
+  },
+  {
+    "code": "LIB.6.3.1.h",
+    "outline_code": "3.1.h",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 3",
+    "strand_name": "Students use information.",
+    "text": "Understand how to provide limited copyright and authorize use of original works (e.g., Creative Commons).",
+    "parent_code": "LIB.6.3.1"
+  },
+  {
+    "code": "LIB.6.3.2",
+    "outline_code": "3.2",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 3",
+    "strand_name": "Students use information.",
+    "text": "Draw conclusions and make informed decisions"
+  },
+  {
+    "code": "LIB.6.3.2.a",
+    "outline_code": "3.2.a",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 3",
+    "strand_name": "Students use information.",
+    "text": "Analyze evidence to support a research question.",
+    "parent_code": "LIB.6.3.2"
+  },
+  {
+    "code": "LIB.6.3.3",
+    "outline_code": "3.3",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 3",
+    "strand_name": "Students use information.",
+    "text": "Use information and technology creatively to answer a question, solve a problem, or enrich understanding"
+  },
+  {
+    "code": "LIB.6.3.3.a",
+    "outline_code": "3.3.a",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 3",
+    "strand_name": "Students use information.",
+    "text": "Choose an appropriate format to produce, communicate, and present information (e.g., written report, multimedia presentation, graphic presentation).",
+    "parent_code": "LIB.6.3.3"
+  },
+  {
+    "code": "LIB.6.4.1",
+    "outline_code": "4.1",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 4",
+    "strand_name": "Students integrate information literacy skills into all areas of learning.",
+    "text": "Read widely and use various media for information, personal interest, and lifelong learning"
+  },
+  {
+    "code": "LIB.6.4.1.a",
+    "outline_code": "4.1.a",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 4",
+    "strand_name": "Students integrate information literacy skills into all areas of learning.",
+    "text": "Read a good representation of grade-level-appropriate text, making progress toward the goal of reading one million words annually by grade eight (e.g., classic and contemporary literature, magazines, newspapers, online information).",
+    "parent_code": "LIB.6.4.1"
+  },
+  {
+    "code": "LIB.6.4.1.b",
+    "outline_code": "4.1.b",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 4",
+    "strand_name": "Students integrate information literacy skills into all areas of learning.",
+    "text": "Participate in activities that reflect interests, talents, or desires.",
+    "parent_code": "LIB.6.4.1"
+  },
+  {
+    "code": "LIB.6.4.2",
+    "outline_code": "4.2",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 4",
+    "strand_name": "Students integrate information literacy skills into all areas of learning.",
+    "text": "Seek, produce, and share information"
+  },
+  {
+    "code": "LIB.6.4.2.a",
+    "outline_code": "4.2.a",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 4",
+    "strand_name": "Students integrate information literacy skills into all areas of learning.",
+    "text": "Respect others’ right to freedom of speech.",
+    "parent_code": "LIB.6.4.2"
+  },
+  {
+    "code": "LIB.6.4.2.b",
+    "outline_code": "4.2.b",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 4",
+    "strand_name": "Students integrate information literacy skills into all areas of learning.",
+    "text": "Pursue information related to personal well-being (e.g., career interests, community involvement, health matters, recreation).",
+    "parent_code": "LIB.6.4.2"
+  },
+  {
+    "code": "LIB.6.4.2.c",
+    "outline_code": "4.2.c",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 4",
+    "strand_name": "Students integrate information literacy skills into all areas of learning.",
+    "text": "Collaborate in person and through technology to identify problems and seek solutions.",
+    "parent_code": "LIB.6.4.2"
+  },
+  {
+    "code": "LIB.6.4.3",
+    "outline_code": "4.3",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 4",
+    "strand_name": "Students integrate information literacy skills into all areas of learning.",
+    "text": "Appreciate and respond to creative expressions of information"
+  },
+  {
+    "code": "LIB.6.4.3.a",
+    "outline_code": "4.3.a",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 4",
+    "strand_name": "Students integrate information literacy skills into all areas of learning.",
+    "text": "Demonstrate a variety of methods to engage the audience when presenting information (e.g., voice modulation, gestures, questions).",
+    "parent_code": "LIB.6.4.3"
+  },
+  {
+    "code": "LIB.6.4.3.b",
+    "outline_code": "4.3.b",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 4",
+    "strand_name": "Students integrate information literacy skills into all areas of learning.",
+    "text": "Appreciate a range of creative forms of expression (e.g., poetry, drama, film, literature, visual arts).",
+    "parent_code": "LIB.6.4.3"
+  },
+  {
+    "code": "LIB.6.4.3.c",
+    "outline_code": "4.3.c",
+    "framework": "CA_SCHOOL_LIBRARY",
+    "grade": 6,
+    "strand": "Standard 4",
+    "strand_name": "Students integrate information literacy skills into all areas of learning.",
+    "text": "Evaluate one’s own research process and that of others in a respectful, cooperative, and productive way.",
+    "parent_code": "LIB.6.4.3"
+  }
+]
