@@ -80,3 +80,78 @@ describe('parseEldFile on the sample ELD tab', () => {
     }
   })
 })
+
+// D-028: when the arc and lesson type order finds no item, a row whose Filename starts with
+// L<n>_ matches lesson n of the same arc (the sample ELD tab leaves most lesson types empty).
+describe('matchEldRows falls back to the L<n>_ lesson number in the filename', () => {
+  const rows = parseEldFile(sampleEldCsv())
+  const { matches, warnings } = matchEldRows(rows, items)
+  const warningText = warnings.map((warning) => warning.message).join('\n')
+  const matchedPositions = new Set(matches.map((match) => match.position))
+
+  it('matches the Spark and Investigation 1 rows to lessons 1-19 by number', () => {
+    for (let number = 1; number <= 19; number += 1) {
+      expect(matchedPositions.has(positionOfLesson(number)), `lesson ${number}`).toBe(true)
+      expect(warningText).not.toMatch(new RegExp(`\\bL${number}_DELD`))
+    }
+  })
+
+  it('still warns about rows whose lesson number is not in the outline', () => {
+    for (const filename of ['L42', 'L43', 'L44', 'L45']) {
+      expect(warningText).toContain(`${filename}_DELD_TE_G8_U4_CA_Core`)
+    }
+  })
+
+  it('does not match a numbered row to a lesson in another arc', () => {
+    // Rows L36-L38 say Investigation 2; lessons 36-38 are in Showcase.
+    for (const filename of ['L36', 'L37', 'L38']) {
+      expect(warningText).toContain(`${filename}_DELD_TE_G8_U4_CA_Core`)
+    }
+  })
+
+  it('matches far more rows than the arc and type order alone', () => {
+    expect(matches.length).toBeGreaterThanOrEqual(19)
+    expect(warnings.length).toBeLessThan(rows.length - 19)
+  })
+
+  it('never matches two rows to the same item', () => {
+    expect(matchedPositions.size).toBe(matches.length)
+  })
+
+  it('does not take an item already matched by arc and type', () => {
+    const header = 'Filename,Arc,Lesson Type,Language Objective'
+    const csv = [
+      header,
+      // Matches lesson 1 by arc and type.
+      'L2_X,Spark,Spark 1,First',
+      // Lesson 1 is taken, so the number fallback must not reuse it.
+      'L1_X,Spark,,Second',
+    ].join('\n')
+    const result = matchEldRows(parseEldFile(csv), items)
+    expect(result.matches).toEqual([
+      { position: positionOfLesson(1), fields: { languageObjective: 'First' } },
+    ])
+    expect(result.warnings.map((warning) => warning.message).join('\n')).toContain('L1_X')
+  })
+
+  it('only uses filenames shaped like L<n>_', () => {
+    const csv = [
+      'Filename,Arc,Lesson Type',
+      'L4B_X,Investigation 1,',
+      'X4_X,Investigation 1,',
+    ].join('\n')
+    const result = matchEldRows(parseEldFile(csv), items)
+    expect(result.matches).toEqual([])
+    expect(result.warnings).toHaveLength(2)
+  })
+})
+
+describe('parseEldFile cell cleanup', () => {
+  it('turns every U+00A0 inside a cell into a normal space', () => {
+    const csv =
+      'Filename,Arc,Lesson Type,Language Objective\nL1_X,Spark,Spark 1,Students explain myths\n'
+    const [row] = parseEldFile(csv)
+    expect(row?.lessonType).toBe('Spark 1')
+    expect(row?.fields).toEqual({ languageObjective: 'Students explain myths' })
+  })
+})

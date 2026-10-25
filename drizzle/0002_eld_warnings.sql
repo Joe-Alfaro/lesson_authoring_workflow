@@ -1,0 +1,1 @@
+ALTER TABLE "units" ADD COLUMN "eld_warnings" jsonb DEFAULT '[]'::jsonb NOT NULL;

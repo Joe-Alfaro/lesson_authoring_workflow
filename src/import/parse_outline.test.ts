@@ -181,6 +181,25 @@ describe('parseOutline on the sample outline (R2)', () => {
     }
   })
 
+  // D-028: U+00A0 inside a cell (not only at its edges) becomes a normal space.
+  it('turns every non-breaking space inside a cell into a normal space', () => {
+    expect(sampleOutlineCsv()).toContain('graphic organizers.\u00a0')
+    expect(lesson(9).foundationalSkills).toContain('graphic organizers. ')
+    for (const item of outline.items) {
+      for (const field of TEXT_FIELDS) {
+        expect(item[field], `${field} of item ${item.position}`).not.toContain('\u00a0')
+      }
+      for (const [header, value] of Object.entries(item.rawRow)) {
+        expect(value, `${header} of item ${item.position}`).not.toContain('\u00a0')
+      }
+    }
+    for (const arc of outline.arcs) {
+      expect(arc.description, arc.name).not.toContain('\u00a0')
+    }
+    expect(outline.unit.banner).not.toContain('\u00a0')
+    expect(outline.unit.anchorTextTitle).not.toContain('\u00a0')
+  })
+
   it('takes lesson numbers from "Lesson #" and keeps filenames with typos as written', () => {
     expect(lesson(35).filename).toBe('L35_ELA_TE_G6_U3_CA_CoreL30_ELA_TE_G6_U3_CA_Core')
     expect(lesson(39).filename).toBe('L309_ELA_TE_G6_U3_CA_Core')

@@ -14,7 +14,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
-import type { EldFields } from '../import/parse_eld'
+import type { EldFields, EldRow } from '../import/parse_eld'
 import type { ImportWarning, ParsedOutline } from '../import/parse_outline'
 
 const bytea = customType<{ data: Uint8Array; driverData: Buffer }>({
@@ -96,6 +96,8 @@ export const units = pgTable('units', {
   anchorTextTitle: text('anchor_text_title').notNull(),
   isbn: text('isbn'),
   banner: text('banner').notNull(),
+  /** ELD rows that matched no lesson, from the last attached ELD file (R5, D-028). */
+  eldWarnings: jsonb('eld_warnings').$type<ImportWarning[]>().notNull().default([]),
   createdBy: uuid('created_by').references(() => users.id),
   createdAt: createdAt(),
 })
@@ -179,6 +181,8 @@ export interface PendingImportPayload {
     codes: Record<'focus' | 'supporting' | 'media' | 'eld', string[]>
     warnings: ImportWarning[]
   }[]
+  /** An ELD file attached at import time (R5); matched to lessons on confirm. */
+  eld?: { rows: EldRow[] }
 }
 
 export const lessonVersions = pgTable(

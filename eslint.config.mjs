@@ -5,7 +5,15 @@ const config = [
   ...nextVitals,
   ...nextTypescript,
   {
-    ignores: ['.next/**', 'node_modules/**', 'drizzle/**', 'next-env.d.ts', 'coverage/**'],
+    ignores: [
+      '.next/**',
+      'node_modules/**',
+      'drizzle/**',
+      'next-env.d.ts',
+      'coverage/**',
+      'test-results/**',
+      'playwright-report/**',
+    ],
   },
   {
     rules: {
