@@ -9,6 +9,12 @@ export const E2E_PORT = Number(process.env.E2E_PORT ?? 3410)
 
 export const E2E_BASE_URL = `http://localhost:${E2E_PORT}`
 
+/** Port of the collab server the e2e run starts next to the app (`E2E_COLLAB_PORT`, default 3411). */
+export const E2E_COLLAB_PORT = Number(process.env.E2E_COLLAB_PORT ?? E2E_PORT + 1)
+
+/** What the browser connects to; the app gets it as `COLLAB_URL`. */
+export const E2E_COLLAB_URL = `ws://localhost:${E2E_COLLAB_PORT}`
+
 /** Test-only Auth.js secret; the e2e server never uses the developer's `.env` secret. */
 export const E2E_AUTH_SECRET = 'e2e-only-auth-secret-not-for-any-real-deployment'
 

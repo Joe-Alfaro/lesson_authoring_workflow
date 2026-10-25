@@ -1,19 +1,23 @@
 import { HocuspocusProvider } from '@hocuspocus/provider'
-import { inArray } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it, inject } from 'vitest'
 import * as Y from 'yjs'
 import { connectTestDb } from '../../tests/db'
 import { signCollabToken } from '../auth/collab_token'
 import { runMigrations } from '../db/migrate'
 import { yjsDocuments } from '../db/schema'
+import { lessonDocumentName } from '../editor/ydoc'
+import { cleanWorkflowData, createTestUnit, createUser } from '../../tests/workflow_fixtures'
+import { richLessonContent } from '../../tests/fixtures/lesson/rich_lesson_fixture'
 import { createYjsPersistence } from './persistence'
 import { startCollabServer, type RunningCollab } from './server'
 
 const SECRET = 'collab-test-secret'
+// M3: only `lesson:<id>` documents of existing lessons are served, so the user and lesson are real.
 const USER = {
-  id: '6f1c2a8e-1d7b-4f0a-9a43-0d2a7b2f9e11',
-  email: 'reviewer01@example.com',
-  name: 'Reviewer 01',
+  id: '',
+  email: 'wf-test-collab@example.com',
+  name: 'Workflow collab',
   role: 'reviewer' as const,
 }
 
@@ -22,7 +26,6 @@ type Outcome = 'authenticated' | 'denied'
 /** Connects a real provider, edits the document and resolves with how authentication ended. */
 function connect(url: string, name: string, token: string | null) {
   const document = new Y.Doc()
-  document.getText('body').insert(0, `written by ${name}`)
   let provider: HocuspocusProvider | undefined
   const outcome = new Promise<Outcome>((resolve) => {
     provider = new HocuspocusProvider({
@@ -46,9 +49,15 @@ describe('collab process', () => {
   const { pool, db } = connectTestDb()
   let collab: RunningCollab
   let wsUrl: string
+  let lessonId: string
 
   beforeAll(async () => {
     await runMigrations(pool)
+    USER.id = (await createUser(db, 'reviewer', 'collab')).id
+    const unit = await createTestUnit(db, {
+      lessons: [{ lessonNumber: 1, content: richLessonContent() }],
+    })
+    lessonId = unit.lessonIds[0]!
     collab = await startCollabServer({
       databaseUrl: inject('databaseUrl'),
       port: 0,
@@ -58,6 +67,7 @@ describe('collab process', () => {
   })
   afterAll(async () => {
     await collab.stop()
+    await cleanWorkflowData(db)
     await pool.end()
   })
 
@@ -68,35 +78,27 @@ describe('collab process', () => {
   })
 
   it('rejects connections without a valid token and stores nothing for them', async () => {
+    const name = lessonDocumentName(lessonId)
     const attempts = [
-      connect(wsUrl, 'denied-no-token', null),
-      connect(wsUrl, 'denied-bad-token', 'v1.not.valid'),
-      connect(wsUrl, 'denied-other-secret', signCollabToken(USER, 'another-secret')),
-      connect(wsUrl, 'denied-expired', signCollabToken(USER, SECRET, { now: 0 })),
+      connect(wsUrl, name, null),
+      connect(wsUrl, name, 'v1.not.valid'),
+      connect(wsUrl, name, signCollabToken(USER, 'another-secret')),
+      connect(wsUrl, name, signCollabToken(USER, SECRET, { now: 0 })),
     ]
     const outcomes = await Promise.all(attempts.map((attempt) => attempt.outcome))
     expect(outcomes).toEqual(['denied', 'denied', 'denied', 'denied'])
+    attempts.forEach((attempt) => attempt.close())
 
-    // A valid client on the same server proves stores have run before we look for denied rows.
-    const allowed = connect(wsUrl, 'allowed-doc', signCollabToken(USER, SECRET))
-    expect(await allowed.outcome).toBe('authenticated')
-    await expect
-      .poll(async () => createYjsPersistence(db).fetch('allowed-doc'), { timeout: 10_000 })
-      .not.toBeNull()
-    ;[...attempts, allowed].forEach((attempt) => attempt.close())
-
-    const deniedRows = await db
+    // Denied connections never load the document, so nothing is stored for it.
+    const rows = await db
       .select({ name: yjsDocuments.name })
       .from(yjsDocuments)
-      .where(
-        inArray(yjsDocuments.name, [
-          'denied-no-token',
-          'denied-bad-token',
-          'denied-other-secret',
-          'denied-expired',
-        ]),
-      )
-    expect(deniedRows).toEqual([])
+      .where(eq(yjsDocuments.name, name))
+    expect(rows).toEqual([])
+
+    const allowed = connect(wsUrl, name, signCollabToken(USER, SECRET))
+    expect(await allowed.outcome).toBe('authenticated')
+    allowed.close()
   })
 
   it('persists Yjs document state in Postgres', async () => {

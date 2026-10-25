@@ -24,9 +24,9 @@ export const AUTHOR = { email: 'author01@example.com', name: 'Author 01', role: 
 export class E2eDb {
   constructor(private readonly pool: pg.Pool) {}
 
-  /** Removes everything an import creates; seeded users and standards stay. */
+  /** Removes everything an import or an editor creates; seeded users and standards stay. */
   async resetImports(): Promise<void> {
-    await this.pool.query('TRUNCATE units, pending_imports RESTART IDENTITY CASCADE')
+    await this.pool.query('TRUNCATE units, pending_imports, yjs_documents RESTART IDENTITY CASCADE')
   }
 
   async count(table: 'units' | 'pending_imports' | 'arcs'): Promise<number> {
