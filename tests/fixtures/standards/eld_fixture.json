@@ -1,0 +1,13 @@
+[
+  {
+    "code": "ELD.PI.6.6",
+    "framework": "CA_ELD",
+    "grade": 6,
+    "strand": "PI",
+    "strand_name": "Part I: Interacting in Meaningful Ways",
+    "text": "Fixture text for an ELD standard.",
+    "emerging": "Fixture emerging level.",
+    "expanding": "Fixture expanding level.",
+    "bridging": "Fixture bridging level."
+  }
+]

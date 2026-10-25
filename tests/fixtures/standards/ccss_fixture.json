@@ -1,0 +1,16 @@
+[
+  {
+    "code": "RL.6.1",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "Reading Standards for Literature",
+    "text": "Fixture text for a reading literature standard."
+  },
+  {
+    "code": "L.6.4",
+    "framework": "CCSS_ELA",
+    "grade": 6,
+    "strand": "Language Standards",
+    "text": "Fixture text for a language standard."
+  }
+]
