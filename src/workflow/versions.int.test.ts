@@ -114,18 +114,21 @@ describe('lesson versions', () => {
       })
 
       const versions = await listVersions(db, lessonId)
+      // `changes` (M4, R14): these contents aren't valid lessons, so nothing is itemised.
       expect(versions).toEqual([
         {
           id: expect.any(String),
           createdAt: expect.any(Date),
           author: { id: people.approver.id, name: people.approver.name },
+          changes: [],
         },
         {
           id: expect.any(String),
           createdAt: expect.any(Date),
           author: { id: people.reviewer.id, name: people.reviewer.name },
+          changes: [],
         },
-        { id: expect.any(String), createdAt: expect.any(Date), author: null },
+        { id: expect.any(String), createdAt: expect.any(Date), author: null, changes: [] },
       ])
       const times = versions.map((v) => v.createdAt.getTime())
       expect(times).toEqual([...times].sort((a, b) => b - a))

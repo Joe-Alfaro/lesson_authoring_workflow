@@ -15,6 +15,17 @@ export const E2E_COLLAB_PORT = Number(process.env.E2E_COLLAB_PORT ?? E2E_PORT + 
 /** What the browser connects to; the app gets it as `COLLAB_URL`. */
 export const E2E_COLLAB_URL = `ws://localhost:${E2E_COLLAB_PORT}`
 
+/**
+ * Port of the fake Anthropic Messages API (`E2E_FAKE_LLM_PORT`, default `E2E_PORT + 2`); the app
+ * gets it as `ANTHROPIC_BASE_URL` (M4 AI assist). See fake_anthropic.ts.
+ */
+export const E2E_FAKE_LLM_PORT = Number(process.env.E2E_FAKE_LLM_PORT ?? E2E_PORT + 2)
+
+export const E2E_FAKE_LLM_URL = `http://localhost:${E2E_FAKE_LLM_PORT}`
+
+/** Global LLM budget of the app under test (`SPEND_CAP_USD`, D-024). */
+export const E2E_SPEND_CAP_USD = 20
+
 /** Test-only Auth.js secret; the e2e server never uses the developer's `.env` secret. */
 export const E2E_AUTH_SECRET = 'e2e-only-auth-secret-not-for-any-real-deployment'
 

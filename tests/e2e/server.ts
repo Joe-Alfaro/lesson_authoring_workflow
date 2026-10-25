@@ -1,7 +1,7 @@
 /**
  * Playwright's webServer: starts a throwaway Postgres (or uses E2E_DATABASE_URL, which must point
- * at an empty database), migrates and seeds it, starts the collab server (M3) in this process and
- * runs `next dev` against both. Stops everything when Playwright stops this process.
+ * at an empty database), migrates and seeds it, starts the collab server (M3) and a fake Anthropic
+ * API (M4 AI assist) in this process and runs `next dev` against them. Stops everything when Playwright stops this process.
  */
 import { spawn } from 'node:child_process'
 import { rmSync, writeFileSync } from 'node:fs'
@@ -10,12 +10,16 @@ import { createDb, createPool } from '../../src/db/client'
 import { runMigrations } from '../../src/db/migrate'
 import { seed } from '../../src/db/seed/seed'
 import { startCollabServer } from '../../src/collab/server'
+import { startFakeAnthropic } from './fake_anthropic'
 import {
   E2E_AUTH_SECRET,
   E2E_COLLAB_PORT,
   E2E_COLLAB_URL,
+  E2E_FAKE_LLM_PORT,
+  E2E_FAKE_LLM_URL,
   E2E_PORT,
   E2E_SEED_PASSWORD,
+  E2E_SPEND_CAP_USD,
   E2E_STATE_FILE,
   type E2eState,
 } from './env'
@@ -56,6 +60,8 @@ const collab = await startCollabServer({
   authSecret: E2E_AUTH_SECRET,
 })
 
+const fakeLlm = await startFakeAnthropic(E2E_FAKE_LLM_PORT)
+
 const next = spawn('npx', ['next', 'dev', '--port', String(E2E_PORT)], {
   stdio: 'inherit',
   env: {
@@ -65,8 +71,11 @@ const next = spawn('npx', ['next', 'dev', '--port', String(E2E_PORT)], {
     SEED_PASSWORD: E2E_SEED_PASSWORD,
     PORT: String(E2E_PORT),
     COLLAB_URL: E2E_COLLAB_URL,
-    // No generation in these tests; never pass the developer's key to the app under test.
-    ANTHROPIC_API_KEY: '',
+    // AI assist talks to the fake API through the real adapter; never pass the developer's key
+    // to the app under test.
+    ANTHROPIC_API_KEY: 'e2e-fake-key',
+    ANTHROPIC_BASE_URL: E2E_FAKE_LLM_URL,
+    SPEND_CAP_USD: String(E2E_SPEND_CAP_USD),
   },
 })
 
@@ -76,6 +85,7 @@ async function stop(code: number): Promise<never> {
     stopping = true
     next.kill('SIGTERM')
     await collab.stop().catch(() => undefined)
+    await fakeLlm.stop().catch(() => undefined)
     rmSync(E2E_STATE_FILE, { force: true })
     await container?.stop().catch(() => undefined)
   }

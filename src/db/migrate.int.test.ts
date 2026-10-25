@@ -2,8 +2,10 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { connectTestDb } from '../../tests/db'
 import { runMigrations } from './migrate'
 
+// M4 adds assist_calls (AI assist metering, src/assist/README.md), as D-022 allows.
 const EXPECTED_TABLES = [
   'arcs',
+  'assist_calls',
   'generation_jobs',
   'generation_runs',
   'lesson_standards',
