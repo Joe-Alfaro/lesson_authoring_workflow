@@ -56,12 +56,19 @@ Needs the Railway CLI 5.42.1 or newer and a clean checkout of `main`.
 4. **Add public domains.** In the dashboard, open `web` > Settings > Networking > Generate Domain
    (target port 3000), then the same for `collab` (target port 4200). Leave `worker` without one.
    `web`'s `COLLAB_URL` already points at `wss://${{collab.RAILWAY_PUBLIC_DOMAIN}}`.
-5. **Deploy the code.** The repo isn't on GitHub, so upload it from the checkout, `web` first so
-   it migrates before the others start:
+5. **Deploy the code, `web` first.** The repo isn't on GitHub, so upload it from the checkout.
+   `-c` only streams the build and returns before the pre-deploy migration runs, so wait for web
+   to finish deploying before starting the others; worker and collab assume the schema exists:
 
    ```sh
-   railway up -s web -c && railway up -s collab -c && railway up -s worker -c
+   railway up -s web -c
+   railway deployment list -s web   # repeat until the newest one is SUCCESS (migration done)
+   railway up -s collab -c && railway up -s worker -c
    ```
+
+   If web's newest deployment is FAILED (build or pre-deploy migration), read its log with
+   `railway logs -s web --deployment <id from the list>` and fix it before deploying the others.
+   The dashboard shows the same states (web > Deployments: "Pre-deploy" then "Active").
 
    `.railwayignore` keeps `.env`, `_private/`, `node_modules` and build output out of the upload.
    To deploy from a GitHub mirror instead, set it as each service's source in the dashboard.
@@ -77,8 +84,25 @@ Needs the Railway CLI 5.42.1 or newer and a clean checkout of `main`.
 
 7. Run the [smoke checklist](#post-deploy-smoke-checklist).
 
-Later deploys: `railway up -s <service>` for each changed service (`web` first when there is a new
-migration). After changing `.railway/railway.ts`: `railway config plan`, then `apply`.
+### Two settings to confirm on the first apply
+
+These can only be checked against a real Railway project; the local tests cover the file, not
+Railway's behaviour.
+
+- **Secrets kept with `preserve()`.** Expected: on the first apply the secrets don't exist yet, so
+  `preserve()` leaves them unset and step 3 sets them; later applies keep them. Check: after step
+  3, `railway variable list -s web` and `-s worker` list `AUTH_SECRET`, `SEED_PASSWORD` and
+  `ANTHROPIC_API_KEY` (values hidden). If `railway config plan` errors on a missing preserved
+  value, or a later plan shows them being removed: set the three secrets in the dashboard (service
+  > Variables > New Variable) first, then run `plan` / `apply` again.
+- **`COLLAB_URL` built from collab's domain.** Expected: web's `COLLAB_URL` resolves to
+  `wss://<collab domain>` once collab has a domain (step 4). Check: web > Variables shows the
+  resolved value, or `railway variable list -s web`. If it shows an empty host or the literal
+  `${{...}}` text: in the dashboard set web's `COLLAB_URL` to `wss://` plus collab's generated
+  domain (collab > Settings > Networking), then redeploy web.
+
+Later deploys: `railway up -s <service>` for each changed service. When a change adds a
+migration, deploy `web` first and wait for SUCCESS as in step 5 before the others. After changing `.railway/railway.ts`: `railway config plan`, then `apply`.
 
 ## Settings per service (dashboard equivalent)
 
@@ -137,7 +161,14 @@ Notes:
 
 ## Post-deploy smoke checklist
 
-Replace `<web>` and `<collab>` with the generated domains.
+Replace `<web>` and `<collab>` with the generated domains. Steps 1-3 run against `main` today.
+Steps 4-6 need features that are still landing; they are part of R31's full flow once those merge:
+
+- Step 4 needs the generation routes, worker queue and spend cap (M2) and the dashboard's Start
+  generation control (UI-B).
+- Steps 5 and 6 need the lesson editor and its use of `COLLAB_URL` (M3) and the approve control on
+  the lesson page. Until then, `npm run docker:smoke` covers the collab path (tokens from web, two
+  users editing through `COLLAB_URL`) without a browser.
 
 1. Health, all 200:
    - `curl -s -o /dev/null -w '%{http_code}\n' https://<web>/health`
@@ -147,11 +178,11 @@ Replace `<web>` and `<collab>` with the generated domains.
    fail.
 3. Import the sample unit (outline and ELD from `data/sample_unit/`); the unit page lists its
    lessons.
-4. Generate 1 lesson on Haiku (`claude-haiku-5-5`): it moves to Draft and the run's cost shows on
+4. _(after M2 and UI-B)_ Generate 1 lesson on Haiku (`claude-haiku-5-5`): it moves to Draft and the run's cost shows on
    the unit page, well under $1.
-5. Two browsers (two accounts) open the same lesson: the network tab shows a `wss://<collab>`
+5. _(after M3)_ Two browsers (two accounts) open the same lesson: the network tab shows a `wss://<collab>`
    connection and each browser sees the other's edits.
-6. Approve the lesson as an approver: it locks for editing.
+6. _(after M3)_ Approve the lesson as an approver: it locks for editing.
 
 ## Checking the image locally
 
@@ -167,6 +198,9 @@ the model and removes everything afterwards (`SMOKE_KEEP=1` keeps the containers
 
 - **Health 503:** the service can't reach Postgres. Check its `DATABASE_URL` reference.
 - **Pre-deploy failed:** read the web deploy log; the previous deployment keeps serving.
+- **Worker or collab errors about missing tables:** they started before web's migration finished.
+  Wait for web's deployment to succeed, then `railway deployment redeploy -s worker` (and
+  `-s collab`).
 - **Sign-in returns to the sign-in page:** `AUTH_SECRET` is missing on `web`.
 - **Editor can't connect:** `collab` has no public domain, its target port isn't 4200, or
   `AUTH_SECRET` differs between `web` and `collab` (collab rejects the token).
