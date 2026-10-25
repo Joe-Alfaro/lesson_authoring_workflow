@@ -76,6 +76,12 @@ describe('import API', () => {
     }
   })
   afterAll(async () => {
+    // Integration files share one database; leave no units, imports or users behind.
+    const { eq } = await import('drizzle-orm')
+    const { pendingImports, units, users } = await import('../../../db/schema')
+    await db.delete(units)
+    await db.delete(pendingImports)
+    await db.delete(users).where(eq(users.id, authorId))
     const { getPool } = await import('../../../db/client')
     await getPool().end()
   })

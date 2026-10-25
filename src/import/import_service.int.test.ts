@@ -5,7 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { connectTestDb } from '../../tests/db'
 import { STANDARDS_DIR, sampleOutlineCsv } from '../../tests/import_fixtures'
 import { runMigrations } from '../db/migrate'
-import { arcs, lessonStandards, lessons, units, users } from '../db/schema'
+import { arcs, lessonStandards, lessons, pendingImports, units, users } from '../db/schema'
 import { loadStandards } from '../db/seed/standards'
 import {
   ImportNotFoundError,
@@ -45,7 +45,13 @@ describe('import service', () => {
       .returning({ id: users.id })
     authorId = author!.id
   })
-  afterAll(() => pool.end())
+  afterAll(async () => {
+    // Integration files share one database; leave no units, imports or users behind.
+    await db.delete(units)
+    await db.delete(pendingImports)
+    await db.delete(users).where(eq(users.id, authorId))
+    await pool.end()
+  })
   beforeEach(async () => {
     await db.delete(units)
   })
