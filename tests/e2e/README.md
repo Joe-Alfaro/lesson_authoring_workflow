@@ -15,6 +15,15 @@ npm run test:e2e -- tests/e2e/import.spec.ts -g "preview"
   to use an existing empty database instead.
 - Each test starts with no units or pending imports (`support.ts` truncates them). Specs run one
   at a time because they share the database.
+- **No model provider.** `server.ts` also runs the real generation worker with the fake LLM in
+  `fake_llm.ts`, and gives the app an empty `ANTHROPIC_API_KEY`. The fake answers with a valid
+  lesson for the prompt's lesson ("Generated title for lesson N"), reports the estimate's tokens
+  (so costs are real Haiku-class dollars), waits `E2E_FAKE_LLM_DELAY_MS` (default 1000) per call,
+  and fails any lesson whose Text Dependent Question contains `E2E-FAIL`. The app runs with
+  `E2E_GENERATION_ENV` (`env.ts`): concurrency 4, 2 attempts, $5 run cap, `SPEND_CAP_USD=20`.
+- The dashboard and prompt editor specs (`dashboard_*.spec.ts`, `prompt_editor.spec.ts`) import
+  the sample outline through the import service and write fixed generation and review states to
+  the database the way the worker does, NOTIFY included (`dashboard_support.ts`).
 - `IMPORT_TEST_SHEET_URL` (see `.env.example`) enables the live sheet-link test; it is skipped
   when unset. The "not shared by link" test uses a made-up sheet id, so it needs no real sheet.
 - Each mockup state saves a full-page screenshot to `test-results/screens/<state>.png`, named

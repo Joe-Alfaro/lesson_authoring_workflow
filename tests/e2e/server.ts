@@ -6,10 +6,20 @@
 import { spawn } from 'node:child_process'
 import { rmSync, writeFileSync } from 'node:fs'
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
+import { PgBoss } from 'pg-boss'
 import { createDb, createPool } from '../../src/db/client'
 import { runMigrations } from '../../src/db/migrate'
 import { seed } from '../../src/db/seed/seed'
-import { E2E_AUTH_SECRET, E2E_PORT, E2E_SEED_PASSWORD, E2E_STATE_FILE, type E2eState } from './env'
+import { registerGenerationWorker } from '../../src/generation/worker'
+import {
+  E2E_AUTH_SECRET,
+  E2E_GENERATION_ENV,
+  E2E_PORT,
+  E2E_SEED_PASSWORD,
+  E2E_STATE_FILE,
+  type E2eState,
+} from './env'
+import { createE2eFakeLlm } from './fake_llm'
 
 let container: StartedPostgreSqlContainer | undefined
 
@@ -36,8 +46,34 @@ async function prepare(databaseUrl: string): Promise<void> {
   }
 }
 
+/**
+ * The generation worker of the e2e app: the real pg-boss worker with the fake LLM client
+ * (tests/e2e/fake_llm.ts), so runs started from the UI generate lessons without a model provider.
+ */
+async function startFakeGenerationWorker(databaseUrl: string): Promise<() => Promise<void>> {
+  const pool = createPool(databaseUrl)
+  const boss = new PgBoss({ connectionString: databaseUrl })
+  boss.on('error', (error) => console.error('[e2e worker] pg-boss error', error))
+  await boss.start()
+  const worker = await registerGenerationWorker({
+    db: createDb(pool),
+    boss,
+    llm: createE2eFakeLlm({ delayMs: Number(process.env.E2E_FAKE_LLM_DELAY_MS ?? 1000) }),
+    concurrency: Number(E2E_GENERATION_ENV.GENERATION_CONCURRENCY),
+    maxAttempts: Number(E2E_GENERATION_ENV.GENERATION_MAX_ATTEMPTS),
+    globalCapUsd: Number(E2E_GENERATION_ENV.SPEND_CAP_USD),
+    pollingIntervalSeconds: 0.5,
+  })
+  return async () => {
+    await worker.stop().catch(() => undefined)
+    await boss.stop({ graceful: false }).catch(() => undefined)
+    await pool.end().catch(() => undefined)
+  }
+}
+
 const databaseUrl = await startDatabase()
 await prepare(databaseUrl)
+const stopWorker = await startFakeGenerationWorker(databaseUrl)
 const state: E2eState = { databaseUrl }
 writeFileSync(E2E_STATE_FILE, JSON.stringify(state))
 
@@ -49,8 +85,9 @@ const next = spawn('npx', ['next', 'dev', '--port', String(E2E_PORT)], {
     AUTH_SECRET: E2E_AUTH_SECRET,
     SEED_PASSWORD: E2E_SEED_PASSWORD,
     PORT: String(E2E_PORT),
-    // No generation in these tests; never pass the developer's key to the app under test.
+    // Generation runs on the fake worker above; never pass the developer's key to the app.
     ANTHROPIC_API_KEY: '',
+    ...E2E_GENERATION_ENV,
   },
 })
 
@@ -59,6 +96,7 @@ async function stop(code: number): Promise<never> {
   if (!stopping) {
     stopping = true
     next.kill('SIGTERM')
+    await stopWorker()
     rmSync(E2E_STATE_FILE, { force: true })
     await container?.stop().catch(() => undefined)
   }
