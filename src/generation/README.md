@@ -67,6 +67,88 @@ ESTIMATED_TOKENS_PER_LESSON)`. Refine `ESTIMATED_TOKENS_PER_LESSON` after the fi
   the global budget `SPEND_CAP_USD` (default $20, all runs) is checked at run start and before
   every job.
 
+## M2 follow-up contract (red tests: `post_process.test.ts`, `queue.int.test.ts`, `sample_unit.int.test.ts`, additions to `prompt_builder.test.ts`, `settings.test.ts`, `service.int.test.ts`)
+
+New or changed exports:
+
+| File                    | Export                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------ |
+| `settings.ts`           | `getGenerationHeartbeatSeconds(env = process.env)`                                               |
+| `queue.ts`              | `ensureGenerationQueue(boss, { heartbeatSeconds? } = {})`                                        |
+| `worker.ts`             | `registerGenerationWorker({ ..., heartbeatSeconds? })` passes it to `ensureGenerationQueue`      |
+| `prompt_builder.ts`     | `pulseCheckCorrectOption(lessonNumber: number \| null): 'A' \| 'B' \| 'C' \| 'D'`                |
+| `post_process.ts` (new) | `normalizeLessonContent(content, { pulseCheckCorrectOption })`, `MAX_ADDRESSED_VOCABULARY` (= 6) |
+
+### Queue: crash recovery (R6)
+
+- `getGenerationHeartbeatSeconds(env)`: `GENERATION_HEARTBEAT_SECONDS`, an integer >= 10 (the
+  pg-boss minimum); the default is at most 180 (suggested 60). Invalid values throw an error naming
+  the variable.
+- `ensureGenerationQueue(boss, { heartbeatSeconds })` (default `getGenerationHeartbeatSeconds()`)
+  creates the queue with that `heartbeatSeconds` and a `retryLimit` >= 1, and **updates** an existing
+  queue to it (`boss.updateQueue`), so a changed setting applies on the next worker start.
+  `boss.getQueue(GENERATE_LESSON_QUEUE).heartbeatSeconds` reports it.
+- A heartbeat rather than a short `expireInSeconds`: a live Core Writing call took 126 s on Haiku
+  and will take longer on Sonnet, so a 3-minute expiry would retry live jobs and pay twice. With a
+  heartbeat, pg-boss refreshes live jobs on its own (`heartbeatSeconds / 2`) and the supervisor
+  fails and retries the job of a dead worker after one window.
+- A retried job finds its `generation_jobs` row still `generating` and generates it (a `generated`
+  job is still never redone).
+
+### Flex days without focus standards (R6, R7)
+
+The sample's six flex rows list no standards. `LessonFrontMatter.focusStandards` may be empty when
+`type` is `flex` (still min 1 otherwise), and the "every focus standard tagged" check is then
+vacuous, so `generateFlexDay` on a sample flex row is valid on the first attempt.
+
+### Focus and additional at once (R7)
+
+A code listed as both focus and additional (lesson 6: `RL.6.1`) is a focus standard only:
+`loadLessonPromptInput` returns it once with kind `focus`, `frontMatterFromOutline` leaves it out of
+`supportingStandards`, and `buildLessonPrompt` lists it once (also when its input has the
+duplicate).
+
+### Front matter texts (R7, Lesson structure item 1)
+
+`frontMatterFromOutline` fills `texts` from the outline:
+
+- The anchor novel: `{ title: unit anchor text title, source: the author from the banner
+("... by <author>"), kind: 'novel', pages }`, where `pages` is the first `pp. N–M` range in the
+  lesson description, verbatim (lesson 6: `pp. 16–22`), and absent when there is none.
+- One text per `•` bullet of Text Set Choice, kind `short_form`, without the bullet. A quoted title
+  (`“...”` or `"..."`) is the `title`; text after `" in "` that follows it is the `source` (lesson 5:
+  `The Hare and the Lion` from `Zanzibar Tales: ..., translated by George W. Bateman`). Without
+  quotes the whole bullet is the title. Lines that are not bullets (a note to the writer) are not
+  texts.
+
+### Regenerate (R11)
+
+- `regenerateLessons({ failed: true })` selects lessons whose **workflow status** is `failed`, even
+  when their latest job was cancelled by a later run.
+- With `confirmOverwrite`, the edited content is kept as a version only if the latest
+  `lesson_versions` row isn't already that content: the editor's save (`saveLessonContent`) already
+  created it, so a regenerate after a save leaves 3 versions (generated, edited, regenerated).
+
+### Prompt tuning the code enforces (smoke run "Weaknesses to tune")
+
+- **Pulse check position.** `pulseCheckCorrectOption(n)` gives each lesson a target letter
+  (suggested `'ABCD'[(n - 1) % 4]`; any fixed letter for `null`), so lessons 1-4 get four different
+  letters. `buildLessonPrompt` has a line naming the pulse check and `option <letter>`. After
+  validation the worker runs `normalizeLessonContent`, which moves each pulse check's correct
+  option to that position (the wrong options keep their order; rationales stay with their option).
+- **Part labels.** Learning in Action labels `A`, `a`, `Part a`, `Part A:` become `Part A` (etc.);
+  unlabeled Learning in Action parts get `Part A`, `Part B`, ... by position; other labels (flex
+  `Huddle N`) and other sections are unchanged. The default template says `"Part A"`, `"Part B"`.
+- **Addressed vocabulary.** `normalizeLessonContent` keeps an addressed entry only when its term
+  occurs in the lesson body outside `vocabulary` (case-insensitive, at a word start, so `cite`
+  matches `citing`), then keeps the first `MAX_ADDRESSED_VOCABULARY` (6, the outline's own cap).
+  The default template says the same in its vocabulary line ("at most 6", words the lesson uses).
+- **Essential questions.** The default template tells the model the essential questions come from
+  the outline's text-dependent question (the column is "Text Dependent Question tied to the EQ")
+  where present, and asks for at most 2 (one line that names both).
+- **Exemplar length.** The template keeps "1-2 sentences for quick checks" (a regression guard).
+- `normalizeLessonContent` is pure (does not mutate its input) and its result still validates.
+
 ## Settings (`settings.ts`)
 
 `getGenerationSettings(env)` -> `{ model, concurrency, maxAttempts, capUsd }` from

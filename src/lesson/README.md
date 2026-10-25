@@ -23,7 +23,8 @@ generated lesson and every editor snapshot, and (in M3) the Tiptap node set.
 Shape (field names the fixture uses; follow the private schema proposal for the rest):
 
 - `frontMatter`: `unitTitle`, `number` (int, **null for flex days**), `arc`, `type`, `title`,
-  `durationMinutes`, `focusStandards: string[]` (min 1), `supportingStandards`,
+  `durationMinutes`, `focusStandards: string[]` (min 1, except a `flex` lesson may have none),
+  `supportingStandards`,
   `eldStandards: { code, levels: ('Em'|'Ex'|'Br')[] }[]`, `texts: { title, source?, kind, pages? }[]`.
   Standard codes are not regex-restricted to `RL.6.1` shapes: `RH.6-8.1`, `LIB.6.2.1.a`,
   `ELD.PI.6.6.a`, `ELD.PII.6.3` must all be accepted (D-017 codes).

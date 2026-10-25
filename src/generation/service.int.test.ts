@@ -20,9 +20,11 @@ import {
 import { createTestUnit, createTestUser } from '../../tests/generation_fixtures'
 import { runMigrations } from '../db/migrate'
 import { generationRuns, lessons, lessonVersions } from '../db/schema'
+import { saveLessonContent } from '../workflow/versions'
 import { lessonBodyJsonSchema, LessonContent, validateLesson } from '../lesson/schema'
 import { computeCostUsd, ESTIMATED_TOKENS_PER_LESSON, UnknownModelError } from './llm'
 import { getCurrentPromptVersion, savePromptVersion } from './prompt_versions'
+import { pulseCheckCorrectOption } from './prompt_builder'
 import { DEFAULT_PROMPT_TEMPLATE } from './prompt_template'
 import { ensureGenerationQueue, GENERATE_LESSON_QUEUE } from './queue'
 import {
@@ -368,6 +370,45 @@ describe('generation (R6, R7, R11, R12)', () => {
     })
   })
 
+  describe('post-processing of model output (prompt tuning)', () => {
+    it('saves lessons with the per-lesson pulse check position, "Part A/B" labels and used vocabulary only', async () => {
+      const unit = await createTestUnit(db, { lessons: 4 })
+      const llm = createFakeLlm({
+        respond: () => {
+          // What the smoke run saw: bare part labels and every outline word listed as addressed.
+          const body = coreLessonBody()
+          const action = body.sections.find((section) => section.kind === 'learning_in_action')!
+          action.parts[0]!.label = 'A'
+          action.parts[1]!.label = 'B'
+          body.vocabulary.addressed.push({ term: 'zephyr', definition: 'A gentle breeze.' })
+          return body
+        },
+      })
+      await startWorker(llm)
+      const { runId } = await startRun(deps, { unitId: unit.unitId, model: TEST_MODEL, capUsd: 1 })
+      await waitForRun(runId, ['completed'])
+
+      const positions = await Promise.all(
+        unit.lessonIds.map(async (lessonId, index) => {
+          const content = LessonContent.parse((await lessonRow(lessonId)).content)
+          const action = content.body.sections.find(
+            (section) => section.kind === 'learning_in_action',
+          )!
+          expect(action.parts.map((part) => part.label)).toEqual(['Part A', 'Part B'])
+          expect(content.body.vocabulary.addressed.map((word) => word.term)).toEqual(['claim'])
+          const check = action.parts
+            .flatMap((part) => part.blocks)
+            .find((block) => block.type === 'pulse_check')!
+          const correct =
+            check.type === 'pulse_check' ? check.options.findIndex((o) => o.correct) : -1
+          expect(correct).toBe('ABCD'.indexOf(pulseCheckCorrectOption(index + 1)))
+          return correct
+        }),
+      )
+      expect(new Set(positions).size).toBe(4)
+    })
+  })
+
   describe('spend guard (R12)', () => {
     it('starts no new jobs once the cap is reached and marks the run stopped', async () => {
       const unit = await createTestUnit(db, { lessons: 5 })
@@ -566,6 +607,85 @@ describe('generation (R6, R7, R11, R12)', () => {
       )
       expect(editedVersion).toBeDefined()
       expect(editedVersion!.authorId).toBe(editorId)
+      expect(LessonContent.parse(versions.at(-1)!.content).body.title).toBe(coreLessonBody().title)
+    })
+
+    it('regenerates failed lessons whose latest job was cancelled (workflow status Failed)', async () => {
+      const unit = await createTestUnit(db, { lessons: 3 })
+      const invalid = coreLessonBody()
+      invalid.sections[0]!.minutes = 10
+      let failQ3 = true
+      const llm = createFakeLlm({
+        respond: (_request, call) => (failQ3 && call.marker === 'Q3' ? invalid : coreLessonBody()),
+      })
+      const worker = await startWorker(llm, { maxAttempts: 1 })
+      await generateAll(unit.unitId)
+      expect((await lessonRow(unit.lessonIds[2]!)).status).toBe('failed')
+
+      // A later run is cancelled before it reaches any lesson: every latest job is now cancelled.
+      await worker.stop()
+      workers.splice(workers.indexOf(worker), 1)
+      const { runId: cancelledRunId } = await startRun(deps, {
+        unitId: unit.unitId,
+        model: TEST_MODEL,
+        capUsd: 1,
+      })
+      await cancelRun(deps, cancelledRunId)
+      expect(
+        (await getRun(db, cancelledRunId))!.jobs.every((job) => job.status === 'cancelled'),
+      ).toBe(true)
+      expect((await lessonRow(unit.lessonIds[2]!)).status).toBe('failed')
+      failQ3 = false
+      await startWorker(llm)
+
+      const { runId, jobCount } = await regenerateLessons(deps, {
+        unitId: unit.unitId,
+        failed: true,
+        model: TEST_MODEL,
+        capUsd: 1,
+      })
+
+      expect(jobCount).toBe(1)
+      const run = await waitForRun(runId, ['completed'])
+      expect(run.jobs.map((job) => job.lessonId)).toEqual([unit.lessonIds[2]])
+      expect((await lessonRow(unit.lessonIds[2]!)).status).toBe('draft')
+    })
+
+    it('does not store the edited version twice when the editor save already made it a version', async () => {
+      const unit = await createTestUnit(db, { lessons: 1 })
+      const editorId = await createTestUser(db, 'regenerate-dup-editor@example.com')
+      const llm = createFakeLlm()
+      await startWorker(llm)
+      await generateAll(unit.unitId)
+      const lessonId = unit.lessonIds[0]!
+
+      // The editor's save (R14) writes the content and a lesson_versions row by the editor.
+      const edited = LessonContent.parse((await lessonRow(lessonId)).content)
+      edited.body.title = 'Edited and saved by a reviewer'
+      await saveLessonContent(db, { lessonId, userId: editorId, content: edited })
+
+      const { runId } = await regenerateLessons(deps, {
+        unitId: unit.unitId,
+        lessonIds: [lessonId],
+        model: TEST_MODEL,
+        capUsd: 1,
+        confirmOverwrite: true,
+      })
+      await waitForRun(runId, ['completed'])
+
+      const versions = await db
+        .select()
+        .from(lessonVersions)
+        .where(eq(lessonVersions.lessonId, lessonId))
+        .orderBy(asc(lessonVersions.createdAt))
+      const editedVersions = versions.filter(
+        (version) =>
+          LessonContent.parse(version.content).body.title === 'Edited and saved by a reviewer',
+      )
+      expect(editedVersions).toHaveLength(1)
+      expect(editedVersions[0]!.authorId).toBe(editorId)
+      // generated, edited, regenerated
+      expect(versions).toHaveLength(3)
       expect(LessonContent.parse(versions.at(-1)!.content).body.title).toBe(coreLessonBody().title)
     })
 
