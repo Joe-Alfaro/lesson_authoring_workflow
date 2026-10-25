@@ -24,6 +24,8 @@ import { loadLessonPromptInput, type GetEldInput } from './prompt_input'
 import { ensureGenerationQueue, GENERATE_LESSON_QUEUE, type GenerateLessonJobData } from './queue'
 import { getTotalSpendUsd } from './service'
 import { getGlobalSpendCapUsd } from './settings'
+import { InvalidTransitionError } from '../workflow/errors'
+import { applySystemTransition, type SystemStatus } from '../workflow/service'
 
 export interface GenerationWorkerOptions {
   db: Database
@@ -55,6 +57,46 @@ const ACTIVE_RUN_STATUSES = ['queued', 'running'] as const
 
 /** Output tokens are capped well above a full lesson (~10k) plus thinking. */
 const DEFAULT_MAX_TOKENS = 32_000
+
+/**
+ * Lesson status moves go through the review workflow (R23) so each one is a workflow event. A
+ * lesson already Generating (a job retried after a worker crash) stays Generating.
+ */
+async function moveLesson(
+  db: Database,
+  lessonId: string,
+  to: SystemStatus,
+  note?: string,
+): Promise<void> {
+  try {
+    await applySystemTransition(db, { lessonId, to, note })
+  } catch (error) {
+    if (!(error instanceof InvalidTransitionError)) {
+      throw error
+    }
+    if (to !== 'generating') {
+      console.warn(`[generation] lesson ${lessonId}: ${error.message}`)
+    }
+  }
+}
+
+/** After a failed generation: Failed when there is no content, else back to Draft. */
+async function moveLessonAfterFailure(db: Database, lessonId: string, reason: string) {
+  const [row] = await db
+    .select({ content: lessons.content })
+    .from(lessons)
+    .where(eq(lessons.id, lessonId))
+  if (row?.content == null) {
+    await moveLesson(db, lessonId, 'failed', reason)
+    return
+  }
+  await moveLesson(
+    db,
+    lessonId,
+    'draft',
+    `Regeneration failed; the previous content was kept. ${reason}`,
+  )
+}
 
 class GenerationContext {
   readonly maxAttempts: number
@@ -247,7 +289,7 @@ async function saveLesson(
     }
     await tx
       .update(lessons)
-      .set({ content, status: 'draft', lastEditedBy: null, updatedAt: now })
+      .set({ content, lastEditedBy: null, updatedAt: now })
       .where(eq(lessons.id, job.lessonId))
     await tx.insert(lessonVersions).values({
       lessonId: job.lessonId,
@@ -289,6 +331,11 @@ async function generateLesson(ctx: GenerationContext, job: JobRow, run: RunRow):
       .set({ attempts: number, updatedAt: new Date() })
       .where(eq(generationJobs.id, job.id))
     const outcome = await callModel(previousErrors)
+    if (!outcome.ok) {
+      console.warn(
+        `[generation] lesson ${job.lessonId} attempt ${number}/${ctx.maxAttempts} rejected: ${outcome.errors.join('; ').slice(0, 1000)}`,
+      )
+    }
     if (outcome.ok || number >= ctx.maxAttempts) {
       return outcome
     }
@@ -338,6 +385,7 @@ async function generateLesson(ctx: GenerationContext, job: JobRow, run: RunRow):
   const outcome = await attempt(1, [])
   if (outcome.ok) {
     await saveLesson(db, job, run.unitId, lesson.lessonNumber, outcome.content)
+    await moveLesson(db, job.lessonId, 'draft')
     return
   }
   await db.transaction(async (tx) => {
@@ -345,16 +393,14 @@ async function generateLesson(ctx: GenerationContext, job: JobRow, run: RunRow):
       .update(generationJobs)
       .set({ status: 'failed', error: outcome.errors.join('\n'), updatedAt: new Date() })
       .where(eq(generationJobs.id, job.id))
-    // Invalid output is never saved; a lesson with earlier content goes back to Draft.
-    await tx
-      .update(lessons)
-      .set({
-        status: sql`case when ${lessons.content} is null then 'failed'::lesson_status else 'draft'::lesson_status end`,
-        updatedAt: new Date(),
-      })
-      .where(eq(lessons.id, job.lessonId))
     await notifyLessonProgress(tx, { ...lesson, lessonId: job.lessonId, status: 'failed' })
   })
+  // Invalid output is never saved.
+  await moveLessonAfterFailure(
+    db,
+    job.lessonId,
+    `Generation failed after ${ctx.maxAttempts} attempt(s).`,
+  )
 }
 
 async function processJob(ctx: GenerationContext, jobId: string): Promise<void> {
@@ -397,24 +443,16 @@ async function processJob(ctx: GenerationContext, jobId: string): Promise<void> 
           notInArray(generationJobs.status, [...FINAL_JOB_STATUSES]),
         ),
       )
-    await tx
-      .update(lessons)
-      .set({ status: 'generating', updatedAt: new Date() })
-      .where(eq(lessons.id, job.lessonId))
     await notifyLessonProgress(tx, { ...lessonRef, lessonId: job.lessonId, status: 'generating' })
   })
+  await moveLesson(db, job.lessonId, 'generating')
 
   try {
     await generateLesson(ctx, job, run)
   } catch (error) {
     // Database or prompt-loading failure: fail this lesson rather than leave it generating.
     await setJobStatus(db, job, lessonRef, 'failed', { error: (error as Error).message })
-    await db
-      .update(lessons)
-      .set({
-        status: sql`case when ${lessons.content} is null then 'failed'::lesson_status else 'draft'::lesson_status end`,
-      })
-      .where(eq(lessons.id, job.lessonId))
+    await moveLessonAfterFailure(db, job.lessonId, (error as Error).message)
   }
   await finishRunIfDone(db, run.id)
 }

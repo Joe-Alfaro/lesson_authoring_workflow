@@ -2,13 +2,23 @@
 import { and, asc, desc, eq, gt, isNotNull, lt } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { arcs, lessons, lessonStandards, standards, units } from '../db/schema'
+import { getLessonEldInput } from '../import/eld_service'
 import type { LessonPromptInput, StandardKind } from './prompt_builder'
 import { getCurrentPromptVersion, getPromptVersion } from './prompt_versions'
 
 export type GetEldInput = (db: Database, lessonId: string) => Promise<Record<string, string> | null>
 
-/** Until M1's `getLessonEldInput` is merged there is no stored ELD input. */
-export const noEldInput: GetEldInput = async () => null
+/** M1's stored ELD input (R5), non-empty fields only. */
+const storedEldInput: GetEldInput = async (db, lessonId) => {
+  const fields = await getLessonEldInput(db, lessonId)
+  if (!fields) {
+    return null
+  }
+  const entries = Object.entries(fields).filter(
+    (entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].trim() !== '',
+  )
+  return entries.length > 0 ? Object.fromEntries(entries) : null
+}
 
 const KIND_ORDER: StandardKind[] = ['focus', 'supporting', 'media', 'eld']
 
@@ -76,7 +86,7 @@ export async function loadLessonPromptInput(
   const [previousLesson, nextLesson, eldInput] = await Promise.all([
     neighbour(db, unit.id, lesson.position, 'previous'),
     neighbour(db, unit.id, lesson.position, 'next'),
-    (options.getEldInput ?? noEldInput)(db, lessonId),
+    (options.getEldInput ?? storedEldInput)(db, lessonId),
   ])
 
   return {
