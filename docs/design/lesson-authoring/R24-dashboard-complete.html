@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unit 4 dashboard | Lesson Studio mockup</title>
+<link rel="stylesheet" href="studio.css"><style>
+.uhead { display: flex; align-items: flex-end; gap: 16px; }
+.uhead .sub { margin-top: 4px; }
+.runp { margin-top: 24px; display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 0; }
+.runp .l { padding: 20px 24px; }
+.runp .r { padding: 20px 24px; border-left: 1px solid var(--rule); }
+.bigcount { font-size: 21px; line-height: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px; margin-top: 8px; }
+.kv dt { color: var(--ink-2); } .kv dd { margin: 0; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.counts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.cnt { display: inline-flex; align-items: center; gap: 0; border-radius: 999px; background: var(--paper); box-shadow: inset 0 0 0 1px var(--rule); padding-right: 10px; font-weight: 700; font-variant-numeric: tabular-nums; text-decoration: none; color: var(--ink); }
+.cnt .pill { margin-right: 8px; }
+.cnt[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--ink); }
+.filters { display: flex; gap: 8px; align-items: center; margin: 24px 0 12px; }
+.fsel { height: 36px; border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--paper); padding: 0 10px 0 12px; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; white-space: nowrap; }
+.fsel .v { font-weight: 400; color: var(--ink-2); }
+.fsel.set { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.search { position: relative; width: 260px; }
+.search .ico { position: absolute; left: 10px; top: 10px; color: var(--ink-3); }
+.search .input { height: 36px; padding-left: 32px; font-size: 14px; }
+.who { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.err-line { color: var(--st-failed); font-size: 13px; margin-top: 2px; }
+.selbar { display: flex; align-items: center; gap: 8px; background: var(--ink); color: #fff; border-radius: 10px; padding: 8px 8px 8px 16px; margin-bottom: 12px; }
+.selbar .btn { background: transparent; color: #fff; border-color: rgba(255,255,255,.35); }
+.complete { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; padding: 20px 24px; margin-top: 24px; background: var(--st-approved-t); border: 1px solid #a9d8b8; border-radius: 10px; color: #0f4424; }
+.complete .seal { width: 40px; height: 40px; border-radius: 999px; background: var(--st-approved); color: #fff; display: grid; place-items: center; }
+.complete .seal .ico { width: 22px; height: 22px; }
+.stopped { border: 1px solid #eab0b0; background: var(--st-failed-t); }
+.table td .btn.sm { height: 28px; }
+.actcell { width: 44px; }
+.table td { padding-top: 8px; padding-bottom: 8px; }
+.table td.num { white-space: nowrap; }
+</style>
+</head><body>
+<header class="topbar">
+  <a class="brand" href="#" style="color:inherit;text-decoration:none"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Lesson Studio</a>
+  <nav class="nav" aria-label="Main"><a href="#" aria-current="page">Units</a><a href="#">My lessons</a><a href="#">Prompts</a></nav>
+  <span class="spacer"></span>
+  <div class="me"><span>Author 01</span><span class="role">Author</span><span class="av c2" title="Author 01" aria-label="Author 01">A1</span></div>
+</header><main class="page"><div class="crumbs"><a href="#">Units</a> / Unit 4</div>
+<div class="uhead"><div><h1 class="h1">Unit 4: The Lightning Thief</h1>
+<p class="sub">Grade 6, 41 lessons in 4 arcs, 6 flex days. Anchor text by Rick Riordan, ISBN 9780786838653.</p></div>
+<span class="spacer"></span><a class="btn" href="#">Edit prompt</a><button class="btn"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v8M4.8 7.5L8 10.7l3.2-3.2"/><path d="M2.5 11v2.5h11V11"/></svg>Export</button></div><section class="complete" role="status"><span class="seal"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5"/></svg></span><div><div class="bigcount" style="color:#0f4424">Unit complete: all 41 lessons approved</div>
+<p style="margin-top:2px">Approved lessons are locked. An approver can reopen a lesson if it needs another change.</p></div>
+<div class="row"><button class="btn"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v8M4.8 7.5L8 10.7l3.2-3.2"/><path d="M2.5 11v2.5h11V11"/></svg>Download unit JSON</button><button class="btn"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v8M4.8 7.5L8 10.7l3.2-3.2"/><path d="M2.5 11v2.5h11V11"/></svg>Download unit HTML</button></div></section>
+<section class="panel" style="margin-top:12px;padding:16px 24px"><div class="counts" role="group" aria-label="Lessons per status"><a href="#" class="cnt" aria-pressed="false" aria-label="Approved: 41 lessons, filter"><span class="pill approved"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5"/></svg>Approved</span>41</a></div><div style="margin-top:16px"><div class="strip"><div class="arcgrp"><div class="arcname">Spark</div><div class="tiles"><span class="tile approved" title="Lesson 1: Approved" role="img" aria-label="Lesson 1, Approved">1</span><span class="tile approved" title="Lesson 2: Approved" role="img" aria-label="Lesson 2, Approved">2</span><span class="tile approved" title="Lesson 3: Approved" role="img" aria-label="Lesson 3, Approved">3</span></div></div><div class="arcgrp"><div class="arcname">Investigation 1</div><div class="tiles"><span class="tile approved" title="Lesson 4: Approved" role="img" aria-label="Lesson 4, Approved">4</span><span class="tile approved" title="Lesson 5: Approved" role="img" aria-label="Lesson 5, Approved">5</span><span class="tile approved" title="Lesson 6: Approved" role="img" aria-label="Lesson 6, Approved">6</span><span class="tile approved" title="Lesson 7: Approved" role="img" aria-label="Lesson 7, Approved">7</span><span class="tile approved" title="Lesson 8: Approved" role="img" aria-label="Lesson 8, Approved">8</span><span class="tile approved" title="Lesson 9: Approved" role="img" aria-label="Lesson 9, Approved">9</span><span class="tile approved" title="Lesson 10: Approved" role="img" aria-label="Lesson 10, Approved">10</span><span class="tile approved" title="Lesson 11: Approved" role="img" aria-label="Lesson 11, Approved">11</span><span class="tile approved" title="Lesson 12: Approved" role="img" aria-label="Lesson 12, Approved">12</span><span class="tile approved" title="Lesson 13: Approved" role="img" aria-label="Lesson 13, Approved">13</span><span class="tile approved" title="Lesson 14: Approved" role="img" aria-label="Lesson 14, Approved">14</span><span class="tile approved" title="Lesson 15: Approved" role="img" aria-label="Lesson 15, Approved">15</span><span class="tile approved" title="Lesson 16: Approved" role="img" aria-label="Lesson 16, Approved">16</span><span class="tile approved" title="Lesson 17: Approved" role="img" aria-label="Lesson 17, Approved">17</span><span class="tile approved" title="Lesson 18: Approved" role="img" aria-label="Lesson 18, Approved">18</span><span class="tile approved" title="Lesson 19: Approved" role="img" aria-label="Lesson 19, Approved">19</span></div></div><div class="arcgrp"><div class="arcname">Investigation 2</div><div class="tiles"><span class="tile approved" title="Lesson 20: Approved" role="img" aria-label="Lesson 20, Approved">20</span><span class="tile approved" title="Lesson 21: Approved" role="img" aria-label="Lesson 21, Approved">21</span><span class="tile approved" title="Lesson 22: Approved" role="img" aria-label="Lesson 22, Approved">22</span><span class="tile approved" title="Lesson 23: Approved" role="img" aria-label="Lesson 23, Approved">23</span><span class="tile approved" title="Lesson 24: Approved" role="img" aria-label="Lesson 24, Approved">24</span><span class="tile approved" title="Lesson 25: Approved" role="img" aria-label="Lesson 25, Approved">25</span><span class="tile approved" title="Lesson 26: Approved" role="img" aria-label="Lesson 26, Approved">26</span><span class="tile approved" title="Lesson 27: Approved" role="img" aria-label="Lesson 27, Approved">27</span><span class="tile approved" title="Lesson 28: Approved" role="img" aria-label="Lesson 28, Approved">28</span><span class="tile approved" title="Lesson 29: Approved" role="img" aria-label="Lesson 29, Approved">29</span><span class="tile approved" title="Lesson 30: Approved" role="img" aria-label="Lesson 30, Approved">30</span><span class="tile approved" title="Lesson 31: Approved" role="img" aria-label="Lesson 31, Approved">31</span><span class="tile approved" title="Lesson 32: Approved" role="img" aria-label="Lesson 32, Approved">32</span><span class="tile approved" title="Lesson 33: Approved" role="img" aria-label="Lesson 33, Approved">33</span><span class="tile approved" title="Lesson 34: Approved" role="img" aria-label="Lesson 34, Approved">34</span><span class="tile approved" title="Lesson 35: Approved" role="img" aria-label="Lesson 35, Approved">35</span></div></div><div class="arcgrp"><div class="arcname">Showcase</div><div class="tiles"><span class="tile approved" title="Lesson 36: Approved" role="img" aria-label="Lesson 36, Approved">36</span><span class="tile approved" title="Lesson 37: Approved" role="img" aria-label="Lesson 37, Approved">37</span><span class="tile approved" title="Lesson 38: Approved" role="img" aria-label="Lesson 38, Approved">38</span><span class="tile approved" title="Lesson 39: Approved" role="img" aria-label="Lesson 39, Approved">39</span><span class="tile approved" title="Lesson 40: Approved" role="img" aria-label="Lesson 40, Approved">40</span><span class="tile approved" title="Lesson 41: Approved" role="img" aria-label="Lesson 41, Approved">41</span></div></div></div></div></section>
+
+<div style="position:relative"></div>
+
+</main>
+</body></html>

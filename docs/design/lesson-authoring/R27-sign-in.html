@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in | Lesson Studio mockup</title>
+<link rel="stylesheet" href="studio.css"><style>
+.signin { min-height: 100vh; display: grid; place-items: center; padding: 32px; }
+.signin .card { width: 400px; }
+.signin .ribbon { height: 8px; margin-bottom: 28px; }
+.signin h1 { font: 600 36px/42px var(--read); letter-spacing: -.01em; margin-bottom: 8px; }
+.signin form { margin-top: 28px; }
+.signin .btn.primary { width: 100%; height: 44px; justify-content: center; margin-top: 24px; font-size: 16px; }
+</style>
+</head><body>
+
+<main class="signin">
+  <div class="card">
+    <div class="ribbon" aria-hidden="true"><i class="launch" style="flex:5"></i><i class="lab" style="flex:10"></i><i class="action" style="flex:30"></i><i class="lookback" style="flex:5"></i></div>
+    <h1>Lesson Studio</h1>
+    <p class="sub" style="font-size:16px;line-height:24px">Sign in to write, review and approve unit lessons.</p>
+    
+    <form>
+      <div class="field"><label class="lbl" for="email">Email</label>
+        <input class="input" id="email" type="email" autocomplete="username" value=""></div>
+      <div class="field"><label class="lbl" for="pw">Password</label>
+        <input class="input" id="pw" type="password" autocomplete="current-password" value="">
+        </div>
+      <button class="btn primary" type="submit">Sign in</button>
+    </form>
+  </div>
+</main>
+</body></html>

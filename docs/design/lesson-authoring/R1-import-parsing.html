@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Import an outline | Lesson Studio mockup</title>
+<link rel="stylesheet" href="studio.css"><style>
+.imp { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 24px; margin-top: 24px; align-items: start; }
+.seg { display: inline-flex; background: var(--desk); border-radius: 8px; padding: 3px; gap: 2px; }
+.seg a { padding: 7px 14px; border-radius: 6px; font-weight: 600; color: var(--ink-2); text-decoration: none; display: inline-flex; gap: 8px; align-items: center; }
+.seg a[aria-selected="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 0 0 1px var(--rule); }
+.drop { border: 1.5px dashed var(--rule-strong); border-radius: 10px; padding: 22px; display: flex; gap: 14px; align-items: center; color: var(--ink-2); }
+.drop .ico { width: 22px; height: 22px; }
+.aside h3 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.aside ol { margin: 0; padding-left: 18px; color: var(--ink-2); }
+.aside li + li { margin-top: 6px; }
+.steps { list-style: none; padding: 0; margin: 20px 0 0; }
+.steps li { display: flex; gap: 10px; align-items: center; padding: 8px 0; }
+.steps .ico { width: 18px; height: 18px; }
+.steps .done { color: var(--st-approved); } .steps .now { color: var(--ink); font-weight: 600; } .steps .later { color: var(--ink-3); }
+</style>
+</head><body>
+<header class="topbar">
+  <a class="brand" href="#" style="color:inherit;text-decoration:none"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Lesson Studio</a>
+  <nav class="nav" aria-label="Main"><a href="#" aria-current="page">Units</a><a href="#">My lessons</a><a href="#">Prompts</a></nav>
+  <span class="spacer"></span>
+  <div class="me"><span>Author 01</span><span class="role">Author</span><span class="av c2" title="Author 01" aria-label="Author 01">A1</span></div>
+</header>
+<main class="page">
+  <div class="crumbs"><a href="#">Units</a> / Import</div>
+  <h1 class="h1">Import an outline</h1>
+  <div class="imp">
+    
+    <section class="panel panel-pad" aria-live="polite" aria-busy="true">
+      <h2 class="h3">Reading the outline</h2>
+      <p class="sub" style="margin-top:4px">From the Google Sheets link. Nothing is saved until you confirm the preview.</p>
+      <div class="progress indet" style="margin-top:20px" role="progressbar" aria-label="Reading outline"><i></i></div>
+      <ul class="steps">
+        <li class="done"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5"/></svg>Fetched the sheet</li>
+        <li class="now"><span class="dot breathe" style="width:10px;height:10px;margin:0 4px;color:var(--st-gen)"></span>Reading rows: banner, arcs, lessons, flex days</li>
+        <li class="later"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/></svg>Matching standards codes to the reference data</li>
+        <li class="later"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/></svg>Matching ELD rows to lessons</li>
+      </ul>
+      <div class="row" style="margin-top:16px"><button class="btn quiet">Cancel</button></div>
+    </section>
+    <aside class="aside panel panel-pad">
+      <h3>What the outline needs</h3>
+      <ol>
+        <li>A banner row with grade, unit, anchor text and ISBN.</li>
+        <li>A header row, then arc rows, lesson rows, flex days and a totals row.</li>
+        <li>Standards codes in the focus and supporting columns, for example RL.6.1, L.6.4.b.</li>
+      </ol>
+      <p class="caption" style="margin-top:14px">You'll see every lesson and any warnings before a unit is created.</p>
+    </aside>
+  </div>
+</main>
+</body></html>

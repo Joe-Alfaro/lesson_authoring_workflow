@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 4 editor | Lesson Studio mockup</title>
+<link rel="stylesheet" href="studio.css"><style>
+.chipbtn { cursor: pointer; }
+.chipadd { height: 26px; border: 1px dashed var(--rule-strong); border-radius: 6px; padding: 0 8px; display: inline-flex; align-items: center; gap: 4px; color: var(--ink-2); font-size: 13px; font-weight: 600; background: transparent; }
+.disp { font: 17px/28px var(--read); background: var(--desk); border-radius: 6px; padding: 10px 14px; }
+.hover-blk { box-shadow: -12px 0 0 0 transparent; }
+.hover-blk::before { content: ''; position: absolute; left: -16px; right: -16px; top: -4px; bottom: -4px; border-radius: 8px; background: rgba(28,36,48,.035); z-index: -1; }
+.handle { position: absolute; left: -46px; top: 2px; display: flex; gap: 2px; color: var(--ink-3); }
+.handle span { width: 20px; height: 24px; display: grid; place-items: center; border-radius: 4px; }
+.locked .doc { background: #fbfcfd; }
+.prop { position: relative; }
+.prop .blk, .prop .routine { background: #eef9f2; box-shadow: -14px 0 0 #eef9f2, 14px 0 0 #eef9f2; }
+.lv .blk { display: block; margin: 12px 0; }
+.lv .blk > .g { display: inline; font: 700 16px/28px var(--read); color: var(--ink); margin-right: 6px; }
+.lv .blk > .c { display: inline; }
+.lv .blk.ex { margin-left: 28px; }
+.lv .blk.ex > .g { display: block; font: 600 13px/20px var(--ui); color: var(--ink-3) !important; }
+.lv .blk.ex > .c { display: block; border: 0; padding: 0; }
+.lv .blk.teacher > .g { display: none; }
+</style>
+</head><body>
+<header class="topbar">
+  <a class="brand" href="#" style="color:inherit;text-decoration:none"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Lesson Studio</a>
+  <nav class="nav" aria-label="Main"><a href="#" aria-current="page">Units</a><a href="#">My lessons</a><a href="#">Prompts</a></nav>
+  <span class="spacer"></span>
+  <div class="me"><span>Reviewer 03</span><span class="role">Reviewer</span><span class="av c4" title="Reviewer 03" aria-label="Reviewer 03">R3</span></div>
+</header><div class="lesson-bar">
+<a class="btn quiet sm" href="#" aria-label="Back to Unit 4">Unit 4</a><span class="muted">/</span>
+<span class="t">Lesson 4</span><span class="pill draft lg"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.5 2.5l3 3L6 13H3v-3z"/></svg>Draft</span>
+<span class="row caption" style="gap:6px">Assigned to <span class="av c4 sm" title="Reviewer 03" aria-label="Reviewer 03">R3</span><span style="color:var(--ink-2)">Reviewer 03</span></span>
+<span class="caption">Prompt v3, Haiku-class</span>
+<span class="spacer"></span>
+<div class="avs" aria-label="Also editing: Reviewer 07, Approver 01"><span class="av c1" title="Reviewer 07" aria-label="Reviewer 07">R7</span><span class="av c5" title="Approver 01" aria-label="Approver 01">P1</span></div>
+<span class="caption row" style="gap:4px"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5a3 3 0 01-.4-6A4 4 0 0111.8 6a3.2 3.2 0 01.2 6.5z"/></svg>All changes saved</span>
+<button class="btn quiet sm" aria-label="Version history"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 101.6-3.9"/><path d="M2.3 2.5v2.8h2.8"/><path d="M8 5v3.2l2 1.3"/></svg></button>
+<button class="btn quiet sm" aria-label="Comments"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3h11v8H7l-3 2.5V11H2.5z"/></svg></button>
+<button class="btn quiet sm" aria-label="Alignment check"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.8"/><circle cx="8" cy="8" r="2.4"/></svg></button>
+<a class="btn sm" href="#"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></svg>Lesson view</a>
+<button class="btn primary">Submit for review</button>
+</div>
+<div class="workspace no-side"><nav class="rail" aria-label="Lesson outline"><h4>Front matter</h4><a href="#">Standards and texts</a><a href="#">Objectives</a><a href="#">Pacing</a><h4 style="margin-top:20px">Lesson sequence</h4><a href="#sec-launch" class=""><span class="bar" style="background:var(--sec-launch)"></span>Launch<span class="min">5 min</span></a><a href="#sec-lab" class=""><span class="bar" style="background:var(--sec-lab)"></span>Literacy Lab<span class="min">10 min</span></a><a href="#sec-action" class=""><span class="bar" style="background:var(--sec-action)"></span>Learning in Action<span class="min">30 min</span></a><a href="#" class="child">Part A</a><a href="#" class="child">Part B</a><a href="#sec-lookback" class="on"><span class="bar" style="background:var(--sec-lookback)"></span>Look Back<span class="min">5 min</span></a><a href="#sec-homework" class=""><span class="bar" style="background:var(--sec-homework)"></span>Homework<span class="min"></span></a><div style="margin-top:20px"><div class="ribbon" style="height:8px" role="img" aria-label="Pacing: Launch 5, Literacy Lab 10, Learning in Action 30, Look Back 5 minutes"><i class="launch" style="flex:5"></i><i class="lab" style="flex:10"></i><i class="action" style="flex:30"></i><i class="lookback" style="flex:5"></i></div><div class="caption" style="margin-top:6px">50 of 50 minutes</div></div></nav><main class="docwrap"><article class="doc" aria-label="Lesson 4 editor"><section class="sec lookback" id="sec-lookback"><div class="sec-h"><span class="no">4</span><h2>Look Back</h2><span class="mins">5 min</span><button class="btn quiet sm" style="margin-left:8px" aria-label="Regenerate Look Back with AI"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.8l1.3 3.6 3.6 1.3-3.6 1.3L8 11.6 6.7 8 3.1 6.7l3.6-1.3z"/><path d="M12.6 11.2l.5 1.3 1.3.5-1.3.5-.5 1.3-.5-1.3-1.3-.5 1.3-.5z"/></svg>Regenerate</button></div><h4 class="routine">Quick Write</h4><div class="blk dir "><div class="g">Directions</div><div class="c">In two sentences, predict what kind of hero Percy might become. Use one word from today’s vocabulary.</div></div><div class="blk ask "><div class="g">Ask</div><div class="c">What is one thing Percy fears, and how might that fear matter later in a myth-like story?</div></div><div class="blk ex "><div class="g">Exemplar</div><div class="c">Percy fears being a problem kid forever. In a myth the hero usually has to face what they fear, so he might have to prove he belongs.</div></div></section>
+<section class="sec homework" id="sec-homework"><div class="sec-h"><h2>Homework</h2></div><div class="blk teacher "><div class="g">Teacher</div><div class="c">Have students take the novel home. Instruct students to:</div></div><div class="blk "><div class="g"></div><div class="c"><ul style="margin:0;padding-left:20px"><li>Read and annotate Chapter 1, pp. 9–15. Mark two places where Percy’s tone changes.</li><li>Read and annotate the excerpt from “The Hare and the Lion.”</li></ul></div></div></section></article></main></div><div class="scrim"><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="r21t">
+<header><h2 class="h3" id="r21t">Regenerate Look Back</h2><p class="sub" style="margin-top:4px">Only this section is rewritten. The rest of the lesson stays as it is, and you review the result before it replaces anything.</p></header>
+<div class="body"><label class="lbl" for="r21i">Instruction <span class="muted" style="font-weight:400">(optional)</span></label>
+<textarea class="textarea is-focus" id="r21i" rows="3">Have students use one of today's vocabulary words in the Quick Write.</textarea>
+<p class="help">Uses prompt v3 and this lesson's outline row, standards and the sections around it.</p></div>
+<footer><button class="btn">Cancel</button><button class="btn primary"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.8l1.3 3.6 3.6 1.3-3.6 1.3L8 11.6 6.7 8 3.1 6.7l3.6-1.3z"/><path d="M12.6 11.2l.5 1.3 1.3.5-1.3.5-.5 1.3-.5-1.3-1.3-.5 1.3-.5z"/></svg>Regenerate section</button></footer></div></div>
+</body></html>

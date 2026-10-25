@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompt | Lesson Studio mockup</title>
+<link rel="stylesheet" href="studio.css"><style>
+.pgrid { display: grid; grid-template-columns: 248px minmax(0,1fr) 300px; gap: 24px; margin-top: 24px; align-items: start; }
+.vers { padding: 8px; }
+.vers h2 { font-size: 13px; font-weight: 600; color: var(--ink-2); padding: 8px 8px 6px; }
+.ver { display: block; padding: 10px; border-radius: 6px; color: inherit; text-decoration: none; }
+.ver + .ver { margin-top: 2px; }
+.ver[aria-current] { background: var(--desk); box-shadow: inset 3px 0 0 var(--ink); }
+.ver .vt { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.ver .tag { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 0 7px; line-height: 18px; background: var(--ink); color: #fff; }
+.ver .tag.d { background: var(--st-review-t); color: var(--st-review); }
+.psec { padding: 20px 24px; }
+.psec + .psec { border-top: 1px solid var(--rule); }
+.psec h2 { font-size: 16px; font-weight: 700; }
+.psec .help { margin: 2px 0 10px; }
+.ptext { font: 15px/24px var(--ui); width: 100%; border: 1px solid var(--rule-strong); border-radius: 6px; padding: 12px 14px; background: var(--paper); white-space: pre-wrap; }
+.ptext.ro { background: #f7f8fa; border-color: var(--rule); color: var(--ink-2); }
+.ptabs { display: flex; gap: 2px; flex-wrap: wrap; margin-bottom: 10px; }
+.ptabs a { padding: 6px 10px; border-radius: 6px; font-weight: 600; font-size: 13px; color: var(--ink-2); text-decoration: none; box-shadow: inset 0 0 0 1px var(--rule); }
+.ptabs a[aria-selected="true"] { background: var(--ink); color: #fff; box-shadow: none; }
+.ptabs a .e { display: inline-block; width: 6px; height: 6px; border-radius: 999px; background: var(--st-review); margin-left: 6px; vertical-align: 1px; }
+.inputs li { padding: 6px 0; }
+.chg { background: #fff3cd; border-radius: 2px; }
+</style>
+</head><body>
+<header class="topbar">
+  <a class="brand" href="#" style="color:inherit;text-decoration:none"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Lesson Studio</a>
+  <nav class="nav" aria-label="Main"><a href="#">Units</a><a href="#">My lessons</a><a href="#" aria-current="page">Prompts</a></nav>
+  <span class="spacer"></span>
+  <div class="me"><span>Author 01</span><span class="role">Author</span><span class="av c2" title="Author 01" aria-label="Author 01">A1</span></div>
+</header><main class="page">
+<div class="crumbs"><a href="#">Units</a> / <a href="#">Unit 4</a> / Prompt</div>
+<div class="row" style="align-items:flex-end"><div><h1 class="h1">Prompt for Unit 4: The Lightning Thief</h1>
+<p class="sub" style="margin-top:4px">Used for every lesson generated or regenerated in this unit.</p></div><span class="spacer"></span><a class="btn" href="#">Back to current version</a></div>
+<div class="notice info" style="margin-top:20px"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 101.6-3.9"/><path d="M2.3 2.5v2.8h2.8"/><path d="M8 5v3.2l2 1.3"/></svg><div><b>You're viewing v2. It's read-only.</b> Lessons 9 and 14 were generated with it. Regenerating them uses the current version, v3.</div></div>
+<div class="pgrid">
+<nav class="panel vers" aria-label="Prompt versions"><h2>Versions</h2><a class="ver" href="#"><span class="vt">v3<span class="tag ">Current</span></span><span class="caption">Author 01, today 10:31. Used by 39 lessons.</span></a><a class="ver" href="#" aria-current="true"><span class="vt">v2</span><span class="caption">Author 02, today 9:05. Used by 2 lessons.</span></a><a class="ver" href="#"><span class="vt">v1</span><span class="caption">Author 01, yesterday 16:40. Imported default. Used by 0 lessons.</span></a></nav>
+<div class="panel">
+  <section class="psec"><h2 id="p1">System instructions</h2><p class="help">The model's role and the rules every lesson must follow.</p>
+    <div class="ptext ro" role="textbox" aria-multiline="true" aria-labelledby="p1">You write teacher-facing lessons for a grade 6 English language arts unit. Each lesson is 50 minutes and is taught by a classroom teacher the next day with little preparation.
+
+Return one lesson that matches the lesson schema. Use only the standards listed for this lesson, and tag every focus standard on at least one Learning in Action part. Section minutes must add up to the lesson&#x27;s duration.
+
+Cite texts by title and page range. Quote at most a short phrase from a text; never reproduce passages.</div></section>
+  <section class="psec"><h2 id="p2">Style guide</h2><p class="help">Voice, block conventions and how much to write per section.</p>
+    <div class="ptext ro" role="textbox" aria-multiline="true" aria-labelledby="p2">Write for the teacher in two voices and keep them apart.
+- Teacher guidance (framing, tips, ELD moves): short imperatives such as &quot;Have students...&quot; or &quot;Pause after...&quot;.
+- Words the teacher says (Say, Directions, Ask): second person, warm and direct, grade 6 vocabulary.
+
+Every Ask is followed by an exemplar response written as a strong grade 6 student would say it, using the language move taught in the lesson.
+
+Each Learning in Action part and the Literacy Lab gets its own ELD instructions and student support table. Launch and Look Back do not.</div></section>
+  <section class="psec"><h2 id="p3">Lesson-type guidance</h2><p class="help">Added to the prompt for lessons of that type in the outline.</p>
+    <div class="ptabs" role="tablist" aria-labelledby="p3"><a href="#" role="tab" aria-selected="false">Spark</a><a href="#" role="tab" aria-selected="true">Core Reading</a><a href="#" role="tab" aria-selected="false">Core Writing</a><a href="#" role="tab" aria-selected="false">Academic Discussion</a><a href="#" role="tab" aria-selected="false">Writing</a><a href="#" role="tab" aria-selected="false">Flex day</a></div>
+    <div class="ptext ro" role="textbox" aria-multiline="true" aria-label="Core Reading guidance">Use the core split: Launch 5, Literacy Lab 10, Learning in Action 30, Look Back 5.
+Literacy Lab teaches one sentence-level move students use later in the lesson.
+Part A is the reading of the page range from the outline, with planned pause points and an Ask at each pause.
+Part B is a short written response to the outline's text-dependent question, with a model paragraph for the teacher.</div></section>
+</div>
+<aside class="panel panel-pad" style="padding:20px">
+  <h2 style="font-size:14px;font-weight:700">Added to every lesson automatically</h2>
+  <p class="caption" style="margin-top:4px">These come from the outline and the standards data. You don't need to repeat them.</p>
+  <ul class="inputs" style="padding-left:18px;margin:10px 0 0;color:var(--ink-2)">
+    <li>The lesson's outline row: type, description, texts, homework, vocabulary</li>
+    <li>Full text of every focus and supporting standard</li>
+    <li>ELD standards from the outline, and the ELD file's fields when they aren't empty</li>
+    <li>The arc's description</li>
+    <li>The previous and next lesson descriptions</li>
+  </ul>
+</aside>
+</div></main>
+</body></html>

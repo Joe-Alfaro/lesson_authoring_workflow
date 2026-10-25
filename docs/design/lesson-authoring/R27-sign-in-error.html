@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in | Lesson Studio mockup</title>
+<link rel="stylesheet" href="studio.css"><style>
+.signin { min-height: 100vh; display: grid; place-items: center; padding: 32px; }
+.signin .card { width: 400px; }
+.signin .ribbon { height: 8px; margin-bottom: 28px; }
+.signin h1 { font: 600 36px/42px var(--read); letter-spacing: -.01em; margin-bottom: 8px; }
+.signin form { margin-top: 28px; }
+.signin .btn.primary { width: 100%; height: 44px; justify-content: center; margin-top: 24px; font-size: 16px; }
+</style>
+</head><body>
+
+<main class="signin">
+  <div class="card">
+    <div class="ribbon" aria-hidden="true"><i class="launch" style="flex:5"></i><i class="lab" style="flex:10"></i><i class="action" style="flex:30"></i><i class="lookback" style="flex:5"></i></div>
+    <h1>Lesson Studio</h1>
+    <p class="sub" style="font-size:16px;line-height:24px">Sign in to write, review and approve unit lessons.</p>
+    <div class="notice err" role="alert" style="margin-top:24px"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8l6.6 11.7H1.4z" fill="currentColor"/><path d="M8 6v3.6M8 11.4v.1" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/></svg><div><b>Email or password is incorrect.</b><br>Check both and try again. Accounts are created by an admin; there is no self sign-up.</div></div>
+    <form>
+      <div class="field"><label class="lbl" for="email">Email</label>
+        <input class="input" id="email" type="email" autocomplete="username" value="reviewer07@example.com"></div>
+      <div class="field"><label class="lbl" for="pw">Password</label>
+        <input class="input" id="pw" type="password" autocomplete="current-password" value="xxxxxxxxxxxx">
+        </div>
+      <button class="btn primary" type="submit">Sign in</button>
+    </form>
+  </div>
+</main>
+</body></html>
