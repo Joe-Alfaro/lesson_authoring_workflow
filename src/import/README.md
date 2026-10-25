@@ -12,7 +12,7 @@ paths and return shapes are what the tests import; anything not listed is up to 
 | `src/import/sheet_link.ts`                  | `toCsvExportUrl(link)`, `fetchSheetCsv(link, fetchImpl = fetch)`, `SheetLinkError`, `SheetAccessError` | pure + fetch |
 | `src/import/parse_eld.ts`                   | `parseEldFile(csv): EldRow[]`, `matchEldRows(rows, items): { matches, warnings }`                      | pure         |
 | `src/import/import_service.ts`              | `previewImport`, `confirmImport`, `cancelImport`, `getLessonWarnings`, `ImportNotFoundError`           | DB           |
-| `src/import/eld_service.ts`                 | `attachEldFile(db, unitId, csv)`, `getLessonEldInput(db, lessonId)`                                    | DB           |
+| `src/import/eld_service.ts`                 | `attachEldFile(db, unitId, csv)`, `getLessonEldInput(db, lessonId)`, `getUnitEldWarnings(db, unitId)`  | DB           |
 | `src/app/api/imports/route.ts`              | `POST` (JSON `{ url }` or multipart field `file`) -> 200 preview, 400 `{ error }`                      | route        |
 | `src/app/api/imports/[id]/confirm/route.ts` | `POST` -> 201 `{ unitId }`, 404 when the import is unknown                                             | route        |
 | `src/app/api/imports/[id]/route.ts`         | `DELETE` -> 204 (cancel)                                                                               | route        |
@@ -72,6 +72,7 @@ type ImportWarning = { message: string; lessonNumber?: number | null; code?: str
 - The lesson number comes from "Lesson #", never from the filename (the sample has typos such as
   `L309_...` for lesson 39). Filenames are kept as written.
 - Every cell is trimmed, including non-breaking spaces (U+00A0), in the fields and in `rawRow`.
+  A U+00A0 inside a cell becomes a normal space (D-028), in the outline and in ELD files.
   Field names match the `lessons` columns in `src/db/schema.ts`.
 
 ## `normalizeStandards(cell, { kind, grade, isKnown })`
@@ -90,7 +91,10 @@ type ImportWarning = { message: string; lessonNumber?: number | null; code?: str
 
 - `toCsvExportUrl` turns any `https://docs.google.com/spreadsheets/d/<id>/...` link into
   `https://docs.google.com/spreadsheets/d/<id>/export?format=csv`, adding `&gid=<gid>` when the
-  link names a tab (`#gid=` or `?gid=`). Anything else throws `SheetLinkError`.
+  link names a tab (`#gid=` or `?gid=`). Account-switch links (`/spreadsheets/u/<n>/d/<id>/...`)
+  convert the same way (D-028). "Publish to the web" links (`/spreadsheets/d/e/<id>/pub...` or
+  `/pubhtml...`, also under `/u/<n>/`) become `https://docs.google.com/spreadsheets/d/e/<id>/pub?output=csv`,
+  plus `&gid=<gid>&single=true` when the link names a tab. Anything else throws `SheetLinkError`.
 - `fetchSheetCsv` fetches the export URL with `fetchImpl` (no Google credentials). A non-2xx
   response or an HTML body (Google's sign-in page for a private sheet) throws `SheetAccessError`
   whose message says the sheet must be shared by link ("anyone with the link").
@@ -137,10 +141,15 @@ type PreviewItem = {
 
 - ELD rows are grouped by arc and lesson type (both trimmed, case-insensitive). The n-th ELD row
   of a group matches the n-th outline item (lesson or flex day) with the same arc and type.
-  A row without a match yields a warning naming its filename.
+  When that finds no item, a row whose Filename starts with `L<n>_` matches the lesson numbered
+  n in the same arc, unless that lesson is already matched (D-028). A row without a match yields
+  a warning naming its filename.
 - `matchEldRows(rows, items)` returns `matches: { position, fields }[]` (the outline item's
   `position`) and `warnings`. `fields` keeps only non-empty content fields:
   `eldStandards, languageObjective, contentObjective, ideasLaunch, ideasLiteracyLab,
 ideasLearningInAction, ideasLookBack, routines`.
 - `attachEldFile` stores those fields per lesson and returns `{ matched, warnings }`;
   `getLessonEldInput(db, lessonId)` returns the stored fields or `null`. Generation (M2) reads it.
+- `attachEldFile` also stores the unmatched-row warnings on the unit, replacing earlier ones;
+  `getUnitEldWarnings(db, unitId)` returns them (`[]` when none or the unit is unknown) so the UI
+  can show them after the import (D-028).

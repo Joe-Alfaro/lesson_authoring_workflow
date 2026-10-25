@@ -100,3 +100,50 @@ describe('fetchSheetCsv', () => {
     expect(fetchImpl).not.toHaveBeenCalled()
   })
 })
+
+// D-028: account-switch links (/u/<n>/) and "Publish to the web" links (/d/e/<id>/pub).
+const PUB_ID = '2PACX-1vAbCdEf_123456789xyz'
+const PUB = `https://docs.google.com/spreadsheets/d/e/${PUB_ID}`
+const PUB_EXPORT = `${PUB}/pub?output=csv`
+
+describe('toCsvExportUrl with /u/<n>/ and publish links', () => {
+  it.each([
+    ['/u/0/ edit link', `https://docs.google.com/spreadsheets/u/0/d/${ID}/edit`, EXPORT],
+    [
+      '/u/1/ share link with a tab',
+      `https://docs.google.com/spreadsheets/u/1/d/${ID}/edit?usp=sharing#gid=456`,
+      `${EXPORT}&gid=456`,
+    ],
+    ['publish link (web page)', `${PUB}/pubhtml`, PUB_EXPORT],
+    ['publish link (CSV)', `${PUB}/pub?output=csv`, PUB_EXPORT],
+    ['publish link (other format)', `${PUB}/pub?output=xlsx`, PUB_EXPORT],
+    [
+      'publish link for one tab',
+      `${PUB}/pubhtml?gid=456&single=true`,
+      `${PUB_EXPORT}&gid=456&single=true`,
+    ],
+    [
+      'publish CSV link for one tab',
+      `${PUB}/pub?gid=456&single=true&output=csv`,
+      `${PUB_EXPORT}&gid=456&single=true`,
+    ],
+    [
+      '/u/0/ publish link',
+      `https://docs.google.com/spreadsheets/u/0/d/e/${PUB_ID}/pubhtml`,
+      PUB_EXPORT,
+    ],
+  ])('converts a %s', (_name, link, expected) => {
+    expect(toCsvExportUrl(link)).toBe(expected)
+  })
+
+  it('does not read the "e" of a publish link as a sheet id', () => {
+    expect(toCsvExportUrl(`${PUB}/pubhtml`)).not.toContain('/d/e/export')
+  })
+
+  it('fetches a publish link from its CSV output', async () => {
+    const fetchImpl = vi.fn(async () => csvResponse(sampleOutlineCsv()))
+    await fetchSheetCsv(`${PUB}/pubhtml`, fetchImpl)
+    const [url] = fetchImpl.mock.calls[0] as unknown as [string]
+    expect(String(url)).toBe(PUB_EXPORT)
+  })
+})
