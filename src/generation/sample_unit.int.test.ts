@@ -1,7 +1,7 @@
 // M2 follow-up on the real sample outline (imported with M1's importer): flex days without focus
 // standards (R6), front matter texts (R7, Lesson structure item 1) and a code listed as both focus
 // and additional (R7). Contract: src/generation/README.md. No test calls a real model.
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { PgBoss } from 'pg-boss'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest'
 import { connectTestDb } from '../../tests/db'
@@ -9,7 +9,7 @@ import { createFakeLlm, TEST_MODEL, TEST_PRICES } from '../../tests/fake_llm'
 import { flexLessonBody } from '../../tests/fixtures/lesson/lesson_fixture'
 import { sampleOutlineCsv, STANDARDS_DIR } from '../../tests/import_fixtures'
 import { runMigrations } from '../db/migrate'
-import { lessons } from '../db/schema'
+import { lessons, standards } from '../db/schema'
 import { loadStandards } from '../db/seed/standards'
 import { confirmImport, previewImport } from '../import/import_service'
 import { LessonContent, type LessonBody } from '../lesson/schema'
@@ -42,6 +42,8 @@ describe('generation on the sample unit (R6, R7)', () => {
   let boss: PgBoss
   let deps: GenerationDeps
   let unitId: string
+  /** Standards this file added; removed afterwards so other files see only their own (D-029). */
+  let addedCodes: string[] = []
   const workers: GenerationWorker[] = []
 
   async function numbered(lessonNumber: number) {
@@ -75,7 +77,13 @@ describe('generation on the sample unit (R6, R7)', () => {
 
   beforeAll(async () => {
     await runMigrations(pool)
+    const before = new Set(
+      (await db.select({ code: standards.code }).from(standards)).map((row) => row.code),
+    )
     await loadStandards(db, STANDARDS_DIR)
+    addedCodes = (await db.select({ code: standards.code }).from(standards))
+      .map((row) => row.code)
+      .filter((code) => !before.has(code))
     const preview = await previewImport(db, { kind: 'csv', csv: sampleOutlineCsv() })
     unitId = (await confirmImport(db, preview.importId)).unitId
     boss = new PgBoss({ connectionString: inject('databaseUrl') })
@@ -92,6 +100,9 @@ describe('generation on the sample unit (R6, R7)', () => {
   })
   afterAll(async () => {
     await boss.stop({ graceful: false })
+    if (addedCodes.length > 0) {
+      await db.delete(standards).where(inArray(standards.code, addedCodes))
+    }
     await pool.end()
   })
 

@@ -1,4 +1,4 @@
-import { cp, mkdtemp, readFile, writeFile } from 'node:fs/promises'
+import { cp, mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import bcrypt from 'bcryptjs'
@@ -19,6 +19,21 @@ describe('seed', () => {
     await runMigrations(pool)
   })
   afterAll(() => pool.end())
+
+  /** Every standard code in the fixture files, sorted. */
+  async function fixtureCodes(): Promise<string[]> {
+    const files = (await readdir(FIXTURE_DIR)).filter((file) => file.endsWith('.json'))
+    const lists = await Promise.all(
+      files.map(
+        async (file) =>
+          JSON.parse(await readFile(join(FIXTURE_DIR, file), 'utf8')) as { code: string }[],
+      ),
+    )
+    return lists
+      .flat()
+      .map((record) => record.code)
+      .sort()
+  }
 
   // Only the seeded accounts: other integration files share this database and add test users.
   async function countByRole() {
@@ -42,8 +57,14 @@ describe('seed', () => {
     expect(first).toEqual({ users: 25, standards: 4 })
     expect(second).toEqual(first)
     expect(await countByRole()).toEqual({ admin: 1, author: 2, approver: 2, reviewer: 20 })
-    const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(standards)
-    expect(row?.count).toBe(4)
+    // Only the fixture's codes (D-029): other integration files load their own standards.
+    const codes = await fixtureCodes()
+    const seeded = await db
+      .select({ code: standards.code })
+      .from(standards)
+      .where(inArray(standards.code, codes))
+    expect(seeded.map((row) => row.code).sort()).toEqual(codes)
+    expect(codes).toHaveLength(4)
   })
 
   it('hashes the seed password and updates it on re-seed', async () => {
