@@ -1,0 +1,7 @@
+node_modules
+.next
+drizzle/meta
+next-env.d.ts
+package-lock.json
+data/sample_unit
+docs/requirements
