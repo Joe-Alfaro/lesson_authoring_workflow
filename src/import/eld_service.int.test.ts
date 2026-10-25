@@ -10,7 +10,7 @@ import {
   sampleOutlineCsv,
 } from '../../tests/import_fixtures'
 import { runMigrations } from '../db/migrate'
-import { arcs, lessons, units } from '../db/schema'
+import { arcs, lessons, pendingImports, standards, units } from '../db/schema'
 import { loadStandards } from '../db/seed/standards'
 import { attachEldFile, getLessonEldInput } from './eld_service'
 import { confirmImport, previewImport } from './import_service'
@@ -23,7 +23,13 @@ describe('ELD file (R5)', () => {
     await runMigrations(pool)
     await loadStandards(db, STANDARDS_DIR)
   })
-  afterAll(() => pool.end())
+  afterAll(async () => {
+    // Integration files share one database; leave no units, imports or standards behind.
+    await db.delete(units)
+    await db.delete(pendingImports)
+    await db.delete(standards)
+    await pool.end()
+  })
   beforeEach(async () => {
     await db.delete(units)
     const preview = await previewImport(db, { kind: 'csv', csv: sampleOutlineCsv() }, {})

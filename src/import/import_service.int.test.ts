@@ -5,7 +5,15 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { connectTestDb } from '../../tests/db'
 import { STANDARDS_DIR, sampleOutlineCsv } from '../../tests/import_fixtures'
 import { runMigrations } from '../db/migrate'
-import { arcs, lessonStandards, lessons, pendingImports, units, users } from '../db/schema'
+import {
+  arcs,
+  lessonStandards,
+  lessons,
+  pendingImports,
+  standards,
+  units,
+  users,
+} from '../db/schema'
 import { loadStandards } from '../db/seed/standards'
 import {
   ImportNotFoundError,
@@ -46,9 +54,10 @@ describe('import service', () => {
     authorId = author!.id
   })
   afterAll(async () => {
-    // Integration files share one database; leave no units, imports or users behind.
+    // Integration files share one database; leave no units, imports, standards or users behind.
     await db.delete(units)
     await db.delete(pendingImports)
+    await db.delete(standards)
     await db.delete(users).where(eq(users.id, authorId))
     await pool.end()
   })
