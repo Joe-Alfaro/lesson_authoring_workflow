@@ -8,33 +8,18 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import { useEffect } from 'react'
 import type { JSONContent } from '@tiptap/core'
 import { lessonEditorExtensions } from '../../editor/schema'
+import { RemoteSelectionFix } from '../../editor/remote_selection'
 import { StructureGuard } from '../../editor/structure_guard'
 import { LESSON_FRAGMENT } from '../../editor/ydoc'
 import type { LessonCollab } from './collab'
+import { CaretLabels, renderCaret } from './caret_labels'
 import { userColour } from './collab'
 import { lessonNodeViews, type EditorViewContext } from './node_views'
 import { PacingWidget } from './pacing'
 
-/** Remote caret: a 2px bar in the person's colour with their name on a tag (aria-hidden). */
-function renderCaret(user: Record<string, unknown>): HTMLElement {
-  const colour = String(user.color ?? '#1d4ed8')
-  const caret = document.createElement('span')
-  caret.className = 'rc'
-  caret.setAttribute('aria-hidden', 'true')
-  const bar = document.createElement('span')
-  bar.className = 'caret'
-  bar.style.background = colour
-  const tag = document.createElement('span')
-  tag.className = 'tag'
-  tag.style.background = colour
-  tag.textContent = String(user.name ?? '')
-  bar.append(tag)
-  caret.append(bar)
-  return caret
-}
-
 function attributes(label: string, editable: boolean): Record<string, string> {
-  if (!editable) return { class: 'lesson-pm' }
+  // Tiptap adds role="textbox" unless told otherwise; a locked lesson is a document, not a field.
+  if (!editable) return { class: 'lesson-pm', role: 'document', 'aria-label': label }
   return {
     class: 'lesson-pm',
     role: 'textbox',
@@ -66,6 +51,8 @@ export function LiveDocument({
       extensions: [
         ...lessonEditorExtensions(lessonNodeViews(ctx)),
         StructureGuard,
+        RemoteSelectionFix,
+        CaretLabels,
         PacingWidget,
         Collaboration.configure({ document: collab.doc, field: LESSON_FRAGMENT }),
         CollaborationCaret.configure({
@@ -103,7 +90,7 @@ export function PreviewDocument({
       editable: false,
       content,
       extensions: [...lessonEditorExtensions(lessonNodeViews(ctx)), PacingWidget],
-      editorProps: { attributes: { class: 'lesson-pm' } },
+      editorProps: { attributes: { class: 'lesson-pm', role: 'document' } },
     },
     [content],
   )

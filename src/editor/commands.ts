@@ -1,7 +1,8 @@
 // R17 editing commands: add and remove blocks (prompts), list items and parts, keeping the lesson
 // shape valid. Each returns false and changes nothing when its target id is unknown or the change
-// would break a schema minimum. Contract: src/editor/README.md.
-import type { Node as PmNode } from '@tiptap/pm/model'
+// would break a schema minimum. New nodes come from `state.schema`, since the browser editor builds
+// its own Schema instance. Contract: src/editor/README.md.
+import type { Node as PmNode, Schema } from '@tiptap/pm/model'
 import type { Command, Transaction } from '@tiptap/pm/state'
 import type { Block } from '../lesson/schema'
 import { blockToNode, parseData, partToNode, valueNode } from './convert'
@@ -50,7 +51,11 @@ function isBlock(node: PmNode): boolean {
 }
 
 /** An empty block of `type`; its text fields are empty, so it validates once filled in. */
-export function emptyBlock(type: Block['type'], partStandards: string[] = []): PmNode {
+export function emptyBlock(
+  type: Block['type'],
+  partStandards: string[] = [],
+  schema: Schema = lessonSchema,
+): PmNode {
   const shape = Object.fromEntries(
     Object.entries(blockShape(type)).filter(([key]) => key !== 'type' && key !== 'id'),
   )
@@ -64,7 +69,7 @@ export function emptyBlock(type: Block['type'], partStandards: string[] = []): P
   if (Array.isArray(value.standards) && 'standards' in shape) {
     value.standards = [...partStandards]
   }
-  return lessonSchema.nodeFromJSON(blockToNode(value as unknown as Block))
+  return schema.nodeFromJSON(blockToNode(value as unknown as Block))
 }
 
 export function addBlock(afterBlockId: string, type: Block['type']): Command {
@@ -75,7 +80,7 @@ export function addBlock(afterBlockId: string, type: Block['type']): Command {
     const standards = (parseData(part.toJSON()).standards as string[] | undefined) ?? []
     if (dispatch) {
       const at = target.pos + target.node.nodeSize
-      dispatch(structural(state.tr.insert(at, emptyBlock(type, standards))))
+      dispatch(structural(state.tr.insert(at, emptyBlock(type, standards, state.schema))))
     }
     return true
   }
@@ -117,7 +122,7 @@ export function addListItem(listBlockId: string): Command {
     if (!item) return false
     if (dispatch) {
       const at = list.pos + list.node.nodeSize - 1
-      dispatch(structural(state.tr.insert(at, lessonSchema.nodeFromJSON(item))))
+      dispatch(structural(state.tr.insert(at, state.schema.nodeFromJSON(item))))
     }
     return true
   }
@@ -144,7 +149,7 @@ export function addPart(sectionId: string): Command {
     if (dispatch) {
       const part = partToNode({ standards: [], blocks: [{ type: 'paragraph', text: '' }] })
       const at = section.pos + section.node.nodeSize - 1
-      dispatch(structural(state.tr.insert(at, lessonSchema.nodeFromJSON(part))))
+      dispatch(structural(state.tr.insert(at, state.schema.nodeFromJSON(part))))
     }
     return true
   }

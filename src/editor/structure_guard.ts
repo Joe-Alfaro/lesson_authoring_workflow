@@ -5,6 +5,7 @@
 import { Extension } from '@tiptap/core'
 import type { Fragment, Node as PmNode, Slice } from '@tiptap/pm/model'
 import { Plugin, PluginKey, TextSelection, type Transaction } from '@tiptap/pm/state'
+import type { EditorView } from '@tiptap/pm/view'
 import { AddMarkStep, RemoveMarkStep, ReplaceStep, type Step } from '@tiptap/pm/transform'
 import { ySyncPluginKey } from '@tiptap/y-tiptap'
 import { STRUCTURE_META } from './commands'
@@ -44,6 +45,19 @@ function isTrusted(tr: Transaction): boolean {
   return Boolean(tr.getMeta(STRUCTURE_META) || tr.getMeta(ySyncPluginKey))
 }
 
+function moveInField(view: EditorView, where: 'start' | 'end'): boolean {
+  // Right after a click the DOM selection can be ahead of the editor state, so read it first.
+  const dom = view.dom.ownerDocument.getSelection()
+  const $from =
+    dom?.focusNode && view.dom.contains(dom.focusNode)
+      ? view.state.doc.resolve(view.posAtDOM(dom.focusNode, dom.focusOffset))
+      : view.state.selection.$from
+  if (!$from.parent.isTextblock) return false
+  const pos = where === 'start' ? $from.start() : $from.end()
+  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, pos)))
+  return true
+}
+
 export const StructureGuard = Extension.create({
   name: 'lessonStructureGuard',
   addProseMirrorPlugins() {
@@ -73,6 +87,10 @@ export const StructureGuard = Extension.create({
         return true
       },
       'Shift-Enter': () => true,
+      // Fields are single paragraphs, so Home/End go to the field's start/end on every platform
+      // (macOS has no line start/end on these keys in a contenteditable).
+      Home: ({ editor }) => moveInField(editor.view, 'start'),
+      End: ({ editor }) => moveInField(editor.view, 'end'),
     }
   },
 })

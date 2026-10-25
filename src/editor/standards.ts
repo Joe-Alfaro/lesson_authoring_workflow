@@ -4,7 +4,7 @@ import type { Node as PmNode } from '@tiptap/pm/model'
 import type { Command } from '@tiptap/pm/state'
 import type { StandardFramework } from '../db/schema'
 import { childrenAt, STRUCTURE_META, type Located } from './commands'
-import { lessonSchema, STANDARD_CHIP_NODE, STANDARD_GROUP_NODE } from './schema'
+import { STANDARD_CHIP_NODE, STANDARD_GROUP_NODE } from './schema'
 
 export interface StandardRef {
   code: string
@@ -79,7 +79,7 @@ export function addStandard(group: StandardGroup, code: string, reference: Stand
     const target = groupNode(state.doc, group)
     if (!target || codesOf(target).includes(code)) return false
     if (dispatch) {
-      const chip = lessonSchema.nodes[STANDARD_CHIP_NODE]!.create({
+      const chip = state.schema.nodes[STANDARD_CHIP_NODE]!.create({
         code,
         levels: group === 'eldStandards' ? JSON.stringify(ELD_LEVELS) : null,
       })

@@ -277,7 +277,7 @@ function fieldText(node: PmNode, where: Where, ctx: EditorViewContext): NodeView
       return { dom: content, content }
     }
     if (listKey === 'languageFocus' || listKey === 'levels') {
-      const content = h('span', 'chip sm word')
+      const content = h('li', 'chip sm word')
       return { dom: content, content }
     }
     const content = h('li')
@@ -353,7 +353,7 @@ function fieldText(node: PmNode, where: Where, ctx: EditorViewContext): NodeView
     const inAction = where.sectionKind === 'learning_in_action'
     if (key === 'label') {
       const dom = h(inAction ? 'h3' : 'h4', inAction ? 'part-h part-label' : 'routine')
-      if (inAction) dom.append(fixed('span', 'pre', 'Part '))
+      if (inAction) dom.append(fixed('span', 'pre', 'Part\u00a0'))
       const content = h('span', 'field')
       dom.append(content)
       if (inAction) dom.append(fixed('span', 'pre', ':'))
@@ -639,6 +639,7 @@ function blockView(node: PmNode, ctx: EditorViewContext): NodeViewParts {
         // The (editable) title sits in the title row; with none, the default title.
         const hasTitle = findChildByKey(node, 'title') !== null
         label.textContent = hasTitle ? '' : 'Additional student support'
+        if (hasTitle) toggle.setAttribute('aria-label', 'Show or hide additional student support')
         content.classList.add('supp-body')
       }
       if (type === 'eld_instructions') content.classList.add('eld-grid')
@@ -747,7 +748,6 @@ function partView(node: PmNode, where: Where, ctx: EditorViewContext): NodeViewP
   add.setAttribute('aria-expanded', 'false')
   const menu = h('div', 'float menu block-menu')
   menu.setAttribute('role', 'menu')
-  menu.hidden = true
   ADDABLE_BLOCKS.forEach((option) => {
     const item = button('mi', option.label, () => {
       toggleMenu(false)
@@ -766,12 +766,14 @@ function partView(node: PmNode, where: Where, ctx: EditorViewContext): NodeViewP
       add.focus()
     }
   })
-  function toggleMenu(open = menu.hidden) {
-    menu.hidden = !open
+  // The menu is in the DOM only while open.
+  function toggleMenu(open = !menu.isConnected) {
+    if (open) tools.append(menu)
+    else menu.remove()
     add.setAttribute('aria-expanded', String(open))
     if (open) (menu.querySelector('button') as HTMLButtonElement | null)?.focus()
   }
-  tools.append(add, menu)
+  tools.append(add)
 
   const section = where.ancestors[0]
   let parts = 0

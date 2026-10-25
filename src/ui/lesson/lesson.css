@@ -784,11 +784,12 @@
   display: none;
 }
 @media (max-width: 640px) {
-  .lv-page .topbar {
+  body:has(.lv-page) .topbar {
     padding: 0 16px;
+    gap: var(--s3);
   }
-  .lv-page .topbar .nav,
-  .lv-page .topbar .me > :not(.av) {
+  body:has(.lv-page) .topbar .nav,
+  body:has(.lv-page) .topbar .me > :not(.av) {
     display: none;
   }
   .lesson-bar {
@@ -969,6 +970,14 @@
   flex-wrap: wrap;
   margin-right: 6px;
 }
+.part-body > .part-label {
+  gap: 0;
+}
+.supp-body > .field:first-child {
+  display: block;
+  font-weight: 700;
+  margin: -32px 0 12px 22px;
+}
 .part-body > .part-label + .part-title {
   margin-top: 0;
 }
@@ -1064,11 +1073,15 @@ button.add-blk:hover {
 .blk.list-intro {
   margin-top: 0;
 }
-.blk-list .prose,
-.blk-list .flist,
-.flist > ul,
-.flist > ol {
+.lesson-pm .blk-list .prose,
+.lesson-pm .blk-list .flist,
+.lesson-pm .flist > ul,
+.lesson-pm .flist > ol {
   margin-left: 108px;
+}
+.lv .blk-list ol,
+.lv .blk-list ul {
+  padding-left: 22px;
 }
 .blk-list ul,
 .blk-list ol {
@@ -1211,11 +1224,6 @@ ul.chips,
 }
 .bar-sec-homework {
   background: var(--sec-homework);
-}
-.rail {
-  position: sticky;
-  top: 0;
-  align-self: start;
 }
 
 /* lesson bar and notices */
@@ -1369,4 +1377,20 @@ ul.chips,
 }
 .restore-dialog .h3 {
   font-size: 18px;
+}
+
+/* remote caret name tags (R18), drawn in one layer over the document */
+.caret-layer {
+  height: 0;
+}
+.caret-tag {
+  position: absolute;
+  z-index: 5;
+  font: 700 11px/16px var(--ui);
+  color: #fff;
+  padding: 0 5px;
+  border-radius: 4px 4px 4px 0;
+  white-space: nowrap;
+  font-style: normal;
+  pointer-events: none;
 }
