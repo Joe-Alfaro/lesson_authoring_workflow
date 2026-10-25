@@ -6,7 +6,13 @@ import * as schema from './schema'
 export type Database = NodePgDatabase<typeof schema>
 
 export function createPool(connectionString = getDatabaseUrl()): pg.Pool {
-  return new pg.Pool({ connectionString, connectionTimeoutMillis: 5_000 })
+  const pool = new pg.Pool({ connectionString, connectionTimeoutMillis: 5_000 })
+  // An idle client dropped by the server (restart, failover) emits 'error' on the pool; without a
+  // listener that crashes the process. The pool discards the client and reconnects on demand.
+  pool.on('error', (error) => {
+    console.error('[db] idle client error:', error.message)
+  })
+  return pool
 }
 
 export function createDb(pool: pg.Pool): Database {
