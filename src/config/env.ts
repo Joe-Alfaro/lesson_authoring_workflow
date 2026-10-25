@@ -54,3 +54,8 @@ export function getAuthSecret(): string {
   }
   return secret
 }
+
+/** The collab WebSocket URL the browser connects to (COLLAB_URL; local collab port by default). */
+export function getCollabUrl(): string {
+  return readEnv('COLLAB_URL') ?? 'ws://localhost:4200'
+}

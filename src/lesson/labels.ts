@@ -1,0 +1,67 @@
+// Display names for lesson schema values (editor, lesson view, export).
+import type { LessonType, Section } from './schema'
+
+export type SectionKind = Section['kind']
+
+export const SECTION_NAMES: Record<SectionKind, string> = {
+  launch: 'Launch',
+  literacy_lab: 'Literacy Lab',
+  learning_in_action: 'Learning in Action',
+  look_back: 'Look Back',
+}
+
+/** Class of a section's pacing colour (STYLE.md: ribbon, rail, headings, gutters). */
+export const SECTION_COLOURS: Record<SectionKind, string> = {
+  launch: 'launch',
+  literacy_lab: 'lab',
+  learning_in_action: 'action',
+  look_back: 'lookback',
+}
+
+/** In-page anchor of a section. */
+export function sectionAnchor(kind: SectionKind | 'homework'): string {
+  return kind === 'homework' ? 'sec-homework' : `sec-${SECTION_COLOURS[kind]}`
+}
+
+export const LESSON_TYPE_NAMES: Record<LessonType, string> = {
+  spark: 'Spark',
+  core_reading: 'Core Reading',
+  core_writing: 'Core Writing',
+  academic_discussion: 'Academic Discussion',
+  writing: 'Writing',
+  presentation: 'Presentation',
+  research: 'Research',
+  flex: 'Flex Day',
+  other: 'Lesson',
+}
+
+const ROUTINE_NAMES: Record<string, string> = {
+  turn_and_talk: 'Turn and Talk',
+  think_pair_share: 'Think-Pair-Share',
+  quick_write: 'Quick Write',
+  whole_class_discussion: 'Whole-Class Discussion',
+  graffiti_table_talk: 'Graffiti Table Talk',
+  language_study: 'Language Study',
+  partner_reading_discussion: 'Partner Reading & Discussion',
+  modeled_writing: 'Modeled Writing',
+  socratic_seminar: 'Socratic Seminar',
+  iterative_conversation_exchange: 'Iterative Conversation Exchange',
+  rehearse_and_refine: 'Rehearse and Refine',
+  reflect_and_respond_dialogue: 'Reflect and Respond Dialogue',
+  sentence_expansion: 'Sentence Expansion',
+  independent_choice_work: 'Independent Choice Work',
+  other: 'Routine',
+}
+
+export function routineName(routine: string): string {
+  return ROUTINE_NAMES[routine] ?? routine
+}
+
+/** "Lesson 4" or "Flex day" (flex days have no number). */
+export function lessonLabel(number: number | null): string {
+  return number === null ? 'Flex day' : `Lesson ${number}`
+}
+
+export function minutesLabel(minutes: number): string {
+  return `${minutes} min`
+}

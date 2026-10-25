@@ -1,0 +1,1372 @@
+/*
+ * Lesson editor and lesson view (R14, R15, R17-R19, R23). Rules up to the marker are ported from
+ * the approved mockups' studio.css and page styles (docs/design/lesson-authoring/); the rest
+ * adapts them to the live editor (ProseMirror node views, carets, popovers).
+ */
+/* ---------- status pills ---------- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px 0 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background-color 240ms ease-out,
+    color 240ms ease-out;
+}
+.pill .ico {
+  width: 14px;
+  height: 14px;
+}
+.pill.none,
+.pill.queued {
+  color: var(--st-none);
+  background: var(--st-none-t);
+}
+.pill.gen {
+  color: var(--st-gen);
+  background: var(--st-gen-t);
+}
+.pill.draft {
+  color: var(--st-draft);
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--rule-strong);
+}
+.pill.review {
+  color: var(--st-review);
+  background: var(--st-review-t);
+}
+.pill.changes {
+  color: var(--st-changes);
+  background: var(--st-changes-t);
+}
+.pill.approved {
+  color: var(--st-approved);
+  background: var(--st-approved-t);
+}
+.pill.failed {
+  color: var(--st-failed);
+  background: var(--st-failed-t);
+}
+.pill.lg {
+  height: 30px;
+  font-size: 14px;
+  padding: 0 12px 0 10px;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+}
+.breathe {
+  animation: breathe 1600ms ease-in-out infinite;
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ---------- menus, dialogs ---------- */
+.float {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  box-shadow: var(--float);
+  animation: rise 140ms var(--ease-out-soft);
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.menu {
+  padding: 6px;
+  min-width: 220px;
+}
+.menu .mi {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+.menu .mi.on {
+  background: var(--desk);
+}
+.menu .sep {
+  height: 1px;
+  background: var(--rule);
+  margin: 6px 0;
+}
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 36, 48, 0.38);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+}
+.dialog {
+  width: 560px;
+  background: var(--paper);
+  border-radius: 10px;
+  box-shadow: var(--float);
+  animation: pop 160ms var(--ease-out-soft);
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.dialog header {
+  padding: var(--s5) var(--s5) 0;
+}
+.dialog .body {
+  padding: var(--s4) var(--s5);
+}
+.dialog footer {
+  padding: var(--s4) var(--s5) var(--s5);
+  display: flex;
+  gap: var(--s2);
+  justify-content: flex-end;
+}
+/* ---------- editor shell ---------- */
+.lesson-bar {
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+  padding: 12px var(--s6);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.lesson-bar > * {
+  white-space: nowrap;
+  flex: none;
+}
+.lesson-bar > .spacer {
+  flex: 1;
+}
+.lesson-bar .btn.quiet.sm {
+  padding: 0 8px;
+}
+.lesson-bar .t {
+  font-weight: 700;
+  font-size: 16px;
+}
+.workspace {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr) 368px;
+  min-height: calc(100vh - 56px - 61px);
+}
+.workspace.no-side {
+  grid-template-columns: 232px minmax(0, 1fr);
+}
+.rail {
+  padding: var(--s5) var(--s4);
+  border-right: 1px solid var(--rule);
+  position: relative;
+}
+.rail h4 {
+  font-size: 13px;
+  color: var(--ink-2);
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+.rail a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 14px;
+}
+.rail a .min {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.rail a.on {
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+.rail a.child {
+  padding-left: 26px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.rail .bar {
+  width: 4px;
+  align-self: stretch;
+  border-radius: 2px;
+}
+.docwrap {
+  padding: var(--s5) var(--s6) var(--s8);
+}
+.doc {
+  max-width: 820px;
+  margin: 0 auto;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: var(--s7) 70px var(--s7) 70px;
+  position: relative;
+}
+.side {
+  border-left: 1px solid var(--rule);
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+}
+.tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--rule);
+  padding: 0 var(--s3);
+}
+.tabs a {
+  padding: 12px 10px;
+  font-weight: 600;
+  color: var(--ink-2);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+}
+.tabs a[aria-selected='true'] {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.side .sbody {
+  padding: var(--s4);
+  overflow: hidden;
+}
+
+/* ---------- lesson document ---------- */
+.doc .kicker {
+  font-size: 13px;
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.doc h1.lt {
+  font: 600 36px/42px var(--read);
+  letter-spacing: -0.01em;
+  margin: 6px 0 var(--s4);
+}
+.doc .meta {
+  display: flex;
+  gap: var(--s4);
+  color: var(--ink-2);
+  flex-wrap: wrap;
+}
+.fm {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 10px var(--s4);
+  margin-top: var(--s5);
+  padding-top: var(--s5);
+  border-top: 1px solid var(--rule);
+}
+.fm dt {
+  font-weight: 600;
+  color: var(--ink-2);
+  font-size: 13px;
+  padding-top: 3px;
+}
+.fm dd {
+  margin: 0;
+}
+.dh {
+  font: 600 21px/28px var(--read);
+  margin: var(--s6) 0 var(--s3);
+}
+.prose {
+  font: 17px/28px var(--read);
+  max-width: 680px;
+}
+.prose p + p {
+  margin-top: 10px;
+}
+.prose ol,
+.prose ul {
+  margin: 6px 0;
+  padding-left: 22px;
+}
+.prose li + li {
+  margin-top: 4px;
+}
+.obj b {
+  font-family: var(--ui);
+  font-size: 14px;
+}
+.pace {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.pace td,
+.pace th {
+  border-bottom: 1px solid var(--rule);
+  padding: 10px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.pace th {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.pace td:first-child {
+  width: 210px;
+  font-weight: 600;
+}
+.pace .derived {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.sec {
+  margin-top: var(--s7);
+}
+.sec-h {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  padding-bottom: 8px;
+  border-bottom: 3px solid;
+  margin-bottom: var(--s4);
+}
+.sec-h .no {
+  font: 700 14px var(--ui);
+  color: var(--ink-2);
+}
+.sec-h h2 {
+  font: 600 24px/32px var(--read);
+}
+.sec-h .mins {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.sec.launch .sec-h {
+  border-color: var(--sec-launch);
+}
+.sec.lab .sec-h {
+  border-color: var(--sec-lab);
+}
+.sec.action .sec-h {
+  border-color: var(--sec-action);
+}
+.sec.lookback .sec-h {
+  border-color: var(--sec-lookback);
+}
+.sec.homework .sec-h {
+  border-color: var(--sec-homework);
+}
+.part-h {
+  font-size: 18px;
+  font-weight: 600;
+  margin: var(--s5) 0 var(--s3);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.routine {
+  font: 600 15px var(--ui);
+  margin: var(--s4) 0 var(--s2);
+  color: var(--ink);
+}
+.blk {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--s3);
+  margin: var(--s3) 0;
+  position: relative;
+}
+.blk > .g {
+  font: 600 13px/28px var(--ui);
+  color: var(--ink-2);
+}
+.blk > .c {
+  font: 17px/28px var(--read);
+}
+.sec.launch .g {
+  color: var(--sec-launch-ink);
+}
+.sec.lab .g {
+  color: var(--sec-lab-ink);
+}
+.sec.action .g {
+  color: var(--sec-action);
+}
+.sec.lookback .g {
+  color: var(--sec-lookback);
+}
+.blk.ex > .c {
+  font-style: italic;
+  color: #2d3748;
+  border-left: 2px solid var(--rule);
+  padding-left: 14px;
+}
+.blk.ex > .g {
+  color: var(--ink-3) !important;
+  font-weight: 400;
+}
+.box {
+  margin: var(--s4) 0;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--ink-2);
+  border-radius: 0 10px 10px 0;
+  background: #fafbfc;
+  padding: var(--s3) var(--s4);
+}
+.sec.launch .box {
+  border-left-color: var(--sec-launch);
+}
+.sec.lab .box {
+  border-left-color: var(--sec-lab);
+}
+.sec.action .box {
+  border-left-color: var(--sec-action);
+}
+.sec.lookback .box {
+  border-left-color: var(--sec-lookback);
+}
+.sec.homework .box {
+  border-left-color: var(--sec-homework);
+}
+.box .bt {
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.box .bt .chev {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-weight: 400;
+  font-size: 13px;
+}
+.box .prose {
+  font-size: 16px;
+  line-height: 26px;
+}
+.opts {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.opts li {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 6px;
+  padding: 8px 0;
+  border-top: 1px solid var(--rule);
+}
+.opts .L {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid var(--rule-strong);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 12px;
+}
+.opts li.correct .L {
+  background: var(--st-approved);
+  border-color: var(--st-approved);
+  color: #fff;
+}
+.opts .why {
+  font: 14px/20px var(--ui);
+  color: var(--ink-2);
+  margin-top: 2px;
+}
+.opts .why b {
+  color: var(--ink);
+}
+.eld-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s3);
+}
+.eld-grid h5 {
+  font: 700 13px var(--ui);
+  margin: 0 0 4px;
+  color: var(--ink-2);
+}
+.supp {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.supp th {
+  text-align: left;
+  font-size: 13px;
+  color: var(--ink-2);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--rule);
+}
+.supp td {
+  padding: 8px;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+.supp td:first-child {
+  width: 36%;
+  font-weight: 600;
+}
+.add-blk {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-3);
+  font-size: 13px;
+  margin: 6px 0 0 108px;
+}
+.add-blk .plus {
+  width: 22px;
+  height: 22px;
+  border: 1px dashed var(--rule-strong);
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+}
+
+/* remote cursors */
+.rc {
+  position: relative;
+  display: inline;
+}
+.rc .caret {
+  position: relative;
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  vertical-align: -3px;
+  margin: 0 -1px;
+}
+.rc .tag {
+  position: absolute;
+  left: -1px;
+  bottom: 100%;
+  margin-bottom: 1px;
+  font: 700 11px/16px var(--ui);
+  color: #fff;
+  padding: 0 5px;
+  border-radius: 4px 4px 4px 0;
+  white-space: nowrap;
+  font-style: normal;
+}
+.rsel {
+  border-radius: 2px;
+}
+
+/* ai selection */
+.mysel {
+  background: var(--select);
+  box-shadow: 0 0 0 1px #9dbcf2;
+  border-radius: 2px;
+}
+.toolbar {
+  position: absolute;
+  z-index: 10;
+  font: 14px/20px var(--ui);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+}
+.toolbar .tb {
+  border: 0;
+  background: transparent;
+  font-family: var(--ui);
+  font-style: normal;
+  color: var(--ink);
+  cursor: pointer;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.toolbar .tb.on {
+  background: var(--desk);
+}
+.toolbar .vsep {
+  width: 1px;
+  height: 20px;
+  background: var(--rule);
+  margin: 0 4px;
+}
+.del {
+  background: #fbe2e2;
+  text-decoration: line-through;
+  text-decoration-color: #a11d1d;
+  color: #6f1414;
+}
+.ins {
+  background: #dcf2e3;
+  color: #0f4424;
+  text-decoration: underline;
+  text-decoration-color: #4caf72;
+  text-underline-offset: 3px;
+}
+
+/* timeline */
+.tl {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.tl li {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  padding-bottom: var(--s4);
+  position: relative;
+}
+.tl li::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 20px;
+  bottom: 0;
+  width: 2px;
+  background: var(--rule);
+}
+.tl li:last-child::before {
+  display: none;
+}
+.tl .node {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 2px var(--rule-strong);
+}
+.tl .node .ico {
+  width: 12px;
+  height: 12px;
+}
+.note {
+  margin-top: 6px;
+  background: var(--desk);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 19px;
+}
+
+/* popover (standard text) */
+.pop {
+  position: absolute;
+  width: 360px;
+  padding: var(--s4);
+  z-index: 20;
+}
+.pop .code {
+  font-weight: 700;
+}
+.pop .tx {
+  font: 15px/23px var(--read);
+  margin-top: 6px;
+}
+.pop::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 24px;
+  width: 10px;
+  height: 10px;
+  background: var(--paper);
+  border-left: 1px solid var(--rule);
+  border-top: 1px solid var(--rule);
+  transform: rotate(45deg);
+}
+.doc > .sec:first-child {
+  margin-top: 0;
+}
+
+/* ---------- mockup page styles (R17, R19 HTML <style>) ---------- */
+.chipbtn {
+  cursor: pointer;
+}
+.chipadd {
+  height: 26px;
+  border: 1px dashed var(--rule-strong);
+  border-radius: 6px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  background: transparent;
+  cursor: pointer;
+}
+.disp {
+  font: 17px/28px var(--read);
+  background: var(--desk);
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+.locked .doc {
+  background: #fbfcfd;
+}
+.lv .blk {
+  display: block;
+  margin: 12px 0;
+}
+.lv .blk > .g {
+  display: inline;
+  font: 700 16px/28px var(--read);
+  color: var(--ink);
+  margin-right: 6px;
+}
+.lv .blk > .c {
+  display: inline;
+}
+.lv .blk.ex {
+  margin-left: 28px;
+}
+.lv .blk.ex > .g {
+  display: block;
+  font: 600 13px/20px var(--ui);
+  color: var(--ink-3) !important;
+}
+.lv .blk.ex > .c {
+  display: block;
+  border: 0;
+  padding: 0;
+}
+.lv .blk.teacher > .g {
+  display: none;
+}
+.lv-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 32px 64px;
+}
+.jump {
+  display: none;
+}
+@media (max-width: 640px) {
+  .lv-page .topbar {
+    padding: 0 16px;
+  }
+  .lv-page .topbar .nav,
+  .lv-page .topbar .me > :not(.av) {
+    display: none;
+  }
+  .lesson-bar {
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .lesson-bar .hide-m {
+    display: none;
+  }
+  .lv-wrap {
+    padding: 0;
+  }
+  .lv .doc {
+    border: 0;
+    border-radius: 0;
+    padding: 24px 16px 48px;
+  }
+  .lv .doc h1.lt {
+    font-size: 28px;
+    line-height: 34px;
+  }
+  .lv .fm {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .lv .fm dd {
+    margin-bottom: 10px;
+  }
+  .lv .pace td:first-child {
+    width: 110px;
+  }
+  .lv .blk.ex {
+    margin-left: 14px;
+  }
+  .lv .sec-h h2 {
+    font-size: 21px;
+  }
+  .jump {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+    padding: 8px 16px;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+  }
+  .jump a {
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--ink);
+    padding: 4px 8px;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px var(--rule);
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .lv .sec {
+    scroll-margin-top: 48px;
+  }
+}
+
+/* ---------- live editor (adapts the mockup markup to ProseMirror) ---------- */
+.lesson-pm {
+  outline: none;
+  white-space: pre-wrap;
+}
+.lesson-pm:focus-visible {
+  outline: none;
+}
+.lesson-pm p,
+.lesson-pm ul,
+.lesson-pm ol {
+  margin: 0;
+}
+.lesson-pm .field {
+  white-space: pre-wrap;
+}
+.lesson-pm .pre {
+  white-space: normal;
+}
+.doc .kicker + h1.lt .pre {
+  font: inherit;
+}
+
+/* front matter: the mockup's dl as a grid of rows */
+.fm-groups,
+.fm-row {
+  display: contents;
+}
+.fm-t {
+  font-weight: 600;
+  color: var(--ink-2);
+  font-size: 13px;
+  padding-top: 3px;
+}
+.fm-d {
+  margin: 0;
+}
+.fm.fm-more {
+  border-top: 0;
+  padding-top: 0;
+  margin-top: 10px;
+}
+.fm.conn {
+  border: 0;
+  padding: 0;
+  margin-top: 0;
+}
+.fm.conn .fm-d,
+.lv .fm.conn dd {
+  font-size: 16px;
+  line-height: 26px;
+}
+.chip-list {
+  display: contents;
+}
+.chip-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+.chip-x {
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 15px;
+  line-height: 1;
+  padding: 2px 4px;
+  margin-left: -2px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.chip-x:hover {
+  color: var(--st-failed);
+  background: var(--desk);
+}
+.chip .ico {
+  width: 13px;
+  height: 13px;
+}
+.vocab .group {
+  display: block;
+}
+.vocab .term {
+  font-weight: 600;
+}
+.vocab .term::after {
+  content: ': ';
+  font-weight: 400;
+}
+.vocab-support {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.inline-list {
+  padding-left: 18px;
+}
+.obj .pre {
+  font: 600 14px var(--ui);
+}
+
+/* sections, parts, blocks */
+.sec-body > .blk.purpose .c,
+.part-body > .blk.purpose .c {
+  font-size: 15px;
+  line-height: 24px;
+  color: var(--ink-2);
+}
+.part-body > .part-label,
+.part-body > .part-title {
+  display: inline-flex;
+  flex-wrap: wrap;
+  margin-right: 6px;
+}
+.part-body > .part-label + .part-title {
+  margin-top: 0;
+}
+.part-meta {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin-left: 6px;
+  font-weight: 400;
+}
+.part-sub {
+  color: var(--ink-2);
+  font: 600 14px var(--ui);
+  margin: -4px 0 var(--s2);
+}
+.lesson-block {
+  position: relative;
+}
+.blk-remove {
+  position: absolute;
+  left: -40px;
+  top: 2px;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+}
+.lesson-block:hover > .blk-remove,
+.blk-remove:focus-visible {
+  opacity: 1;
+}
+.blk-remove:hover {
+  background: var(--desk);
+  color: var(--st-failed);
+}
+.box .blk-remove {
+  left: -44px;
+}
+button.add-blk {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--ui);
+}
+button.add-blk:hover {
+  color: var(--ink);
+}
+.part-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 0 108px;
+  position: relative;
+}
+.part-tools .add-blk {
+  margin: 0;
+}
+.add-part {
+  margin: var(--s4) 0 0;
+}
+.block-menu {
+  position: absolute;
+  top: 28px;
+  left: 0;
+  z-index: 20;
+}
+.block-menu .mi {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.block-menu .mi:hover,
+.block-menu .mi:focus-visible {
+  background: var(--desk);
+}
+.blk .c.disp {
+  font: 17px/28px var(--read);
+}
+.blk.disp-label .c {
+  font: 600 13px/28px var(--ui);
+  color: var(--ink-2);
+}
+.blk.disp-text,
+.blk.list-intro {
+  margin-top: 0;
+}
+.blk-list .prose,
+.blk-list .flist,
+.flist > ul,
+.flist > ol {
+  margin-left: 108px;
+}
+.blk-list ul,
+.blk-list ol {
+  font: 17px/28px var(--read);
+  padding-left: 22px;
+}
+.box .flist > ul,
+.box .flist > ol,
+.homework .flist > ul {
+  margin-left: 0;
+  font: 16px/26px var(--read);
+  padding-left: 22px;
+}
+.flist > h5,
+.eld-field > h5,
+.box-sub {
+  font: 700 13px var(--ui);
+  margin: var(--s3) 0 4px;
+  color: var(--ink-2);
+}
+ul.chips,
+.lang-focus {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+}
+.lang-focus .caption {
+  margin-right: 4px;
+  align-self: center;
+}
+.chip.word {
+  font-weight: 400;
+}
+.box-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.box.closed > .box-body {
+  display: none;
+}
+.box.closed > .bt {
+  margin: 0;
+}
+.box-body .prose,
+.box-body > .prose {
+  font-size: 16px;
+  line-height: 26px;
+}
+.opts .opt-text {
+  font-size: 16px;
+}
+.why .pre {
+  color: var(--ink);
+}
+.lesson-grid .trow,
+.supp-grid .trow,
+.supp-row {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
+  font-size: 14px;
+}
+.supp-grid .trow,
+.supp-row {
+  grid-template-columns: 36% minmax(0, 1fr);
+}
+.tcell {
+  padding: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+.tcell.th {
+  font-size: 13px;
+  color: var(--ink-2);
+  font-weight: 600;
+  padding: 6px 8px;
+}
+.tcell.first {
+  font-weight: 600;
+}
+.lesson-grid {
+  margin: var(--s3) 0 var(--s3) 108px;
+}
+.lesson-grid > div > .prose:first-child {
+  font: 600 13px/20px var(--ui);
+  color: var(--ink-2);
+}
+.crit-name,
+.rubric-title {
+  font-weight: 700;
+}
+.criterion {
+  margin-top: var(--s3);
+}
+.crit-std {
+  float: right;
+}
+
+/* remote carets (R18) */
+.lesson-pm .rc .tag {
+  pointer-events: none;
+}
+.lesson-pm .rsel {
+  border-radius: 2px;
+}
+.ProseMirror-separator,
+.ProseMirror-trailingBreak {
+  display: none;
+}
+
+/* rail */
+.rail-seq {
+  margin-top: 20px !important;
+}
+.rail-pacing {
+  margin-top: 20px;
+}
+.rail-pacing .ribbon {
+  height: 8px;
+}
+.rail-pacing .caption {
+  margin-top: 6px;
+}
+.bar-sec-launch {
+  background: var(--sec-launch);
+}
+.bar-sec-lab {
+  background: var(--sec-lab);
+}
+.bar-sec-action {
+  background: var(--sec-action);
+}
+.bar-sec-lookback {
+  background: var(--sec-lookback);
+}
+.bar-sec-homework {
+  background: var(--sec-homework);
+}
+.rail {
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
+
+/* lesson bar and notices */
+.lesson-bar .btn.on {
+  background: var(--desk);
+}
+.lesson-bar .assigned {
+  gap: 6px;
+}
+.save-state {
+  gap: 4px;
+}
+.lock-notice,
+.preview-notice {
+  max-width: 820px;
+  margin: 0 auto var(--s4);
+}
+.notice .grow {
+  flex: 1;
+}
+.preview-actions {
+  margin-top: var(--s2);
+}
+.action-error {
+  margin: var(--s3) var(--s6) 0;
+}
+
+/* side panel */
+.tabs [role='tab'] {
+  padding: 12px 10px;
+  font-weight: 600;
+  color: var(--ink-2);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font-size: 13px;
+  cursor: pointer;
+}
+.tabs [role='tab'][aria-selected='true'] {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.panel-title {
+  font-size: 16px;
+}
+.versions {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+}
+.version {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.version:hover {
+  background: var(--desk);
+}
+.versions li.on .version {
+  background: var(--desk);
+  box-shadow: inset 3px 0 0 var(--ink);
+}
+.side .tl {
+  margin-top: var(--s3);
+}
+
+/* standard picker (R15) */
+.std-picker {
+  position: absolute;
+  z-index: 30;
+}
+.std-input {
+  width: 180px;
+  height: 30px;
+  border: 2px solid var(--focus);
+  border-radius: 6px;
+  padding: 0 8px;
+  background: var(--paper);
+}
+.std-results {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  width: 520px;
+  padding: 6px;
+}
+.std-option {
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.std-option.on {
+  background: var(--desk);
+}
+.std-text {
+  font: 14px/20px var(--read);
+  color: var(--ink-2);
+  margin-top: 2px;
+}
+.std-empty {
+  padding: 8px 10px;
+  color: var(--ink-2);
+}
+.std-help {
+  padding: 8px 10px;
+  border-top: 1px solid var(--rule);
+  margin-top: 4px;
+}
+.std-pop[hidden] {
+  display: none;
+}
+
+/* lesson view (R19) */
+.lv .sec-h h2 .no {
+  font: 700 14px var(--ui);
+  color: var(--ink-2);
+  margin-right: 6px;
+}
+.lv .part-h .part-min {
+  margin-left: auto;
+}
+.lv .lang-focus {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.lv .lesson-table caption {
+  text-align: left;
+  font: 600 13px/20px var(--ui);
+  color: var(--ink-2);
+  padding-bottom: 4px;
+}
+.lv .lesson-table,
+.lv .box .supp {
+  margin: var(--s3) 0;
+}
+.lv .blk-list {
+  margin: var(--s3) 0;
+}
+.lv .homework > .prose {
+  margin-top: var(--s3);
+}
+.restore-dialog .h3 {
+  font-size: 18px;
+}
