@@ -1,0 +1,66 @@
+# Production image against a throwaway Postgres, as Railway runs it (npm run docker:smoke).
+# Own project name and host ports, so it never touches the dev database or other sessions.
+name: law_deploy_smoke
+
+x-app: &app
+  image: lesson-authoring-workflow:smoke
+  build: { context: .. }
+  depends_on:
+    postgres: { condition: service_healthy }
+  labels:
+    ao.session: ${AO_SESSION_ID:-none}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lesson_authoring
+    labels:
+      ao.session: ${AO_SESSION_ID:-none}
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d lesson_authoring']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  web:
+    <<: *app
+    ports: ['${SMOKE_WEB_PORT:-3920}:3000']
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/lesson_authoring
+      PORT: '3000'
+      AUTH_SECRET: ${SMOKE_AUTH_SECRET:?}
+      SEED_PASSWORD: ${SMOKE_SEED_PASSWORD:?}
+      # What the browser connects to: the collab service's public URL.
+      COLLAB_URL: ws://localhost:${SMOKE_COLLAB_PORT:-3921}
+    healthcheck: &health
+      test: ['CMD-SHELL', 'wget -qO- "http://127.0.0.1:$$PORT/health" > /dev/null']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  worker:
+    <<: *app
+    command: ['node', 'dist/worker/main.mjs']
+    # Private on Railway; published here only so the smoke test can read /health.
+    ports: ['${SMOKE_WORKER_PORT:-3922}:4100']
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/lesson_authoring
+      PORT: '4100'
+      # Empty key: the smoke test never calls the model.
+      ANTHROPIC_API_KEY: ''
+      SPEND_CAP_USD: '1'
+      GENERATION_MODEL: claude-haiku-5-5
+    healthcheck: *health
+
+  collab:
+    <<: *app
+    command: ['node', 'dist/collab/main.mjs']
+    ports: ['${SMOKE_COLLAB_PORT:-3921}:4200']
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/lesson_authoring
+      PORT: '4200'
+      AUTH_SECRET: ${SMOKE_AUTH_SECRET:?}
+    healthcheck: *health
