@@ -6,7 +6,7 @@ export default defineConfig({
       {
         test: {
           name: 'unit',
-          include: ['src/**/*.test.ts', 'scripts/**/*.test.ts'],
+          include: ['src/**/*.test.ts', 'scripts/**/*.test.ts', '.railway/**/*.test.ts'],
           exclude: ['src/**/*.int.test.ts'],
           environment: 'node',
         },

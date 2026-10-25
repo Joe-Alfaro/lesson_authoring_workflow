@@ -7,6 +7,7 @@ const config = [
   {
     ignores: [
       '.next/**',
+      'dist/**',
       'node_modules/**',
       'drizzle/**',
       'next-env.d.ts',

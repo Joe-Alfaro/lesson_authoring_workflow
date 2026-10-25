@@ -1,0 +1,14 @@
+# `railway up` uploads the working directory. Never upload secrets or private notes
+# (_private/ is ignored only by the owner's global git ignore, so list it here too).
+.env
+.env.*
+!.env.example
+_private
+.claude
+node_modules
+.next
+dist
+coverage
+test-results
+playwright-report
+*.tsbuildinfo
