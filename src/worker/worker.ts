@@ -1,16 +1,21 @@
 import type { AddressInfo } from 'node:net'
 import { PgBoss } from 'pg-boss'
-import { createPool } from '../db/client'
+import { createDb, createPool } from '../db/client'
+import type { LlmClient } from '../generation/llm'
+import type { GenerationSettings } from '../generation/settings'
+import { registerGenerationWorker, type GenerationWorker } from '../generation/worker'
 import { createHealthServer } from '../health/server'
 import { retryWithBackoff, type RetryOptions } from './retry'
 
-/** Placeholder queue that proves the worker is consuming jobs; M2 adds the generation queue. */
+/** Placeholder queue that proves the worker is consuming jobs. */
 export const NOOP_QUEUE = 'noop'
 
 export interface WorkerOptions {
   databaseUrl: string
   port: number
   retry?: Pick<RetryOptions, 'initialDelayMs' | 'maxDelayMs'>
+  /** Lesson generation (M2); without it the worker only serves the no-op queue. */
+  generation?: { llm: LlmClient; settings: Pick<GenerationSettings, 'concurrency' | 'maxAttempts'> }
 }
 
 export interface RunningWorker {
@@ -45,6 +50,7 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
   const pool = createPool(options.databaseUrl)
   const abort = new AbortController()
   let boss: PgBoss | undefined
+  let generationWorker: GenerationWorker | undefined
 
   const ready = retryWithBackoff(() => startBoss(options.databaseUrl), {
     initialDelayMs: options.retry?.initialDelayMs ?? 1_000,
@@ -56,8 +62,17 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
       const reason = message || code || String(error)
       console.error(`[worker] pg-boss start failed (${reason}); retrying in ${delayMs} ms`)
     },
-  }).then((started) => {
+  }).then(async (started) => {
     boss = started
+    if (options.generation) {
+      generationWorker = await registerGenerationWorker({
+        db: createDb(pool),
+        boss: started,
+        llm: options.generation.llm,
+        concurrency: options.generation.settings.concurrency,
+        maxAttempts: options.generation.settings.maxAttempts,
+      })
+    }
     return started
   })
   // stop() before the database comes up rejects `ready` with an abort; that is expected.
@@ -75,6 +90,7 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
       await new Promise<void>((resolve, reject) =>
         server.close((error) => (error ? reject(error) : resolve())),
       )
+      await generationWorker?.stop()
       await boss?.stop({ graceful: true })
       await pool.end()
     },

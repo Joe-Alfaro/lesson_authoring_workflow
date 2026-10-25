@@ -2,12 +2,13 @@ import { cp, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import bcrypt from 'bcryptjs'
-import { eq, sql } from 'drizzle-orm'
+import { eq, inArray, sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { connectTestDb } from '../../../tests/db'
 import { runMigrations } from '../migrate'
 import { standards, users } from '../schema'
 import { seed } from './seed'
+import { SEED_USERS } from './users'
 
 const FIXTURE_DIR = resolve(import.meta.dirname, '../../../tests/fixtures/standards')
 
@@ -19,10 +20,17 @@ describe('seed', () => {
   })
   afterAll(() => pool.end())
 
+  // Only the seeded accounts: other integration files share this database and add test users.
   async function countByRole() {
     const rows = await db
       .select({ role: users.role, count: sql<number>`count(*)::int` })
       .from(users)
+      .where(
+        inArray(
+          users.email,
+          SEED_USERS.map((user) => user.email),
+        ),
+      )
       .groupBy(users.role)
     return Object.fromEntries(rows.map((row) => [row.role, row.count]))
   }
