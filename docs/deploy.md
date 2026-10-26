@@ -189,10 +189,11 @@ Steps 4-6 need features that are still landing; they are part of R31's full flow
    fail.
 3. Import the sample unit (outline and ELD from `data/sample_unit/`); the unit page lists its
    lessons.
-4. _(after M2 and UI-B)_ Generate 1 lesson on Haiku (`claude-haiku-5-5`): it moves to Draft and the run's cost shows on
-   the unit page, well under $1.
-5. _(after M3)_ Two browsers (two accounts) open the same lesson: the network tab shows a `wss://<collab>`
-   connection and each browser sees the other's edits.
+4. _(after M2 and UI-B)_ Generate 1 lesson on Haiku (`claude-haiku-5-5`): it moves to Draft and
+   the run's cost shows on the unit page, well under $1. This is a real Anthropic call: get the
+   PM's explicit OK first and record the model, tokens and cost for the spend ledger.
+5. _(after M3)_ Two browsers (two accounts) open the same lesson: the network tab shows a
+   `wss://<collab>` connection and each browser sees the other's edits.
 6. _(after M3)_ Approve the lesson as an approver: it locks for editing.
 
 ## Checking the image locally
@@ -203,7 +204,8 @@ Postgres (compose project `law_deploy_smoke`, host ports 3920-3922, override wit
 to run without `SEED_PASSWORD`, seeds, starts the three services, checks they run as non-root and
 that `/health` is 200 on each, signs in, checks the README password fails, gets collab tokens from
 the web app and has two users edit one document through the web app's `COLLAB_URL`. It never calls
-the model and removes everything afterwards (`SMOKE_KEEP=1` keeps the containers).
+the model (the worker gets an empty `ANTHROPIC_API_KEY`) and removes everything afterwards
+(`SMOKE_KEEP=1` keeps the containers).
 
 ## Troubleshooting
 
