@@ -1,5 +1,6 @@
 import type { AddressInfo } from 'node:net'
 import { PgBoss } from 'pg-boss'
+import { pgBossOptions } from '../config/env'
 import { createDb, createPool } from '../db/client'
 import type { LlmClient } from '../generation/llm'
 import type { GenerationSettings } from '../generation/settings'
@@ -27,7 +28,7 @@ export interface RunningWorker {
 
 async function startBoss(databaseUrl: string): Promise<PgBoss> {
   // A fresh instance per attempt: a failed start() leaves pg-boss half-initialized.
-  const boss = new PgBoss({ connectionString: databaseUrl })
+  const boss = new PgBoss(pgBossOptions(databaseUrl))
   boss.on('error', (error) => console.error('[worker] pg-boss error', error))
   try {
     await boss.start()

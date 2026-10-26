@@ -1,6 +1,6 @@
 // The web app's pg-boss client: it only inserts generation jobs; the worker process runs them.
 import { PgBoss } from 'pg-boss'
-import { getDatabaseUrl } from '../config/env'
+import { getDatabaseUrl, pgBossOptions } from '../config/env'
 import { getDb, type Database } from '../db/client'
 import { ensureGenerationQueue } from '../generation/queue'
 import type { GenerationDeps } from '../generation/service'
@@ -12,7 +12,7 @@ interface BossGlobal {
 const bossGlobal = globalThis as BossGlobal
 
 async function startBoss(): Promise<PgBoss> {
-  const boss = new PgBoss({ connectionString: getDatabaseUrl() })
+  const boss = new PgBoss(pgBossOptions(getDatabaseUrl()))
   boss.on('error', (error) => console.error('[web] pg-boss error', error))
   await boss.start()
   await ensureGenerationQueue(boss)

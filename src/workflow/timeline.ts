@@ -10,6 +10,9 @@ import { generatedJobs, jobNear } from './generation_provenance'
 import { historyEventText } from './history_text'
 import { getLessonHistory } from './service'
 
+/** The note the generation worker writes when a regeneration fails and the content is kept. */
+const REGENERATION_FAILED = /^Regeneration failed\b/
+
 export interface TimelineEvent {
   id: string
   kind: 'status' | 'assignment'
@@ -29,8 +32,13 @@ export async function getLessonTimeline(db: Database, lessonId: string): Promise
   const statusEvents: TimelineEvent[] = history.map((event) => {
     let text = historyEventText(event)
     if (event.fromStatus === 'generating' && event.toStatus === 'draft') {
-      const job = jobNear(jobs, event.at)
-      if (job) text += ` with prompt v${job.promptVersion}, ${modelLabel(job.model)}`
+      if (event.note && REGENERATION_FAILED.test(event.note)) {
+        // The worker kept the previous content: nothing new was generated (N5).
+        text = 'regeneration failed; previous content kept as Draft'
+      } else {
+        const job = jobNear(jobs, event.at)
+        if (job) text += ` with prompt v${job.promptVersion}, ${modelLabel(job.model)}`
+      }
     }
     return {
       id: event.id,

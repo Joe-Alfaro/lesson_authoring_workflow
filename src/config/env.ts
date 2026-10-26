@@ -34,6 +34,25 @@ export function getDbPoolMax(env: Record<string, string | undefined> = process.e
   return max
 }
 
+/** pg-boss's own pool per process: `PGBOSS_POOL_MAX`, an integer >= 1, default 2. */
+export function getPgBossPoolMax(env: Record<string, string | undefined> = process.env): number {
+  const raw = env.PGBOSS_POOL_MAX?.trim()
+  if (!raw) return 2
+  const max = Number(raw)
+  if (!Number.isInteger(max) || max < 1) {
+    throw new Error(`PGBOSS_POOL_MAX must be an integer >= 1, got "${raw}"`)
+  }
+  return max
+}
+
+/** pg-boss constructor options: the database and a bounded pool (B1). */
+export function pgBossOptions(
+  connectionString: string,
+  env: Record<string, string | undefined> = process.env,
+): { connectionString: string; max: number } {
+  return { connectionString, max: getPgBossPoolMax(env) }
+}
+
 export function getPort(defaultPort: number): number {
   const raw = readEnv('PORT')
   if (!raw) {

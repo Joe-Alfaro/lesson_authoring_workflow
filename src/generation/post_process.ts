@@ -1,5 +1,6 @@
 // Prompt-tuning rules the code enforces on a validated lesson (M2 smoke run, D-039): rewriting is
 // free, while rejecting the output would cost a repair call. Contract: src/generation/README.md.
+import { withContentIds } from '../lesson/content_ids'
 import type { Block, LessonContent, Part, Section } from '../lesson/schema'
 import type { PulseCheckOption } from './prompt_builder'
 
@@ -89,7 +90,8 @@ export function normalizeLessonContent(
   const addressed = vocabulary.addressed
     .filter((entry) => usesTerm(bodyText, entry.term))
     .slice(0, MAX_ADDRESSED_VOCABULARY)
-  return structuredClone({
+  // Saved with ids, so the editor, versions and AI assist share them from the start (N1).
+  return withContentIds({
     ...content,
     body: {
       ...content.body,

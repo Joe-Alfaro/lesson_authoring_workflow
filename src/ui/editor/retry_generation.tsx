@@ -8,10 +8,13 @@ import { Icon } from '../lesson/lesson_icons'
 export function RetryGenerationButton({
   unitId,
   lessonId,
+  disabled = false,
   onStarted,
 }: {
   unitId: string
   lessonId: string
+  /** While the lesson is generating, a second retry would queue it again. */
+  disabled?: boolean
   onStarted?: () => void
 }) {
   const router = useRouter()
@@ -43,7 +46,12 @@ export function RetryGenerationButton({
 
   return (
     <>
-      <button type="button" className="btn primary" disabled={busy} onClick={() => void retry()}>
+      <button
+        type="button"
+        className="btn primary"
+        disabled={busy || disabled}
+        onClick={() => void retry()}
+      >
         <Icon name="refresh" />
         Retry generation
       </button>

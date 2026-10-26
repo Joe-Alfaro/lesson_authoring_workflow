@@ -139,6 +139,7 @@ in step 3 and never commit or paste them.
 | `ANTHROPIC_API_KEY`        | set by owner (AI assist, R20-R22)         | set by owner                 | not used                     | yes     |
 | `ASSIST_MODEL`             | `claude-haiku-5-5`                        | not used                     | not used                     | no      |
 | `DB_POOL_MAX`              | `10`                                      | `10`                         | `10`                         | no      |
+| `PGBOSS_POOL_MAX`          | `2`                                       | `2`                          | not used                     | no      |
 | `SPEND_CAP_USD`            | `3`                                       | `3`                          | not used                     | no      |
 | `GENERATION_SPEND_CAP_USD` | `1`                                       | `1`                          | not used                     | no      |
 | `GENERATION_MODEL`         | `claude-haiku-5-5`                        | `claude-haiku-5-5`           | not used                     | no      |
@@ -160,10 +161,12 @@ Notes:
   Anthropic key for generation; the web app uses it for AI assist (R20-R22), whose calls are
   metered in `assist_calls` and count against the same `SPEND_CAP_USD`. Without the key on `web`,
   assist answers 503 and nothing else changes.
-- `DB_POOL_MAX` sizes each process's Postgres pool (default 10). Live feeds don't use pool
-  clients: each process shares one LISTEN connection, and open editors poll the lesson status, so
-  the pool only bounds concurrent queries. Keep (web + worker + collab) x `DB_POOL_MAX` + 3 under
-  the database's connection limit.
+- `DB_POOL_MAX` sizes each process's Postgres pool (default 10) and `PGBOSS_POOL_MAX` pg-boss's own
+  pool in `web` and `worker` (default 2). Live feeds don't use pool clients: each process shares
+  one LISTEN connection, and open editors poll the lesson status. Connections at most:
+  3 x `DB_POOL_MAX` (web, worker, collab) + 2 x `PGBOSS_POOL_MAX` (web, worker) + 2 LISTEN
+  connections (web's dashboard feed, collab's lesson events) + 1 while `migrate_cli` runs. With
+  the defaults that's 37; keep it under the database's connection limit.
 - Hosted demo passwords come from `SEED_PASSWORD`; the README's `demo-password` does not work
   there.
 
