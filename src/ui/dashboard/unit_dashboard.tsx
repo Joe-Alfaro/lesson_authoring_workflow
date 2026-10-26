@@ -7,6 +7,7 @@ import type { Role } from '../../auth/roles'
 import type { UnitDashboardData, DashboardRow } from '../../units/dashboard_data'
 import { Breadcrumbs } from '../breadcrumbs'
 import { download, unitExportHref } from '../download'
+import { LocalTime } from '../local_time'
 import {
   CheckIcon,
   DownloadIcon,
@@ -80,6 +81,11 @@ function matchesFilters(row: DashboardRow, filters: Filters): boolean {
     }
   }
   return true
+}
+
+/** "10:42" for an ISO time, in the viewer's clock (LocalTime's format). */
+function clockOf(iso: string): string {
+  return formatClock(new Date(iso))
 }
 
 function lessonsText(count: number): string {
@@ -481,17 +487,16 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
                   {active ? (
                     <>
                       <dt>Started</dt>
-                      <dd suppressHydrationWarning>
-                        {[run.startedBy, formatClock(new Date(run.createdAt))]
-                          .filter(Boolean)
-                          .join(', ')}
+                      <dd>
+                        {run.startedBy ? `${run.startedBy}, ` : null}
+                        <LocalTime iso={run.createdAt} format={clockOf} />
                       </dd>
                     </>
                   ) : (
                     <>
                       <dt>{stopped ? 'Stopped' : 'Cancelled'}</dt>
-                      <dd suppressHydrationWarning>
-                        {run.finishedAt ? formatClock(new Date(run.finishedAt)) : '–'}
+                      <dd>
+                        {run.finishedAt ? <LocalTime iso={run.finishedAt} format={clockOf} /> : '–'}
                       </dd>
                     </>
                   )}
@@ -564,10 +569,10 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
             </span>
             <span className="spacer" />
             {run ? (
-              <span className="caption" suppressHydrationWarning>
+              <span className="caption">
                 Generation {run.status === 'cancelled' ? 'cancelled' : 'finished'} at{' '}
-                {run.finishedAt ? formatClock(new Date(run.finishedAt)) : '–'} with prompt v
-                {run.promptVersion}. Run cost {formatUsd(run.costUsd)}.
+                {run.finishedAt ? <LocalTime iso={run.finishedAt} format={clockOf} /> : '–'} with
+                prompt v{run.promptVersion}. Run cost {formatUsd(run.costUsd)}.
               </span>
             ) : null}
             {retryFailed}

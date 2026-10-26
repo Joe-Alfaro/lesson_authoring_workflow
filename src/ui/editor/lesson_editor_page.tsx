@@ -48,6 +48,7 @@ import { avatarColour, initials } from '../people'
 import { useLiveStatus } from './use_live_status'
 import { useLessonCollab, type SaveState } from './collab'
 import { formatShort, formatWhen } from './format_time'
+import { LocalTime } from '../local_time'
 import { LiveDocument, PreviewDocument } from './lesson_documents'
 import type { EditorViewContext } from './node_views'
 import { AssistLayer, type AssistLayerHandle } from './assist_layer'
@@ -668,9 +669,16 @@ export function LessonEditorPage({
                 {status === 'approved' ? (
                   <>
                     <b>This lesson is approved, so editing is locked.</b>{' '}
-                    {lesson.approval
-                      ? `${lesson.approval.name} approved it ${formatWhen(lesson.approval.at, { at: true })}. `
-                      : ''}
+                    {lesson.approval ? (
+                      <>
+                        {lesson.approval.name} approved it{' '}
+                        <LocalTime
+                          iso={lesson.approval.at}
+                          format={(iso) => formatWhen(iso, { at: true })}
+                        />
+                        .{' '}
+                      </>
+                    ) : null}
                     Reopening moves it back to In review so reviewers can edit.
                   </>
                 ) : status === 'failed' ? (

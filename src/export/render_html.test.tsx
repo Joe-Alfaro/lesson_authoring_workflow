@@ -184,6 +184,15 @@ describe('renderLessonHtml', () => {
     expect(text(doc.body)).not.toMatch(/not approved/i)
   })
 
+  it('dates the approval in UTC and says so, since a static file has no viewer time zone', () => {
+    const doc = parse(renderLessonHtml(lessonExport()))
+    expect(text(doc.body)).toContain('Approved by Approver 01 on Oct 25, 2026, 15:30 UTC')
+    const late = exportedLesson({ approval: { by: APPROVER, at: '2026-10-26T00:05:00.000Z' } })
+    expect(text(parse(renderLessonHtml(lessonExport(late))).body)).toContain(
+      'on Oct 26, 2026, 00:05 UTC',
+    )
+  })
+
   it('marks a lesson that is not approved, naming its status', () => {
     const doc = parse(
       renderLessonHtml(

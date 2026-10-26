@@ -39,6 +39,7 @@ export default defineConfig({
     reuseExistingServer: false,
     stdout: 'pipe',
     stderr: 'pipe',
-    env: { E2E_PORT: String(E2E_PORT) },
+    // The app runs in UTC, as in production, so specs can load pages in another browser time zone.
+    env: { E2E_PORT: String(E2E_PORT), TZ: 'UTC' },
   },
 })

@@ -63,13 +63,25 @@ function lessonHeadingText(content: LessonContent): string {
   return `${lessonLabel(content.frontMatter.number)}: ${title}`
 }
 
+/**
+ * "Oct 25, 2026, 15:30 UTC". A downloaded file has no viewer time zone (it is read anywhere, any
+ * time later), so the time is given in UTC and says so rather than in the server's zone.
+ */
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+  const date = new Date(iso)
+  const day = date.toLocaleDateString('en-US', {
     year: 'numeric',
-    month: 'long',
+    month: 'short',
     day: 'numeric',
     timeZone: 'UTC',
   })
+  const clock = date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: 'UTC',
+  })
+  return `${day}, ${clock} UTC`
 }
 
 /** Ids of one lesson's anchors; in a unit file each lesson gets its own prefix. */
@@ -410,7 +422,7 @@ const STYLE = `*{box-sizing:border-box}
 body{margin:0;background:#eef1f4;color:#1c2430;font:17px/28px Georgia,"Times New Roman",serif}
 main{max-width:820px;margin:32px auto;padding:0 16px}
 .doc,.unit-head{background:#fff;border:1px solid #d5dbe2;border-radius:8px;padding:40px 48px;margin-bottom:32px}
-h1{font-size:32px;line-height:40px;margin:4px 0 8px}
+h1,h2,h3{overflow-wrap:anywhere}h1{font-size:32px;line-height:40px;margin:4px 0 8px}
 h2{font-size:22px;line-height:30px;margin:32px 0 12px}
 h3{font-size:18px;margin:20px 0 8px}h4{font-size:16px;margin:16px 0 6px}h5{font:600 14px/20px system-ui,sans-serif;margin:12px 0 4px}
 .kicker,.meta,.caption,.chip,caption,th,.mins,.bt,.g{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
@@ -436,7 +448,7 @@ td.flow{white-space:nowrap;font-weight:700;border-left:4px solid #aeb7c2}
 .box{border:1px solid #d5dbe2;border-left:4px solid #4a5568;border-radius:4px;padding:12px 16px;margin:16px 0}
 .box.eld{border-left-color:#4f46c8}.box.tip{border-left-color:#b87a00}.bt{font-weight:700;font-size:15px;margin-bottom:4px}
 .opts li{margin:6px 0}.opts .correct{color:#166534}.why{font-size:15px;color:#4a5568}
-nav ol{columns:2;padding-left:20px}nav a{color:#1c2430}
+nav ol{columns:2;padding-left:20px}nav li{overflow-wrap:anywhere;break-inside:avoid}nav a{color:#1c2430}
 @media print{body{background:#fff}.doc,.unit-head{border:0;padding:0}.doc{break-before:page}}
 @media (max-width:640px){.doc,.unit-head{padding:20px}dl.fm{grid-template-columns:1fr}nav ol{columns:1}}`
 

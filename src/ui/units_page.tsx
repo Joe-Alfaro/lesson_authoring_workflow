@@ -4,6 +4,7 @@ import { ROLES, hasRole } from '../auth/roles'
 import { getDb } from '../db/client'
 import { listUnits } from '../units/queries'
 import { UploadIcon } from './icons'
+import { LocalDate } from './local_time'
 import { PacingRibbon } from './ribbon'
 
 function ImportLink() {
@@ -92,7 +93,9 @@ export async function UnitsPage() {
                 </td>
                 <td className="n">{unit.grade}</td>
                 <td className="n">{unit.lessons}</td>
-                <td>{unit.createdAt.toLocaleDateString('en-US', { dateStyle: 'medium' })}</td>
+                <td>
+                  <LocalDate iso={unit.createdAt.toISOString()} />
+                </td>
               </tr>
             ))}
           </tbody>

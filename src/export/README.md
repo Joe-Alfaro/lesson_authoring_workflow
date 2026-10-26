@@ -101,8 +101,10 @@ mockup `R19-lesson-view`):
   Action", "4 Look Back" (text content, whitespace collapsed), then Homework when present.
 - **Standards**: a section headed "Standards" lists each known code with its full text (the
   static file has no hover popover).
-- **Approval**: approved: "Approved by <name>" (with the date); not approved: "Not approved:
-  <status label>" (`STATUS_LABELS`).
+- **Approval**: approved: "Approved by <name> on Oct 25, 2026, 15:30 UTC"; not approved: "Not
+  approved: <status label>" (`STATUS_LABELS`). The time is in UTC and labelled as such: a
+  downloaded file has no viewer time zone, unlike the app, which shows times in the viewer's zone.
+- **Long titles** wrap (`overflow-wrap: anywhere`) in the contents list and the headings.
 - **Unit HTML**: one document. `<h1>` names the unit ("Unit 4: <anchor text>"); a
   `<nav aria-label="Contents">` has one link per exported lesson ("Lesson 4: <title>", "Flex
   day: <title>"), each `href="#<id>"` pointing at that lesson's `<article>`; every `id` in the

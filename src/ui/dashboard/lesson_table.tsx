@@ -14,6 +14,7 @@ import {
   PlayIcon,
   RetryIcon,
 } from '../icons'
+import { LocalTime } from '../local_time'
 import { formatUpdated } from './format'
 import { RowMenu, type MenuEntry } from './row_menu'
 import { StatusPill } from './status_pill'
@@ -181,8 +182,12 @@ function LessonRow({
       <td className="editor">
         {row.lastEditor ? <Who person={row.lastEditor} /> : <span className="muted">–</span>}
       </td>
-      <td className="num updated" suppressHydrationWarning>
-        {showTime ? formatUpdated(new Date(row.updatedAt), now) : <span className="muted">–</span>}
+      <td className="num updated">
+        {showTime ? (
+          <LocalTime iso={row.updatedAt} format={(iso) => formatUpdated(new Date(iso), now)} />
+        ) : (
+          <span className="muted">–</span>
+        )}
       </td>
       <td className="actcell">
         {actions.canGenerate && row.generation === 'failed' ? (

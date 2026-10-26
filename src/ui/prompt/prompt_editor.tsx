@@ -10,6 +10,7 @@ import { errorText, sendJson } from '../dashboard/api'
 import { formatDayTime, lessonNumbersText } from '../dashboard/format'
 import { Modal } from '../dashboard/modal'
 import { EyeIcon } from '../icons'
+import { LocalTime } from '../local_time'
 
 export interface PromptVersionView {
   id: string
@@ -334,9 +335,13 @@ function VersionEditor({
                   v{item.version}
                   {item.version === current.version ? <span className="tag">Current</span> : null}
                 </span>
-                <span className="caption" suppressHydrationWarning>
+                <span className="caption">
                   {item.savedBy ?? 'Default template'},{' '}
-                  {formatDayTime(new Date(item.savedAt), nowDate)}. {usedBy(item.lessonCount)}
+                  <LocalTime
+                    iso={item.savedAt}
+                    format={(iso) => formatDayTime(new Date(iso), nowDate)}
+                  />
+                  . {usedBy(item.lessonCount)}
                 </span>
               </Link>
             )
