@@ -25,6 +25,7 @@ import { GenerationSummary } from './generation_summary'
 import { LessonTable, type RowActions } from './lesson_table'
 import { RaiseCapDialog } from './raise_cap_dialog'
 import { RegenerateDialog } from './regenerate_dialog'
+import { RowMenu } from './row_menu'
 import { StartGenerationDialog, type StartOptions } from './start_generation_dialog'
 import { StatusChips, type ChipStatus } from './status_chips'
 import { STATUS_LOOKS, type RowStatus } from './status_pill'
@@ -397,10 +398,32 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
           </button>
         ) : null}
         {anyContent && !active && !stopped ? (
-          <button type="button" className="btn" disabled title="Export arrives with R16">
-            <DownloadIcon />
-            Export
-          </button>
+          <RowMenu
+            label="Export"
+            trigger={{
+              className: 'btn',
+              content: (
+                <>
+                  <DownloadIcon />
+                  Export
+                </>
+              ),
+            }}
+            entries={[
+              {
+                kind: 'action',
+                label: 'Download unit JSON',
+                icon: <DownloadIcon />,
+                onSelect: () => download(unitExportHref(data.unit.id, 'json')),
+              },
+              {
+                kind: 'action',
+                label: 'Download unit HTML',
+                icon: <DownloadIcon />,
+                onSelect: () => download(unitExportHref(data.unit.id, 'html')),
+              },
+            ]}
+          />
         ) : null}
       </div>
 

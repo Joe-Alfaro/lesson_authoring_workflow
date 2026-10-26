@@ -12,8 +12,17 @@ export type MenuEntry =
 /**
  * The row's "More actions for lesson N" menu (R11-row-actions): a button with
  * aria-haspopup="menu"; arrow keys move between items, Escape closes and returns focus.
+ * `trigger` replaces the "more" icon button with a labelled one (the header Export menu).
  */
-export function RowMenu({ label, entries }: { label: string; entries: MenuEntry[] }) {
+export function RowMenu({
+  label,
+  entries,
+  trigger,
+}: {
+  label: string
+  entries: MenuEntry[]
+  trigger?: { content: ReactNode; className: string }
+}) {
   const [open, setOpen] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -73,13 +82,13 @@ export function RowMenu({ label, entries }: { label: string; entries: MenuEntry[
       <button
         ref={buttonRef}
         type="button"
-        className="btn quiet sm"
+        className={trigger?.className ?? 'btn quiet sm'}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={label}
         onClick={() => setOpen((value) => !value)}
       >
-        <MoreIcon />
+        {trigger ? trigger.content : <MoreIcon />}
       </button>
       {open ? (
         <div

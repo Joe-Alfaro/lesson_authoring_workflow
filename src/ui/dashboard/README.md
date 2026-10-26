@@ -71,4 +71,4 @@ again.
 Approvers see the bulk bar's Regenerate button disabled (the roles table gives regeneration to
 authors). Export (R16, `src/export/README.md`): the row menu's Download JSON / HTML (disabled for rows
 without content) and the unit-complete banner's Download unit JSON / HTML download from the export
-routes; the header Export button is still disabled.
+routes, and so does the header Export menu (Download unit JSON / HTML).

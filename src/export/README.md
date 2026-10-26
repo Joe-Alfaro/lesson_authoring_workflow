@@ -141,8 +141,10 @@ mockup `R19-lesson-view`):
   content and download from the lesson route (the browser saves the route's file name).
 - Unit-complete banner (`R24-dashboard-complete`): "Download unit JSON" and "Download unit HTML"
   are enabled and download from the unit route.
-- Not covered by the tests: the header "Export" button (still disabled), and the lesson view's
-  client-side HTML button, which may switch to the lesson route.
+- Header "Export" (`tests/e2e/export_entry_points.spec.ts`): a menu with "Download unit JSON" and
+  "Download unit HTML" from the unit route.
+- Lesson view "HTML" button: downloads from the lesson route, so `src/export/html.ts` is the only
+  HTML renderer.
 
 ## Implementation notes (from a throwaway prototype the tests were checked against)
 
