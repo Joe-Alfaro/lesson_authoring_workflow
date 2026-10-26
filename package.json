@@ -30,6 +30,9 @@
     "pretest:e2e": "node -e \"for (const dir of ['.next', 'dist']) require('node:fs').rmSync(dir, { recursive: true, force: true })\"",
     "test:e2e": "playwright test",
     "docker:smoke": "bash scripts/docker_smoke.sh",
+    "load:reviewers": "tsx scripts/load/reviewers.ts",
+    "load:generation": "tsx scripts/load/generation.ts",
+    "load:fake-model": "tsx scripts/load/fake_model.ts",
     "scrub": "tsx scripts/scrub_check.ts",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run scrub"
   },
