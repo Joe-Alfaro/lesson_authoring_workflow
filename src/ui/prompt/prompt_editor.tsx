@@ -2,20 +2,13 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import {
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type MouseEvent,
-} from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import type { PromptTemplate } from '../../generation/prompt_template'
 import type { LessonType } from '../../lesson/schema'
 import { Breadcrumbs } from '../breadcrumbs'
 import { errorText, sendJson } from '../dashboard/api'
 import { formatDayTime, lessonNumbersText } from '../dashboard/format'
+import { Modal } from '../dashboard/modal'
 import { EyeIcon } from '../icons'
 
 export interface PromptVersionView {
@@ -106,7 +99,10 @@ function PromptText({
       suppressContentEditableWarning
       spellCheck
       tabIndex={readOnly ? 0 : undefined}
-      onInput={(event) => onChange(event.currentTarget.innerText)}
+      // innerText keeps the line breaks the browser shows; textContent covers DOMs without it.
+      onInput={(event) =>
+        onChange(event.currentTarget.innerText ?? event.currentTarget.textContent ?? '')
+      }
     >
       {initial}
     </div>
@@ -136,6 +132,8 @@ function VersionEditor({
   const [tab, setTab] = useState<LessonType>('core_reading')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** Where an in-app link was going when the leave prompt opened. */
+  const [leavingTo, setLeavingTo] = useState<string | null>(null)
   const tabRefs = useRef(new Map<LessonType, HTMLButtonElement>())
 
   const editedTabs = TYPE_TABS.filter(
@@ -159,13 +157,34 @@ function VersionEditor({
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [dirty])
 
-  function confirmLeave(event: MouseEvent<HTMLAnchorElement>) {
-    if (dirty && !window.confirm('Discard your unsaved changes to the prompt?')) {
-      event.preventDefault()
+  // R10: leaving by an in-app link with unsaved edits asks Save, Discard or Stay first.
+  useEffect(() => {
+    if (!dirty) {
+      return
     }
-  }
+    function onClick(event: globalThis.MouseEvent) {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey) {
+        return
+      }
+      const link = (event.target as Element | null)?.closest?.('a[href]')
+      if (!(link instanceof HTMLAnchorElement) || link.target === '_blank') {
+        return
+      }
+      const url = new URL(link.href, window.location.href)
+      const here = new URL(window.location.href)
+      if (url.origin !== here.origin || url.href.split('#')[0] === here.href.split('#')[0]) {
+        return
+      }
+      event.preventDefault()
+      event.stopPropagation()
+      setLeavingTo(`${url.pathname}${url.search}`)
+    }
+    document.addEventListener('click', onClick, true)
+    return () => document.removeEventListener('click', onClick, true)
+  }, [dirty])
 
-  async function save() {
+  /** Saves the draft as the next version; true when it was saved. */
+  async function save(): Promise<boolean> {
     setSaving(true)
     setError(null)
     const typeGuidance: Partial<Record<LessonType, string>> = {}
@@ -187,9 +206,26 @@ function VersionEditor({
     setSaving(false)
     if (!result.ok) {
       setError(errorText(result))
-      return
+      return false
     }
     router.refresh()
+    return true
+  }
+
+  async function leave(action: 'save' | 'discard') {
+    const href = leavingTo
+    if (!href) {
+      return
+    }
+    if (action === 'save' && !(await save())) {
+      setLeavingTo(null)
+      return
+    }
+    setLeavingTo(null)
+    if (action === 'discard') {
+      onDiscard()
+    }
+    router.push(href)
   }
 
   function onTabKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -293,7 +329,6 @@ function VersionEditor({
                     : `${promptHref}?version=${item.version}`
                 }
                 aria-current={isViewing ? 'true' : undefined}
-                onClick={confirmLeave}
               >
                 <span className="vt">
                   v{item.version}
@@ -396,7 +431,66 @@ function VersionEditor({
           </ul>
         </aside>
       </div>
+      {leavingTo ? (
+        <LeaveDialog
+          nextVersion={nextVersion}
+          saving={saving}
+          onSave={() => void leave('save')}
+          onDiscard={() => void leave('discard')}
+          onStay={() => setLeavingTo(null)}
+        />
+      ) : null}
     </main>
+  )
+}
+
+/** Save, Discard or Stay when leaving with unsaved prompt edits; Stay is the safe choice. */
+function LeaveDialog({
+  nextVersion,
+  saving,
+  onSave,
+  onDiscard,
+  onStay,
+}: {
+  nextVersion: number
+  saving: boolean
+  onSave: () => void
+  onDiscard: () => void
+  onStay: () => void
+}) {
+  const id = useId()
+  const stayRef = useRef<HTMLButtonElement>(null)
+  return (
+    <Modal
+      role="alertdialog"
+      labelledBy={`${id}-title`}
+      describedBy={`${id}-text`}
+      initialFocus={stayRef}
+      onClose={onStay}
+    >
+      <header>
+        <h2 className="h3" id={`${id}-title`}>
+          Save your changes to the prompt?
+        </h2>
+      </header>
+      <div className="body">
+        <p id={`${id}-text`}>
+          You edited the prompt but haven&apos;t saved it. Saving creates v{nextVersion}; discarding
+          throws the edits away.
+        </p>
+      </div>
+      <footer>
+        <button ref={stayRef} type="button" className="btn" onClick={onStay}>
+          Stay
+        </button>
+        <button type="button" className="btn" onClick={onDiscard}>
+          Discard changes
+        </button>
+        <button type="button" className="btn primary" disabled={saving} onClick={onSave}>
+          Save as v{nextVersion}
+        </button>
+      </footer>
+    </Modal>
   )
 }
 

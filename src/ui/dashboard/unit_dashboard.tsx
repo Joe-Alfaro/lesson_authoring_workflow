@@ -18,7 +18,7 @@ import {
 import { errorText, sendJson } from './api'
 import { AssignPopover, type Reviewer } from './assign_popover'
 import { CancelRunDialog } from './cancel_run_dialog'
-import { FilterBar, NO_FILTERS, type FilterOption, type Filters } from './filter_bar'
+import { FilterBar, hasFilters, NO_FILTERS, type FilterOption, type Filters } from './filter_bar'
 import { formatClock, formatDayTime, formatUsd } from './format'
 import { GenerationSummary } from './generation_summary'
 import { LessonTable, type RowActions } from './lesson_table'
@@ -304,6 +304,7 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
   }))
   const strip = <UnitStrip arcs={data.arcs} lessons={stripLessons} />
   const approved = data.counts.approved
+  const showTable = !data.complete || hasFilters(filters)
   const pressed = filters.statuses as ChipStatus[]
   function toggleChip(status: ChipStatus) {
     setFilters((current) => ({
@@ -543,67 +544,72 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
         </section>
       )}
 
-      <FilterBar
-        filters={filters}
-        onChange={setFilters}
-        statusOptions={statusOptions}
-        arcOptions={arcOptions}
-        assigneeOptions={assigneeOptions}
-      />
+      {/* R24-dashboard-complete ends after the strip panel; a count chip brings the table back. */}
+      {showTable ? (
+        <>
+          <FilterBar
+            filters={filters}
+            onChange={setFilters}
+            statusOptions={statusOptions}
+            arcOptions={arcOptions}
+            assigneeOptions={assigneeOptions}
+          />
 
-      {selectedRows.length > 0 ? (
-        <div className="selbar-wrap">
-          <div className="selbar" role="toolbar" aria-label="Bulk actions">
-            <b>{lessonsText(selectedRows.length)} selected</b>
-            <span className="spacer" />
-            {canAssign ? (
-              <button
-                type="button"
-                className="btn sm"
-                aria-haspopup="dialog"
-                aria-expanded={assign?.anchor === 'bulk'}
-                onClick={() =>
-                  setAssign(
-                    assign?.anchor === 'bulk' ? null : { anchor: 'bulk', rows: selectedRows },
-                  )
-                }
-              >
-                <PersonIcon />
-                Assign
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className="btn sm"
-              disabled={!canGenerate}
-              title={canGenerate ? undefined : 'Only authors regenerate lessons.'}
-              onClick={() =>
-                setDialog({
-                  kind: 'regenerate',
-                  rows: selectedRows.filter((row) => row.lessonNumber !== null),
-                })
-              }
-            >
-              <RetryIcon />
-              Regenerate
-            </button>
-            <button type="button" className="btn sm" onClick={() => setSelected(new Set())}>
-              Clear
-            </button>
-          </div>
-          {assign?.anchor === 'bulk' ? assignPopover(assign) : null}
-        </div>
+          {selectedRows.length > 0 ? (
+            <div className="selbar-wrap">
+              <div className="selbar" role="toolbar" aria-label="Bulk actions">
+                <b>{lessonsText(selectedRows.length)} selected</b>
+                <span className="spacer" />
+                {canAssign ? (
+                  <button
+                    type="button"
+                    className="btn sm"
+                    aria-haspopup="dialog"
+                    aria-expanded={assign?.anchor === 'bulk'}
+                    onClick={() =>
+                      setAssign(
+                        assign?.anchor === 'bulk' ? null : { anchor: 'bulk', rows: selectedRows },
+                      )
+                    }
+                  >
+                    <PersonIcon />
+                    Assign
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="btn sm"
+                  disabled={!canGenerate}
+                  title={canGenerate ? undefined : 'Only authors regenerate lessons.'}
+                  onClick={() =>
+                    setDialog({
+                      kind: 'regenerate',
+                      rows: selectedRows.filter((row) => row.lessonNumber !== null),
+                    })
+                  }
+                >
+                  <RetryIcon />
+                  Regenerate
+                </button>
+                <button type="button" className="btn sm" onClick={() => setSelected(new Set())}>
+                  Clear
+                </button>
+              </div>
+              {assign?.anchor === 'bulk' ? assignPopover(assign) : null}
+            </div>
+          ) : null}
+
+          <LessonTable
+            rows={visible}
+            arcs={data.arcs}
+            selected={selected}
+            onSelect={select}
+            now={now}
+            actions={actions}
+          />
+          {assign && assign.anchor !== 'bulk' ? assignPopover(assign) : null}
+        </>
       ) : null}
-
-      <LessonTable
-        rows={visible}
-        arcs={data.arcs}
-        selected={selected}
-        onSelect={select}
-        now={now}
-        actions={actions}
-      />
-      {assign && assign.anchor !== 'bulk' ? assignPopover(assign) : null}
 
       {dialog?.kind === 'start' ? (
         <StartGenerationDialog
