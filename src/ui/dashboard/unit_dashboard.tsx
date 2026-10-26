@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from 'react'
 import type { Role } from '../../auth/roles'
 import type { UnitDashboardData, DashboardRow } from '../../units/dashboard_data'
 import { Breadcrumbs } from '../breadcrumbs'
+import { download, unitExportHref } from '../download'
 import {
   CheckIcon,
   DownloadIcon,
@@ -508,11 +509,19 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
               </p>
             </div>
             <div className="row">
-              <button type="button" className="btn" disabled title="Export arrives with R16">
+              <button
+                type="button"
+                className="btn"
+                onClick={() => download(unitExportHref(data.unit.id, 'json'))}
+              >
                 <DownloadIcon />
                 Download unit JSON
               </button>
-              <button type="button" className="btn" disabled title="Export arrives with R16">
+              <button
+                type="button"
+                className="btn"
+                onClick={() => download(unitExportHref(data.unit.id, 'html'))}
+              >
                 <DownloadIcon />
                 Download unit HTML
               </button>

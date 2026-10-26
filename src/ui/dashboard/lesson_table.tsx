@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Fragment, useEffect, useRef } from 'react'
 import type { DashboardRow } from '../../units/dashboard_data'
 import { Who } from '../avatar'
+import { download, lessonExportHref } from '../download'
 import {
   DownloadIcon,
   EyeIcon,
@@ -79,21 +80,21 @@ function menuEntries(row: DashboardRow, actions: RowActions): MenuEntry[] {
       disabled: row.status === 'queued' || row.status === 'generating',
     })
   }
-  // Export (R16) is not built yet; the items stay in place, disabled.
+  // R16: the routes answer 409 without content, so the items are off for those rows.
   entries.push(
     {
       kind: 'action',
       label: 'Download JSON',
       icon: <DownloadIcon />,
-      onSelect: () => {},
-      disabled: true,
+      onSelect: () => download(lessonExportHref(row.id, 'json')),
+      disabled: noContent,
     },
     {
       kind: 'action',
       label: 'Download HTML',
       icon: <DownloadIcon />,
-      onSelect: () => {},
-      disabled: true,
+      onSelect: () => download(lessonExportHref(row.id, 'html')),
+      disabled: noContent,
     },
   )
   return entries
