@@ -57,7 +57,7 @@ function Box({
     <div className="box">
       <div className="bt">
         <Icon name={icon} />
-        {title}
+        <span>{title}</span>
       </div>
       {children}
     </div>

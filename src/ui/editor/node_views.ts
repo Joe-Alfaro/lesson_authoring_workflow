@@ -684,7 +684,9 @@ function blockView(node: PmNode, ctx: EditorViewContext): NodeViewParts {
   const boxedCodes = (iconName: IconName, title: string, codes: unknown) => {
     dom = h('div', 'box')
     const bt = fixed('div', 'bt')
-    bt.append(icon(iconName), ...titleWithCodes(title, codes))
+    const text = h('span')
+    text.append(...titleWithCodes(title, codes))
+    bt.append(icon(iconName), text)
     dom.append(bt)
     content = h('div', 'box-body')
     dom.append(content)

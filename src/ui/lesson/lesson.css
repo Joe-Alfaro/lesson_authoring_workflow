@@ -966,12 +966,12 @@
 }
 .part-body > .part-label,
 .part-body > .part-title {
-  display: inline-flex;
-  flex-wrap: wrap;
+  display: inline;
   margin-right: 6px;
+  line-height: 32px;
 }
-.part-body > .part-label {
-  gap: 0;
+.part-body > .part-label + .part-title + * {
+  margin-top: var(--s3);
 }
 .supp-body > .field:first-child {
   display: block;
@@ -983,10 +983,12 @@
 }
 .part-meta {
   display: inline-flex;
+  flex-wrap: wrap;
   gap: 6px;
   align-items: center;
   margin-left: 6px;
   font-weight: 400;
+  vertical-align: 2px;
 }
 .part-sub {
   color: var(--ink-2);
