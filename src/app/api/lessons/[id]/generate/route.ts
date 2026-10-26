@@ -1,4 +1,4 @@
-import { requireRole } from '../../../../../auth/require_role'
+import { requireApiRole } from '../../../../../auth/require_role'
 import { generationDeps } from '../../../../../generation_api/boss'
 import { generationErrorResponse, optionalString } from '../../../../../generation_api/http'
 import { isUuid } from '../../../../../import/is_uuid'
@@ -12,7 +12,10 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const user = await requireRole(['author'])
+  const user = await requireApiRole(['author'])
+  if (user instanceof Response) {
+    return user
+  }
   const { id } = await params
   try {
     // The body is optional: an empty request uses the default model.

@@ -1,4 +1,4 @@
-import { requireRole } from '../../../../../../auth/require_role'
+import { requireApiRole } from '../../../../../../auth/require_role'
 import { getDb } from '../../../../../../db/client'
 import { generationErrorResponse } from '../../../../../../generation_api/http'
 import { raiseRunCap } from '../../../../../../generation_api/run_cap'
@@ -15,7 +15,10 @@ export async function PUT(
   { params }: { params: Promise<{ runId: string }> },
 ): Promise<Response> {
   // Admins pass every role check; an empty list lets only them through.
-  await requireRole([])
+  const access = await requireApiRole([])
+  if (access instanceof Response) {
+    return access
+  }
   const { runId } = await params
   try {
     const body = await readJsonObject(request)

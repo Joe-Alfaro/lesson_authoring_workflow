@@ -1,4 +1,4 @@
-import { requireRole } from '../../../../../../auth/require_role'
+import { requireApiRole } from '../../../../../../auth/require_role'
 import { getDb } from '../../../../../../db/client'
 import { readOnlyDeps } from '../../../../../../generation_api/boss'
 import { generationErrorResponse } from '../../../../../../generation_api/http'
@@ -15,7 +15,10 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  await requireRole(['author'])
+  const access = await requireApiRole(['author'])
+  if (access instanceof Response) {
+    return access
+  }
   const { id } = await params
   try {
     const db = getDb()

@@ -1,4 +1,4 @@
-import { requireRole } from '../../../../../auth/require_role'
+import { requireApiRole } from '../../../../../auth/require_role'
 import { getDb } from '../../../../../db/client'
 import { UnitNotFoundError, attachEldFile } from '../../../../../import/eld_service'
 import { badRequest, readUploadedFile } from '../../../../../import/http'
@@ -10,7 +10,10 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  await requireRole(['author'])
+  const access = await requireApiRole(['author'])
+  if (access instanceof Response) {
+    return access
+  }
   const { id } = await params
   try {
     const result = await attachEldFile(getDb(), id, await readUploadedFile(request))

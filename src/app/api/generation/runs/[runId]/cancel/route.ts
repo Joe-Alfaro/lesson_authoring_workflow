@@ -1,4 +1,4 @@
-import { requireRole } from '../../../../../../auth/require_role'
+import { requireApiRole } from '../../../../../../auth/require_role'
 import { generationDeps } from '../../../../../../generation_api/boss'
 import { generationErrorResponse } from '../../../../../../generation_api/http'
 import { cancelRun, getRun, NotFoundError } from '../../../../../../generation/service'
@@ -11,7 +11,10 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ runId: string }> },
 ): Promise<Response> {
-  await requireRole(['author'])
+  const access = await requireApiRole(['author'])
+  if (access instanceof Response) {
+    return access
+  }
   const { runId } = await params
   try {
     const deps = await generationDeps()

@@ -37,25 +37,27 @@ const MISSING_ID = '00000000-0000-4000-8000-000000000000'
 
 interface Result {
   status: number
+  type: string | null
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   body: any
 }
 
+/** Runs a handler; role checks answer JSON themselves (D-032 (4)), so nothing is thrown. */
 async function call(handler: () => Promise<Response>): Promise<Result> {
-  try {
-    const response = await handler()
-    const text = await response.text()
-    return { status: response.status, body: text ? JSON.parse(text) : null }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    if (message === 'forbidden') {
-      return { status: 403, body: null }
-    }
-    if (message.startsWith('redirect:')) {
-      return { status: 307, body: null }
-    }
-    throw error
+  const response = await handler()
+  const text = await response.text()
+  return {
+    status: response.status,
+    type: response.headers.get('content-type'),
+    body: text ? JSON.parse(text) : null,
   }
+}
+
+/** A role refusal: 403 with a JSON `{ error }`. */
+const FORBIDDEN = {
+  status: 403,
+  type: expect.stringContaining('application/json'),
+  body: { error: expect.any(String) },
 }
 
 function signIn(user: FixtureUser | null) {
@@ -172,7 +174,7 @@ describe('generation and prompt API', () => {
           call(() => routes.resume.POST(request('/', 'POST'), runParams)),
           call(() => routes.flex.POST(request('/', 'POST', {}), params({ id: unit.flexIds[0]! }))),
         ])
-        expect(answers.map((answer) => answer.status)).toEqual([403, 403, 403, 403, 403, 403])
+        expect(answers).toEqual(Array.from({ length: 6 }, () => FORBIDDEN))
       }
       expect(insert).not.toHaveBeenCalled()
     })
@@ -180,14 +182,12 @@ describe('generation and prompt API', () => {
     it('lets only authors and admins read and save prompt versions', async () => {
       signIn(people.reviewer)
       const unitParams = params({ id: unit.unitId })
-      expect((await call(() => routes.prompts.GET(request('/'), unitParams))).status).toBe(403)
+      expect(await call(() => routes.prompts.GET(request('/'), unitParams))).toEqual(FORBIDDEN)
       expect(
-        (
-          await call(() =>
-            routes.prompts.POST(request('/', 'POST', { template: { system: 'x' } }), unitParams),
-          )
-        ).status,
-      ).toBe(403)
+        await call(() =>
+          routes.prompts.POST(request('/', 'POST', { template: { system: 'x' } }), unitParams),
+        ),
+      ).toEqual(FORBIDDEN)
     })
 
     it('lets only admins raise a run cap', async () => {
@@ -197,16 +197,16 @@ describe('generation and prompt API', () => {
         const answer = await call(() =>
           routes.cap.PUT(request('/', 'PUT', { capUsd: 1 }), params({ runId })),
         )
-        expect(answer.status).toBe(403)
+        expect(answer).toEqual(FORBIDDEN)
       }
     })
 
-    it('sends a signed-out caller to sign-in', async () => {
+    it('answers a signed-out caller 401 JSON', async () => {
       signIn(null)
       const answer = await call(() =>
         routes.runs.POST(request('/', 'POST', {}), params({ id: unit.unitId })),
       )
-      expect(answer.status).toBe(307)
+      expect(answer).toMatchObject({ status: 401, body: { error: 'Sign in required' } })
     })
   })
 
@@ -279,7 +279,7 @@ describe('generation and prompt API', () => {
       const answer = await call(() =>
         routes.cancel.POST(request('/', 'POST'), params({ runId: started.body.runId })),
       )
-      expect(answer).toEqual({ status: 200, body: { status: 'cancelled' } })
+      expect(answer).toMatchObject({ status: 200, body: { status: 'cancelled' } })
       const missing = await call(() =>
         routes.cancel.POST(request('/', 'POST'), params({ runId: 'not-a-run' })),
       )
@@ -355,7 +355,7 @@ describe('generation and prompt API', () => {
       const ok = await call(() =>
         routes.cap.PUT(request('/', 'PUT', { capUsd: 1 }), params({ runId })),
       )
-      expect(ok).toEqual({ status: 200, body: { capUsd: 1 } })
+      expect(ok).toMatchObject({ status: 200, body: { capUsd: 1 } })
       const [run] = await db
         .select()
         .from(schema.generationRuns)

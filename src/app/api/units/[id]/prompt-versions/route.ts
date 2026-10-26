@@ -1,4 +1,4 @@
-import { requireRole } from '../../../../../auth/require_role'
+import { requireApiRole } from '../../../../../auth/require_role'
 import { getDb } from '../../../../../db/client'
 import { generationErrorResponse } from '../../../../../generation_api/http'
 import { assertUnitExists } from '../../../../../generation_api/units'
@@ -17,7 +17,10 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  await requireRole(['author'])
+  const access = await requireApiRole(['author'])
+  if (access instanceof Response) {
+    return access
+  }
   const { id } = await params
   try {
     const db = getDb()
@@ -34,7 +37,10 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const user = await requireRole(['author'])
+  const user = await requireApiRole(['author'])
+  if (user instanceof Response) {
+    return user
+  }
   const { id } = await params
   try {
     const body = await readJsonObject(request)

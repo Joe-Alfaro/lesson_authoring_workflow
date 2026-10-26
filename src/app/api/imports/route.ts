@@ -1,4 +1,4 @@
-import { requireRole } from '../../../auth/require_role'
+import { requireApiRole } from '../../../auth/require_role'
 import { getDb } from '../../../db/client'
 import {
   BadInputError,
@@ -46,7 +46,10 @@ async function readPreviewRequest(request: Request): Promise<PreviewRequest> {
 
 /** R1, R4, R5: parses an outline from a sheet link or an uploaded CSV and returns the preview. */
 export async function POST(request: Request): Promise<Response> {
-  const user = await requireRole(['author'])
+  const user = await requireApiRole(['author'])
+  if (user instanceof Response) {
+    return user
+  }
   try {
     const { source, eldCsv, eldUrl } = await readPreviewRequest(request)
     const preview = await previewImport(getDb(), source, { userId: user.id, eldCsv, eldUrl })

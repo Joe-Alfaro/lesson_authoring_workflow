@@ -1,4 +1,4 @@
-import { requireRole } from '../../../../auth/require_role'
+import { requireApiRole } from '../../../../auth/require_role'
 import { getDb } from '../../../../db/client'
 import { cancelImport } from '../../../../import/import_service'
 
@@ -9,7 +9,10 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  await requireRole(['author'])
+  const access = await requireApiRole(['author'])
+  if (access instanceof Response) {
+    return access
+  }
   const { id } = await params
   await cancelImport(getDb(), id)
   return new Response(null, { status: 204 })
