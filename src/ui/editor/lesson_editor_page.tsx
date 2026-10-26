@@ -4,7 +4,7 @@
 // R23-request-changes, R23-history, R23-approved-locked) with AI assist (R20-R22: assist_layer.tsx,
 // the Alignment tab and the lesson bar's `assistSlot`).
 import type { Editor, JSONContent } from '@tiptap/core'
-import type { Command } from '@tiptap/pm/state'
+import { TextSelection, type Command } from '@tiptap/pm/state'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -13,12 +13,18 @@ import type { LessonStatus } from '../../db/schema'
 import {
   addBlock,
   addPart,
+  addPartStandard,
   childrenAt,
+  findById,
   removeBlock,
+  removeListItemAt,
   removePart,
+  removePartStandard,
+  setPartMinutes,
   type Located,
 } from '../../editor/commands'
-import { lessonToDoc, parseData } from '../../editor/convert'
+import { docToLesson, lessonToDoc, parseData } from '../../editor/convert'
+import { describeBlockingField, type BlockingField } from '../../editor/snapshot_errors'
 import { PART_NODE, SECTION_NODE, STANDARD_GROUP_NODE } from '../../editor/schema'
 import {
   addStandard,
@@ -26,7 +32,13 @@ import {
   type StandardGroup,
   type StandardRef,
 } from '../../editor/standards'
-import { lessonLabel, SECTION_NAMES, sectionAnchor, type SectionKind } from '../../lesson/labels'
+import {
+  lessonLabel,
+  partName,
+  SECTION_NAMES,
+  sectionAnchor,
+  type SectionKind,
+} from '../../lesson/labels'
 import type { LessonContent } from '../../lesson/schema'
 import { availableActions, isEditableStatus, type WorkflowAction } from '../../workflow/transitions'
 import { Icon } from '../lesson/lesson_icons'
@@ -110,6 +122,9 @@ function useLiveStatus(lessonId: string, initial: LessonStatus, onChange: () => 
 /** Actions that save a version of the latest edits first (D-024), so the editor flushes. */
 const FLUSH_FIRST: WorkflowAction[] = ['submit', 'resubmit', 'approve']
 
+/** Pause after an edit before re-checking whether the lesson can be saved. */
+const BLOCKING_CHECK_MS = 300
+
 const SAVE_LABELS: Record<SaveState, string> = {
   connecting: 'Connecting…',
   saving: 'Saving…',
@@ -134,7 +149,7 @@ function outlineOf(editor: Editor | null, content: LessonContent): OutlineSectio
         .filter(() => section.kind === 'learning_in_action')
         .map((part, index) => ({
           id: part.id ?? String(index),
-          name: part.label ? `Part ${part.label}` : `Part ${index + 1}`,
+          name: partName(part.label, undefined) || `Part ${index + 1}`,
         })),
     }))
   }
@@ -148,7 +163,7 @@ function outlineOf(editor: Editor | null, content: LessonContent): OutlineSectio
       if (child.type.name !== PART_NODE || kind !== 'learning_in_action') return
       let name = ''
       child.forEach((field) => {
-        if (field.attrs.key === 'label') name = `Part ${field.textContent}`
+        if (field.attrs.key === 'label') name = partName(field.textContent, undefined)
       })
       parts.push({ id: String(child.attrs.id), name: name || `Part ${parts.length + 1}` })
     })
@@ -302,6 +317,7 @@ export function LessonEditorPage({
   const [restoreError, setRestoreError] = useState<string | null>(null)
   const [picker, setPicker] = useState<PickerTarget | null>(null)
   const [actionBusy, setActionBusy] = useState(false)
+  const [blocking, setBlocking] = useState<BlockingField | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [requesting, setRequesting] = useState(false)
   const [alignment, setAlignment] = useState<AlignmentState>({
@@ -324,6 +340,14 @@ export function LessonEditorPage({
     const current = editorRef.current
     return current ? command(current.state, current.view.dispatch) : false
   }, [])
+  const focusAfter = useCallback((applied: boolean) => {
+    const current = editorRef.current
+    if (applied && current) {
+      current.view.focus()
+      current.commands.scrollIntoView()
+    }
+    return applied
+  }, [])
 
   const ctx = useMemo<EditorViewContext>(
     () => ({
@@ -343,15 +367,25 @@ export function LessonEditorPage({
         setPicker({ group, anchor, chosen })
       },
       removeStandard: (group, code) => run(removeStandard(group, code)),
-      addPart: (sectionId) => run(addPart(sectionId)),
       removePart: (partId) => run(removePart(partId)),
-      addBlock: (after, type) => run(addBlock(after, type)),
+      // The caret moves into the new block or part (the commands select it), so typing goes there.
+      addPart: (sectionId) => focusAfter(run(addPart(sectionId))),
+      addBlock: (after, type) => focusAfter(run(addBlock(after, type))),
       removeBlock: (blockId) => run(removeBlock(blockId)),
+      addPartStandard(partId: string, _name: string, anchor: HTMLElement) {
+        const part = editorRef.current ? findById(editorRef.current.state.doc, partId) : null
+        const chosen =
+          (parseData(part?.node.toJSON() ?? {}).standards as string[] | undefined) ?? []
+        setPicker({ group: 'part', partId, anchor, chosen })
+      },
+      removePartStandard: (partId, code) => run(removePartStandard(partId, code)),
+      setPartMinutes: (partId, minutes) => run(setPartMinutes(partId, minutes)),
+      removeListItem: (pos) => focusAfter(run(removeListItemAt(pos))),
       regenerateSection: canAssist
         ? (sectionId, kind) => assistRef.current?.regenerateSection(sectionId, kind)
         : undefined,
     }),
-    [canAssist, editable, label, lesson.unitNumber, run],
+    [canAssist, editable, focusAfter, label, lesson.unitNumber, run],
   )
   const previewCtx = useMemo<EditorViewContext>(
     () => ({ ...ctx, editable: false, regenerateSection: undefined }),
@@ -360,16 +394,40 @@ export function LessonEditorPage({
 
   useEffect(() => {
     if (!editor) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const check = () => {
+      // R17: an empty required field keeps the lesson from saving; say which one.
+      const result = docToLesson(editor.getJSON())
+      const next = result.ok ? null : describeBlockingField(editor.state.doc, result.errors)
+      setBlocking((current) =>
+        current?.label === next?.label && current?.pos === next?.pos ? current : next,
+      )
+    }
     const update = () => {
       const next = outlineOf(editor, lesson.content)
       setOutline((current) => (JSON.stringify(current) === JSON.stringify(next) ? current : next))
+      clearTimeout(timer)
+      timer = setTimeout(check, BLOCKING_CHECK_MS)
     }
     update()
     editor.on('update', update)
     return () => {
+      clearTimeout(timer)
       editor.off('update', update)
     }
   }, [editor, lesson.content])
+
+  function goToBlockingField() {
+    const current = editorRef.current
+    if (!current || !blocking) return
+    const pos = Math.min(blocking.pos, current.state.doc.content.size)
+    const $pos = current.state.doc.resolve(pos)
+    const selection = $pos.parent.isTextblock
+      ? TextSelection.create(current.state.doc, pos)
+      : TextSelection.near($pos)
+    current.view.dispatch(current.state.tr.setSelection(selection).scrollIntoView())
+    current.view.focus()
+  }
 
   const loadVersions = useCallback(async () => {
     const body = await readJson<{ versions: VersionItem[] }>(
@@ -509,14 +567,26 @@ export function LessonEditorPage({
         {lesson.provenance ? <span className="caption">{lesson.provenance}</span> : null}
         <span className="spacer" />
         <Presence names={collab.others} />
-        <span className="caption row save-state" aria-live="polite">
-          <Icon name={editable ? 'cloud' : status === 'generating' ? 'cloud' : 'lock'} />
-          {editable
-            ? SAVE_LABELS[collab.saveState]
-            : status === 'generating'
-              ? 'Generating sections'
-              : 'Locked'}
-        </span>
+        {editable && blocking ? (
+          <button
+            type="button"
+            className="btn quiet sm save-blocked"
+            aria-live="polite"
+            onClick={goToBlockingField}
+          >
+            <Icon name="warning" />
+            Not saved: {blocking.label}
+          </button>
+        ) : (
+          <span className="caption row save-state" aria-live="polite">
+            <Icon name={editable || status === 'generating' ? 'cloud' : 'lock'} />
+            {editable
+              ? SAVE_LABELS[collab.saveState]
+              : status === 'generating'
+                ? 'Generating sections'
+                : 'Locked'}
+          </span>
+        )}
         <button
           type="button"
           className={`btn quiet sm${panel === 'versions' || panel === 'history' ? ' on' : ''}`}
@@ -590,7 +660,7 @@ export function LessonEditorPage({
                   <>
                     <b>This lesson is approved, so editing is locked.</b>{' '}
                     {lesson.approval
-                      ? `${lesson.approval.name} approved it ${formatWhen(lesson.approval.at)}. `
+                      ? `${lesson.approval.name} approved it ${formatWhen(lesson.approval.at, { at: true })}. `
                       : ''}
                     Reopening moves it back to In review so reviewers can edit.
                   </>
@@ -684,7 +754,8 @@ export function LessonEditorPage({
           reference={standards}
           onClose={() => setPicker(null)}
           onPick={(code) => {
-            run(addStandard(picker.group, code, standards))
+            if (picker.group === 'part') run(addPartStandard(picker.partId ?? '', code, standards))
+            else run(addStandard(picker.group, code, standards))
             setPicker(null)
           }}
         />

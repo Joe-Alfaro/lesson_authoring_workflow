@@ -5,8 +5,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, inject, it, vi } from
 import { TEST_MODEL, TEST_PRICES } from '../../../../../../../tests/fake_llm'
 import { createTestUnit } from '../../../../../../../tests/generation_fixtures'
 
-const { requireRole } = vi.hoisted(() => ({ requireRole: vi.fn() }))
-vi.mock('../../../../../../auth/require_role', () => ({ requireRole }))
+const { requireApiRole } = vi.hoisted(() => ({ requireApiRole: vi.fn() }))
+vi.mock('../../../../../../auth/require_role', () => ({ requireApiRole }))
 
 interface FeedMessage {
   type: string
@@ -75,8 +75,11 @@ describe('GET /api/units/:id/generation/events (R9)', () => {
     boss = new PgBoss({ connectionString: inject('databaseUrl') })
     boss.on('error', (error) => console.error('[test] pg-boss error', error))
     await boss.start()
+    // Its own queue, so the file doesn't depend on another one having created it.
+    const { ensureGenerationQueue } = await import('../../../../../../generation/queue')
+    await ensureGenerationQueue(boss)
     route = await import('./route')
-    requireRole.mockResolvedValue({
+    requireApiRole.mockResolvedValue({
       id: 'user-1',
       role: 'reviewer',
       email: 'r@example.com',
@@ -99,7 +102,7 @@ describe('GET /api/units/:id/generation/events (R9)', () => {
       await response.body?.cancel().catch(() => {})
     })
 
-    expect(requireRole).toHaveBeenCalledWith(
+    expect(requireApiRole).toHaveBeenCalledWith(
       expect.arrayContaining(['author', 'reviewer', 'approver']),
     )
   })

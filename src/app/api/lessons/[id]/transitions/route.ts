@@ -1,4 +1,4 @@
-import { requireRole } from '../../../../../auth/require_role'
+import { requireApiRole } from '../../../../../auth/require_role'
 import { getDb } from '../../../../../db/client'
 import {
   BadRequestError,
@@ -15,7 +15,10 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const user = await requireRole(['author', 'reviewer', 'approver'])
+  const user = await requireApiRole(['author', 'reviewer', 'approver'])
+  if (user instanceof Response) {
+    return user
+  }
   const { id } = await params
   try {
     const body = await readJsonObject(request)

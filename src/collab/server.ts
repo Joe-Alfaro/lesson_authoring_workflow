@@ -13,11 +13,12 @@ import { LESSON_FRAGMENT, writeLesson, yDocToLesson } from '../editor/ydoc'
 import { handleHealthRequest } from '../health/server'
 import { isUuid } from '../import/is_uuid'
 import { LessonContent } from '../lesson/schema'
-import { LessonLockedError } from '../workflow/errors'
+import { LessonLockedError, LessonNotFoundError } from '../workflow/errors'
 import { LESSON_CONTENT_CHANNEL, LESSON_STATUS_CHANNEL } from '../workflow/lesson_events'
 import { isEditableStatus } from '../workflow/transitions'
 import { saveEditorSnapshot, saveIdleVersion } from '../workflow/versions'
 import { authenticateConnection, type CollabContext } from './authenticate'
+import { compactLessonDoc, isBloated } from './compact'
 import { createIdleVersioner, VERSION_IDLE_MS } from './idle_versions'
 import { listenForLessonEvents } from './lesson_listener'
 import { createYjsPersistence } from './persistence'
@@ -58,7 +59,13 @@ export async function startCollabServer(options: CollabOptions): Promise<Running
     idleMs: options.versionIdleMs ?? VERSION_IDLE_MS,
     async onIdle(documentName, userId) {
       const lessonId = lessonIdOf(documentName)
-      if (lessonId) await saveIdleVersion(db, { lessonId, userId })
+      if (!lessonId) return
+      try {
+        await saveIdleVersion(db, { lessonId, userId })
+      } catch (error) {
+        // The lesson can be gone by then (unit deleted); there is nothing to version.
+        if (!(error instanceof LessonNotFoundError)) throw error
+      }
     },
   })
 
@@ -87,22 +94,27 @@ export async function startCollabServer(options: CollabOptions): Promise<Running
     if (!lessonId || !row || !isEditableStatus(row.status)) {
       return { type: 'flushed', ok: false, reason: 'locked' }
     }
-    await persistence.store(documentName, Y.encodeStateAsUpdate(document))
+    compactLessonDoc(document)
     const snapshot = yDocToLesson(document)
-    if (!snapshot.ok) {
-      // The last valid lessons.content stays; the Yjs state above keeps the reviewer's work.
-      return { type: 'flushed', ok: false, reason: 'invalid' }
-    }
     try {
-      await saveEditorSnapshot(db, {
+      // The Yjs row is the fence against a restore that committed before we heard of it: then
+      // nothing is written, and the content-replaced handler brings the doc up to date.
+      const result = await saveEditorSnapshot(db, {
         lessonId,
         userId: lastEditor.get(documentName) ?? null,
-        content: snapshot.lesson,
+        content: snapshot.ok ? snapshot.lesson : null,
+        yjs: { name: documentName, state: Y.encodeStateAsUpdate(document) },
       })
+      if (result.replaced) return { type: 'flushed', ok: true }
     } catch (error) {
-      if (error instanceof LessonLockedError)
+      // Locked, or the lesson is gone (unit deleted): nothing to store.
+      if (error instanceof LessonLockedError || error instanceof LessonNotFoundError)
         return { type: 'flushed', ok: false, reason: 'locked' }
       throw error
+    }
+    if (!snapshot.ok) {
+      // The last valid lessons.content stays; the stored Yjs state keeps the reviewer's work.
+      return { type: 'flushed', ok: false, reason: 'invalid' }
     }
     return { type: 'flushed', ok: true }
   }
@@ -127,11 +139,27 @@ export async function startCollabServer(options: CollabOptions): Promise<Running
     },
     async onLoadDocument({ documentName, document }) {
       const stored = await persistence.fetch(documentName)
+      const row = await lessonRow(lessonIdOf(documentName) ?? '')
       if (stored) {
-        Y.applyUpdate(document, stored)
+        const loaded = new Y.Doc()
+        Y.applyUpdate(loaded, stored)
+        const compacted = compactLessonDoc(loaded)
+        const snapshot = yDocToLesson(loaded)
+        const lesson = snapshot.ok ? snapshot.lesson : row?.content
+        if (!isBloated(loaded, lesson)) {
+          Y.applyUpdate(document, Y.encodeStateAsUpdate(loaded))
+          if (compacted) await persistence.store(documentName, Y.encodeStateAsUpdate(document))
+          return document
+        }
+        // Thousands of tombstones from y-tiptap 3.0.10: rebuild once from the lesson (new item ids).
+        console.warn(`[collab] rebuilding bloated ${documentName} (${stored.byteLength} bytes)`)
+        writeLesson(
+          document.getXmlFragment(LESSON_FRAGMENT),
+          snapshot.ok ? snapshot.lesson : LessonContent.parse(row?.content),
+        )
+        await persistence.store(documentName, Y.encodeStateAsUpdate(document))
         return document
       }
-      const row = await lessonRow(lessonIdOf(documentName) ?? '')
       const content = LessonContent.parse(row?.content)
       writeLesson(document.getXmlFragment(LESSON_FRAGMENT), content)
       // Stored at once, so a reconnecting client never merges into a second, different seed.
@@ -196,7 +224,10 @@ export async function startCollabServer(options: CollabOptions): Promise<Running
       if (!document) return
       const row = await lessonRow(lessonId)
       const content = LessonContent.safeParse(row?.content)
-      if (content.success) replaceContent(document, content.data)
+      if (!content.success) return
+      replaceContent(document, content.data)
+      // Re-open the fence (the replace deleted the Yjs row), so later stores are written.
+      await persistence.store(name, Y.encodeStateAsUpdate(document))
     },
   })
 

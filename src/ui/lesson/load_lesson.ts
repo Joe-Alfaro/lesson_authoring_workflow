@@ -8,6 +8,7 @@ import { getLessonGeneration } from '../../generation/service'
 import { isUuid } from '../../import/is_uuid'
 import { LessonContent } from '../../lesson/schema'
 import { getLessonHistory } from '../../workflow/service'
+import { promptProvenanceText } from './prompt_provenance'
 
 export interface LessonPageData {
   id: string
@@ -24,12 +25,6 @@ export interface LessonPageData {
   provenance: string | null
   /** Who approved it and when, for the lock notice (R23). */
   approval: { name: string; at: string } | null
-}
-
-/** "claude-haiku-5-5" -> "Haiku-class". */
-export function modelClass(model: string): string {
-  const family = /claude-([a-z]+)/i.exec(model)?.[1] ?? model
-  return `${family.charAt(0).toUpperCase()}${family.slice(1)}-class`
 }
 
 export async function loadLessonPage(
@@ -73,9 +68,7 @@ export async function loadLessonPage(
     content: parsed.success ? parsed.data : null,
     assignee:
       row.assigneeId && row.assigneeName ? { id: row.assigneeId, name: row.assigneeName } : null,
-    provenance: generation
-      ? `Prompt v${generation.promptVersion}, ${modelClass(generation.model)}`
-      : null,
+    provenance: generation ? promptProvenanceText(generation) : null,
     approval:
       row.status === 'approved' && approved?.actor
         ? { name: approved.actor.name, at: approved.at.toISOString() }
@@ -91,11 +84,29 @@ export async function loadStandards(db: Database, codes?: string[]): Promise<Sta
       code: standards.code,
       framework: standards.framework,
       strand: standards.strand,
+      grade: standards.grade,
+      details: standards.details,
       text: standards.text,
     })
     .from(standards)
   const rows = codes ? await query.where(inArray(standards.code, codes)) : await query
-  return rows.sort((a, b) => a.code.localeCompare(b.code, 'en', { numeric: true }))
+  return rows
+    .map(({ grade, details, ...row }) => ({
+      ...row,
+      strand: strandLabel(row.strand, grade, details),
+    }))
+    .sort((a, b) => a.code.localeCompare(b.code, 'en', { numeric: true }))
+}
+
+/** "Reading Standards for Literature, grade 6" (the seed keeps the strand's name in details). */
+export function strandLabel(
+  strand: string,
+  grade: number,
+  details: Record<string, unknown>,
+): string {
+  const name =
+    typeof details.strand_name === 'string' ? details.strand_name.trim().replace(/\.$/, '') : ''
+  return name ? `${name}, grade ${grade}` : strand
 }
 
 /** Every standard code a lesson mentions (front matter, parts, blocks). */

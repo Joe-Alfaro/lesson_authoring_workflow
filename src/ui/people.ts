@@ -12,10 +12,14 @@ export const COLLABORATOR_HEX: Record<(typeof COLLABORATOR_COLOURS)[number], str
   c6: '#1d4ed8',
 }
 
+/** Approvers are "P" in the mockups, so Approver 01 (P1) and Author 01 (A1) differ. */
+const FIRST_LETTERS: Record<string, string> = { approver: 'P' }
+
 /** "Author 01" -> "A1": first letter of the first word plus the trailing number, if any. */
 export function initials(name: string): string {
   const words = name.trim().split(/\s+/)
-  const first = words[0]?.[0] ?? '?'
+  const firstWord = words[0] ?? ''
+  const first = FIRST_LETTERS[firstWord.toLowerCase()] ?? firstWord[0] ?? '?'
   const last = words.length > 1 ? words[words.length - 1]! : ''
   const second = /^\d+$/.test(last) ? String(Number(last)) : (last[0] ?? '')
   return `${first}${second}`.toUpperCase()

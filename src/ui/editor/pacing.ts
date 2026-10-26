@@ -4,10 +4,16 @@ import { Extension } from '@tiptap/core'
 import type { Node as PmNode } from '@tiptap/pm/model'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
-import { docToLesson, parseData } from '../../editor/convert'
-import { FRONT_MATTER_NODE, SECTION_NODE } from '../../editor/schema'
+import { parseData } from '../../editor/convert'
+import { blockNodeName, FRONT_MATTER_NODE, PART_NODE, SECTION_NODE } from '../../editor/schema'
 import type { Section } from '../../lesson/schema'
-import { minutesLabel, routineName, SECTION_COLOURS, SECTION_NAMES } from '../../lesson/labels'
+import {
+  minutesLabel,
+  partName,
+  routineName,
+  SECTION_COLOURS,
+  SECTION_NAMES,
+} from '../../lesson/labels'
 
 interface PacingRow {
   kind: Section['kind']
@@ -29,10 +35,16 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, t
   return element
 }
 
-/** Reads the pacing straight from the doc (it must show even while a field is mid-edit). */
+function fieldText(node: PmNode, key: string): string | undefined {
+  let text: string | undefined
+  node.forEach((child) => {
+    if (child.attrs.key === key) text = child.textContent
+  })
+  return text
+}
+
+/** Reads the pacing straight from the doc nodes, so it shows even while a field is empty. */
 function pacingOf(doc: PmNode): Pacing {
-  const json = doc.toJSON()
-  const result = docToLesson(json)
   let duration = 0
   const rows: PacingRow[] = []
   doc.descendants((node) => {
@@ -40,32 +52,37 @@ function pacingOf(doc: PmNode): Pacing {
       duration = Number(parseData(node.toJSON()).durationMinutes ?? 0)
       return false
     }
-    if (node.type.name === SECTION_NODE) {
-      const data = parseData(node.toJSON())
-      rows.push({
-        kind: data.kind as Section['kind'],
-        minutes: Number(data.minutes ?? 0),
-        purpose: '',
-        parts: [],
-        routines: [],
-      })
-      return false
+    if (node.type.name !== SECTION_NODE) return true
+    const data = parseData(node.toJSON())
+    const row: PacingRow = {
+      kind: data.kind as Section['kind'],
+      minutes: Number(data.minutes ?? 0),
+      purpose: fieldText(node, 'purpose') ?? '',
+      parts: [],
+      routines: [],
     }
-    return true
-  })
-  if (result.ok) {
-    result.lesson.body.sections.forEach((section, index) => {
-      const row = rows[index]
-      if (!row) return
-      row.purpose = section.purpose.replace(/\*/g, '')
-      row.parts = section.parts.filter((part) => part.label || part.title)
-      row.routines = section.parts
-        .flatMap((part) => part.blocks)
-        .flatMap((block) =>
-          block.type === 'routine' ? [block.label ?? routineName(block.routine)] : [],
-        )
+    node.forEach((part) => {
+      if (part.type.name !== PART_NODE) return
+      const partData = parseData(part.toJSON())
+      const label = fieldText(part, 'label')
+      const title = fieldText(part, 'title')
+      if (label || title) {
+        row.parts.push({
+          label,
+          title,
+          standards: (partData.standards as string[] | undefined) ?? [],
+          minutes: typeof partData.minutes === 'number' ? partData.minutes : undefined,
+        })
+      }
+      part.forEach((block) => {
+        if (block.type.name !== blockNodeName('routine')) return
+        const routine = String(parseData(block.toJSON()).routine ?? 'other')
+        row.routines.push(fieldText(block, 'label') || routineName(routine))
+      })
     })
-  }
+    rows.push(row)
+    return false
+  })
   return { rows, duration }
 }
 
@@ -106,13 +123,7 @@ function render(pacing: Pacing): HTMLElement {
     if (row.kind === 'learning_in_action') {
       row.parts.forEach((part) => {
         const line = el('div')
-        line.append(
-          el(
-            'b',
-            undefined,
-            [part.label ? `Part ${part.label}` : null, part.title].filter(Boolean).join(': '),
-          ),
-        )
+        line.append(el('b', undefined, partName(part.label, part.title)))
         const codes = part.standards.length > 0 ? ` (${part.standards.join(', ')})` : ''
         line.append(
           document.createTextNode(

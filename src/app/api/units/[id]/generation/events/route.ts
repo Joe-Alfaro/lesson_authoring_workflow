@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { requireRole } from '../../../../../../auth/require_role'
+import { requireApiRole } from '../../../../../../auth/require_role'
 import { getDb } from '../../../../../../db/client'
 import { units } from '../../../../../../db/schema'
 import {
@@ -22,7 +22,10 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  await requireRole(['author', 'reviewer', 'approver'])
+  const access = await requireApiRole(['author', 'reviewer', 'approver'])
+  if (access instanceof Response) {
+    return access
+  }
   const { id } = await params
   const db = getDb()
   const [unit] = UUID.test(id)

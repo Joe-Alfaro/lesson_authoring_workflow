@@ -19,7 +19,7 @@ import {
 import { getTotalSpendUsd } from '../generation/service'
 import { getGlobalSpendCapUsd } from '../generation/settings'
 import { isUuid } from '../import/is_uuid'
-import { BLOCK_LABELS, SECTION_NAMES } from '../lesson/labels'
+import { BLOCK_LABELS, partName, SECTION_NAMES } from '../lesson/labels'
 import { LessonContent, Section } from '../lesson/schema'
 import { LessonLockedError, LessonNotFoundError, WorkflowForbiddenError } from '../workflow/errors'
 import { isEditableStatus } from '../workflow/transitions'
@@ -387,7 +387,9 @@ function evidenceLabels(content: LessonContent): Map<string, string> {
     if (section.id) labels.set(section.id, sectionName)
     section.parts.forEach((part, index) => {
       const where =
-        section.kind === 'learning_in_action' ? `Part ${part.label || index + 1}` : sectionName
+        section.kind === 'learning_in_action'
+          ? partName(part.label, undefined) || `Part ${index + 1}`
+          : sectionName
       if (part.id) labels.set(part.id, where)
       part.blocks.forEach((block) => {
         if (block.id) labels.set(block.id, `${where}, ${BLOCK_LABELS[block.type]}`)

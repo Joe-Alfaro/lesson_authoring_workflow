@@ -1,7 +1,7 @@
 // R14 "what changed": the areas of a lesson one version changed compared with the one before.
 // Contract: src/assist/README.md (M4 additions to src/workflow).
 import { isDeepStrictEqual } from 'node:util'
-import { SECTION_NAMES } from '../lesson/labels'
+import { partName, SECTION_NAMES } from '../lesson/labels'
 import type { LessonContent, Section } from '../lesson/schema'
 
 function sectionAreas(before: Section | undefined, after: Section): string[] {
@@ -16,7 +16,7 @@ function sectionAreas(before: Section | undefined, after: Section): string[] {
   if (!isDeepStrictEqual(beforeOwn, afterOwn) || !sameParts) return [name]
   return afterParts
     .filter((part, index) => !isDeepStrictEqual(part, beforeParts[index]))
-    .map((part) => `Part ${part.label || afterParts.indexOf(part) + 1}`)
+    .map((part) => partName(part.label, undefined) || `Part ${afterParts.indexOf(part) + 1}`)
 }
 
 /** Areas in lesson order, each once: Front matter, the sections (LiA by part), Homework. */

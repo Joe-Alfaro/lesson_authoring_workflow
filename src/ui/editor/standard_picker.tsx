@@ -8,9 +8,11 @@ import { searchStandards, type StandardGroup, type StandardRef } from '../../edi
 const PREVIEW_CHARS = 120
 
 export interface PickerTarget {
-  group: StandardGroup
+  /** A front-matter group, or a part's tags (R17). */
+  group: StandardGroup | 'part'
+  partId?: string
   anchor: HTMLElement
-  /** Codes already in the group. */
+  /** Codes already chosen there. */
   chosen: string[]
 }
 

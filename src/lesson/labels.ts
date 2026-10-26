@@ -10,6 +10,14 @@ export const SECTION_NAMES: Record<SectionKind, string> = {
   look_back: 'Look Back',
 }
 
+/** Short names for tight spaces (the lesson view's section chips at 390 wide). */
+export const SECTION_SHORT_NAMES: Record<SectionKind, string> = {
+  launch: 'Launch',
+  literacy_lab: 'Lab',
+  learning_in_action: 'In Action',
+  look_back: 'Look Back',
+}
+
 /** Class of a section's pacing colour (STYLE.md: ribbon, rail, headings, gutters). */
 export const SECTION_COLOURS: Record<SectionKind, string> = {
   launch: 'launch',
@@ -86,4 +94,17 @@ export const BLOCK_LABELS: Record<Block['type'], string> = {
   eld_instructions: 'Integrated ELD instructions',
   student_support: 'Additional student support',
   rubric: 'Rubric',
+}
+
+/** "Part A: Title". Generated labels already say "Part A"; only a bare letter gets "Part". */
+export function partName(label: string | undefined, title: string | undefined): string {
+  const name = label ? (/^[A-Z0-9]{1,2}$/i.test(label) ? `Part ${label}` : label) : ''
+  return [name, title].filter(Boolean).join(': ')
+}
+
+/** "Unit 4: The Lightning Thief"; generation already puts "Unit 4:" in the unit title. */
+export function unitKicker(unitNumber: number, unitTitle: string): string {
+  return /^unit\s+\d+/i.test(unitTitle.trim())
+    ? unitTitle.trim()
+    : `Unit ${unitNumber}: ${unitTitle}`
 }

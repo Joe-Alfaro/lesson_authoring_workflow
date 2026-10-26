@@ -6,14 +6,17 @@ import {
   LESSON_TYPE_NAMES,
   lessonLabel,
   minutesLabel,
+  partName,
   routineName,
   SECTION_COLOURS,
   SECTION_NAMES,
+  SECTION_SHORT_NAMES,
   sectionAnchor,
+  unitKicker,
 } from '../../lesson/labels'
 import { Icon } from './lesson_icons'
 import { RichText } from './rich_text'
-import { StandardChip } from './standard_chip'
+import { CodeChip, StandardChip } from './standard_chip'
 
 interface ViewProps {
   content: LessonContent
@@ -54,7 +57,7 @@ function Box({
     <div className="box">
       <div className="bt">
         <Icon name={icon} />
-        {title}
+        <span>{title}</span>
       </div>
       {children}
     </div>
@@ -70,8 +73,21 @@ function Items({ items, ordered = false }: { items: string[]; ordered?: boolean 
   return ordered ? <ol className="prose">{list}</ol> : <ul className="prose">{list}</ul>
 }
 
-function codesNote(codes: string[] | undefined): string {
-  return codes && codes.length > 0 ? ` (${codes.join(', ')})` : ''
+/** "Pulse check (RL.6.1, L.6.4)" with each code showing its full text (R15). */
+function TitleWithCodes({ title, codes }: { title: string; codes: string[] | undefined }) {
+  if (!codes || codes.length === 0) return <>{title}</>
+  return (
+    <>
+      {title} (
+      {codes.map((code, index) => (
+        <span key={code}>
+          {index > 0 ? ', ' : ''}
+          <CodeChip code={code} className="code-link" />
+        </span>
+      ))}
+      )
+    </>
+  )
 }
 
 function EldBox({ block }: { block: Extract<Block, { type: 'eld_instructions' }> }) {
@@ -266,7 +282,7 @@ function BlockView({ block }: { block: Block }): ReactNode {
       )
     case 'pulse_check':
       return (
-        <Box title={`Pulse check${codesNote(block.standards)}`} icon="check">
+        <Box title={<TitleWithCodes title="Pulse check" codes={block.standards} />} icon="check">
           <div className="prose">
             <RichText text={block.stem} />
           </div>
@@ -299,7 +315,10 @@ function BlockView({ block }: { block: Block }): ReactNode {
       )
     case 'check_for_understanding':
       return (
-        <Box title={`Check for understanding${codesNote(block.standards)}`} icon="target">
+        <Box
+          title={<TitleWithCodes title="Check for understanding" codes={block.standards} />}
+          icon="target"
+        >
           <div className="prose">
             <RichText text={block.prompt} />
           </div>
@@ -313,7 +332,7 @@ function BlockView({ block }: { block: Block }): ReactNode {
       )
     case 'reflection':
       return (
-        <Box title={`Reflection${codesNote(block.standards)}`} icon="target">
+        <Box title={<TitleWithCodes title="Reflection" codes={block.standards} />} icon="target">
           <div className="prose">
             <RichText text={block.prompt} />
           </div>
@@ -377,9 +396,7 @@ function BlockView({ block }: { block: Block }): ReactNode {
                 <tr key={index}>
                   <td>
                     <RichText text={criterion.name} />
-                    {criterion.standard ? (
-                      <span className="chip sm">{criterion.standard}</span>
-                    ) : null}
+                    {criterion.standard ? <CodeChip code={criterion.standard} /> : null}
                   </td>
                   {criterion.descriptors.map((descriptor, cell) => (
                     <td key={cell}>
@@ -400,14 +417,12 @@ function PartHeading({ part, inAction }: { part: Part; inAction: boolean }) {
   if (!inAction) {
     return <h4 className="routine">{[part.label, part.title].filter(Boolean).join(': ')}</h4>
   }
-  const name = [part.label ? `Part ${part.label}` : null, part.title].filter(Boolean).join(': ')
+  const name = partName(part.label, part.title)
   return (
     <h3 className="part-h">
       <RichText text={name} />
       {part.standards.map((code) => (
-        <span key={code} className="chip sm">
-          {code}
-        </span>
+        <CodeChip key={code} code={code} />
       ))}
       {part.minutes ? <span className="caption part-min">{minutesLabel(part.minutes)}</span> : null}
     </h3>
@@ -485,10 +500,9 @@ export function PacingTable({ sections, duration }: { sections: Section[]; durat
                     ? parts.map((part, partIndex) => (
                         <div key={part.id ?? partIndex}>
                           <b>
-                            {part.label ? `Part ${part.label}: ` : ''}
-                            <RichText text={part.title ?? ''} />
+                            <RichText text={partName(part.label, part.title)} />
                           </b>
-                          {codesNote(part.standards)}
+                          {part.standards.length > 0 ? ` (${part.standards.join(', ')})` : ''}
                           {part.minutes ? `, ${minutesLabel(part.minutes)}.` : ''}{' '}
                           {part.purpose ? <RichText text={part.purpose} /> : null}
                         </div>
@@ -520,9 +534,7 @@ export function LessonView({ content, unitNumber, knownCodes }: ViewProps) {
   )
   return (
     <article className="doc" aria-label={label}>
-      <div className="kicker">
-        Unit {unitNumber}: {frontMatter.unitTitle}
-      </div>
+      <div className="kicker">{unitKicker(unitNumber, frontMatter.unitTitle)}</div>
       <h1 className="lt">
         {label}: <RichText text={body.title} />
       </h1>
@@ -637,7 +649,7 @@ export function SectionJump({ content }: { content: LessonContent }) {
       {content.body.sections.map((section, index) => (
         <a key={section.id ?? index} href={`#${sectionAnchor(section.kind)}`}>
           <span className={`sw ${SECTION_COLOURS[section.kind]}`} />
-          {SECTION_NAMES[section.kind]}
+          {SECTION_SHORT_NAMES[section.kind]}
         </a>
       ))}
       {content.body.homework ? <a href={`#${sectionAnchor('homework')}`}>Homework</a> : null}

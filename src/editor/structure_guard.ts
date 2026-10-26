@@ -8,7 +8,7 @@ import { Plugin, PluginKey, TextSelection, type Transaction } from '@tiptap/pm/s
 import type { EditorView } from '@tiptap/pm/view'
 import { AddMarkStep, RemoveMarkStep, ReplaceStep, type Step } from '@tiptap/pm/transform'
 import { ySyncPluginKey } from '@tiptap/y-tiptap'
-import { STRUCTURE_META } from './commands'
+import { removeListItemAt, STRUCTURE_META } from './commands'
 import { FIELD_LIST_NODE, FIELD_TEXT_NODE } from './schema'
 
 /** A slice that, once its open ends are unwrapped, is only inline content. */
@@ -92,6 +92,13 @@ export const StructureGuard = Extension.create({
         return true
       },
       'Shift-Enter': () => true,
+      // Backspace in an empty list item removes it (R17), when the list keeps at least one item.
+      Backspace: ({ editor }) => {
+        const { $from, empty } = editor.state.selection
+        if (!empty || $from.parent.type.name !== FIELD_TEXT_NODE) return false
+        if ($from.parent.content.size > 0) return false
+        return removeListItemAt($from.pos)(editor.state, editor.view.dispatch)
+      },
       // Fields are single paragraphs, so Home/End go to the field's start/end on every platform
       // (macOS has no line start/end on these keys in a contenteditable).
       Home: ({ editor }) => moveInField(editor.view, 'start'),

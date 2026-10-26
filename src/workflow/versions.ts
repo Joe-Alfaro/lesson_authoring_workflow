@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from 'node:util'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import type { Database } from '../db/client'
-import { lessonVersions, lessons, users } from '../db/schema'
+import { lessonVersions, lessons, users, yjsDocuments } from '../db/schema'
 import { isUuid } from '../import/is_uuid'
 import { LessonContent } from '../lesson/schema'
 import { LessonLockedError, VersionNotFoundError } from './errors'
@@ -156,19 +156,36 @@ export async function restoreVersion(
 }
 
 /**
- * The collab server's store of a validated editor snapshot (R17, R18): sets the content and last
- * editor without a version. Unchanged content writes nothing. Throws LessonLockedError when the
- * lesson is approved or generating (D-032 (1)).
+ * The collab server's store of the editor's Yjs state and, when given, its validated snapshot
+ * (R17, R18): sets the content and last editor without a version. Unchanged content writes
+ * nothing. With `yjs`, the lesson's Yjs row is the fence: a restore or regeneration deletes it
+ * (notifyContentReplaced), so a store that lost that race writes nothing (`replaced`). Throws
+ * LessonLockedError when the lesson is approved or generating (D-032 (1)).
  */
 export async function saveEditorSnapshot(
   db: Database,
-  input: { lessonId: string; userId: string | null; content: unknown },
-): Promise<{ saved: boolean }> {
+  input: {
+    lessonId: string
+    userId: string | null
+    /** Null when the snapshot doesn't validate: only the Yjs state is stored. */
+    content: unknown
+    yjs?: { name: string; state: Uint8Array }
+  },
+): Promise<{ saved: boolean; replaced?: boolean }> {
   return db.transaction(async (tx) => {
     const lesson = await lockLesson(tx, input.lessonId)
     assertEditable(lesson)
-    if (isDeepStrictEqual(lesson.content, input.content)) {
-      return { saved: false }
+    if (input.yjs) {
+      const stored = await tx
+        .update(yjsDocuments)
+        .set({ state: input.yjs.state, updatedAt: sql`now()` })
+        .where(eq(yjsDocuments.name, input.yjs.name))
+        .returning({ name: yjsDocuments.name })
+      if (stored.length === 0) return { saved: false, replaced: true }
+    }
+    const replaced = input.yjs ? { replaced: false } : {}
+    if (input.content == null || isDeepStrictEqual(lesson.content, input.content)) {
+      return { saved: false, ...replaced }
     }
     await tx
       .update(lessons)
@@ -178,7 +195,7 @@ export async function saveEditorSnapshot(
         updatedAt: sql`now()`,
       })
       .where(eq(lessons.id, lesson.id))
-    return { saved: true }
+    return { saved: true, ...replaced }
   })
 }
 
