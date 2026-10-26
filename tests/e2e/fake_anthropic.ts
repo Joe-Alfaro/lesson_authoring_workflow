@@ -7,7 +7,8 @@
 //   GET  /__fake/requests                                 every request received, oldest first
 //   POST /__fake/reset                                    clear the queue and the request log
 // A request with nothing queued gets a 400 invalid_request_error (not retried by the SDK), so a
-// spec that forgot to script an answer fails loudly instead of hanging.
+// spec that forgot to script an answer fails loudly instead of hanging. The load scripts pass
+// `respond` instead, which answers every request that has nothing queued (scripts/load).
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 
 export interface FakeResponse {
@@ -56,7 +57,15 @@ function sse(response: ServerResponse, event: string, data: unknown) {
   response.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
 }
 
-export async function startFakeAnthropic(port: number): Promise<{ stop(): Promise<void> }> {
+export interface FakeAnthropicOptions {
+  /** Answers a request when nothing is queued (default: a 400 error). */
+  respond?: (request: FakeRequest) => FakeResponse
+}
+
+export async function startFakeAnthropic(
+  port: number,
+  options: FakeAnthropicOptions = {},
+): Promise<{ stop(): Promise<void> }> {
   let queue: FakeResponse[] = []
   let requests: FakeRequest[] = []
   let counter = 0
@@ -68,13 +77,14 @@ export async function startFakeAnthropic(port: number): Promise<{ stop(): Promis
       messages?: { content: unknown }[]
       stream?: boolean
     }
-    requests.push({
+    const received: FakeRequest = {
       model: body.model,
       system: textOf(body.system),
       prompt: (body.messages ?? []).map((message) => textOf(message.content)).join('\n'),
       receivedAt: new Date().toISOString(),
-    })
-    const next = queue.shift()
+    }
+    requests.push(received)
+    const next = queue.shift() ?? options.respond?.(received)
     if (!next) {
       sendJson(response, 400, {
         type: 'error',
