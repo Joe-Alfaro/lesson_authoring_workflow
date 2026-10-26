@@ -5,6 +5,7 @@ import type { Node as PmNode } from '@tiptap/pm/model'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { parseData } from '../../editor/convert'
+import { bindStandardChip } from '../lesson/standard_tooltip'
 import { blockNodeName, FRONT_MATTER_NODE, PART_NODE, SECTION_NODE } from '../../editor/schema'
 import type { Section } from '../../lesson/schema'
 import {
@@ -26,6 +27,15 @@ interface PacingRow {
 interface Pacing {
   rows: PacingRow[]
   duration: number
+}
+
+/** A standard code that shows its full text on hover and focus (R15), as in box titles. */
+function codeLink(code: string): HTMLButtonElement {
+  const button = el('button', 'code-link code-chip', code)
+  button.type = 'button'
+  button.setAttribute('aria-label', `Standard ${code}`)
+  bindStandardChip(button, code)
+  return button
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string) {
@@ -124,12 +134,15 @@ function render(pacing: Pacing): HTMLElement {
       row.parts.forEach((part) => {
         const line = el('div')
         line.append(el('b', undefined, partName(part.label, part.title)))
-        const codes = part.standards.length > 0 ? ` (${part.standards.join(', ')})` : ''
-        line.append(
-          document.createTextNode(
-            `${codes}${part.minutes ? `, ${minutesLabel(part.minutes)}` : ''}`,
-          ),
-        )
+        if (part.standards.length > 0) {
+          line.append(document.createTextNode(' ('))
+          part.standards.forEach((code, index) => {
+            if (index > 0) line.append(document.createTextNode(', '))
+            line.append(codeLink(code))
+          })
+          line.append(document.createTextNode(')'))
+        }
+        if (part.minutes) line.append(document.createTextNode(`, ${minutesLabel(part.minutes)}`))
         purpose.append(line)
       })
     }
