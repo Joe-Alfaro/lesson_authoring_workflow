@@ -1601,9 +1601,10 @@ li.diff-field,
   position: relative;
 }
 .item-remove {
-  position: absolute;
-  right: -28px;
-  top: 2px;
+  display: inline-grid;
+  place-items: center;
+  margin-left: 6px;
+  vertical-align: 2px;
   width: 22px;
   height: 22px;
   border: 0;

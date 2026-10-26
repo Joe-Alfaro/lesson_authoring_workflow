@@ -502,7 +502,9 @@ export function PacingTable({ sections, duration }: { sections: Section[]; durat
                           <b>
                             <RichText text={partName(part.label, part.title)} />
                           </b>
-                          {part.standards.length > 0 ? ` (${part.standards.join(', ')})` : ''}
+                          {part.standards.length > 0 ? (
+                            <TitleWithCodes title="" codes={part.standards} />
+                          ) : null}
                           {part.minutes ? `, ${minutesLabel(part.minutes)}.` : ''}{' '}
                           {part.purpose ? <RichText text={part.purpose} /> : null}
                         </div>

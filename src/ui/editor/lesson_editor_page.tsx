@@ -419,8 +419,13 @@ export function LessonEditorPage({
 
   function goToBlockingField() {
     const current = editorRef.current
-    if (!current || !blocking) return
-    const pos = Math.min(blocking.pos, current.state.doc.content.size)
+    if (!current) return
+    // Recomputed now: the last check can be up to BLOCKING_CHECK_MS behind the latest typing.
+    const result = docToLesson(current.getJSON())
+    const field = result.ok ? null : describeBlockingField(current.state.doc, result.errors)
+    setBlocking(field)
+    if (!field) return
+    const pos = Math.min(field.pos, current.state.doc.content.size)
     const $pos = current.state.doc.resolve(pos)
     const selection = $pos.parent.isTextblock
       ? TextSelection.create(current.state.doc, pos)
