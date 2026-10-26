@@ -24,10 +24,12 @@ import { BLOCK_TYPES, type Block, type Section } from '../../lesson/schema'
 import {
   LESSON_TYPE_NAMES,
   minutesLabel,
+  partName,
   routineName,
   SECTION_COLOURS,
   SECTION_NAMES,
   sectionAnchor,
+  unitKicker,
 } from '../../lesson/labels'
 import { iconSvg, type IconName } from '../lesson/lesson_icons'
 import { bindStandardChip, isKnownStandard } from '../lesson/standard_tooltip'
@@ -43,6 +45,12 @@ export interface EditorViewContext {
   removePart(partId: string): void
   addBlock(afterBlockId: string, type: Block['type']): void
   removeBlock(blockId: string): void
+  /** Opens the standard picker for a part's tags (R17). */
+  addPartStandard(partId: string, partName: string, anchor: HTMLElement): void
+  removePartStandard(partId: string, code: string): void
+  setPartMinutes(partId: string, minutes: number | null): void
+  /** Removes the list item holding this doc position (its remove control). */
+  removeListItem(pos: number): void
 }
 
 type Json = Record<string, unknown>
@@ -133,11 +141,15 @@ interface Where {
   index: number
   blockType: Block['type'] | null
   sectionKind: Section['kind'] | null
+  /** The node's current position (node views outlive edits around them). */
+  getPos: (() => number | undefined) | null
 }
 
 function locate(editor: Editor, getPos: NodeViewRendererProps['getPos']): Where {
   const pos = typeof getPos === 'function' ? getPos() : undefined
-  if (pos === undefined) return { ancestors: [], index: 0, blockType: null, sectionKind: null }
+  if (pos === undefined) {
+    return { ancestors: [], index: 0, blockType: null, sectionKind: null, getPos: null }
+  }
   const $pos = editor.state.doc.resolve(pos)
   const ancestors = Array.from({ length: $pos.depth + 1 }, (_, i) => $pos.node($pos.depth - i))
   const block = ancestors.find((node) => blockTypeOf(node.type.name) !== null)
@@ -147,6 +159,7 @@ function locate(editor: Editor, getPos: NodeViewRendererProps['getPos']): Where 
     index: $pos.index(),
     blockType: block ? blockTypeOf(block.type.name) : null,
     sectionKind: section ? (parseData(section.toJSON()).kind as Section['kind']) : null,
+    getPos: typeof getPos === 'function' ? getPos : null,
   }
 }
 
@@ -191,8 +204,72 @@ function boxTitle(iconName: IconName, title: string): HTMLElement {
   return bt
 }
 
-function codesNote(codes: unknown): string {
-  return Array.isArray(codes) && codes.length > 0 ? ` (${codes.join(', ')})` : ''
+/** A standard code in the lesson body: shows its full text on hover and focus (R15). */
+function codeChip(
+  code: string,
+  className = 'chip sm',
+): { element: HTMLElement; destroy: () => void } {
+  const chip = h('button', `${className} code-chip`, code)
+  chip.type = 'button'
+  // Named apart from the front-matter chips, which are the lesson's own standards list.
+  chip.setAttribute('aria-label', `Standard ${code}`)
+  return { element: chip, destroy: bindStandardChip(chip, code) }
+}
+
+/** "Pulse check (RL.6.1, L.6.4)" with each code as a popover chip. */
+function titleWithCodes(text: string, codes: unknown): Node[] {
+  const list = Array.isArray(codes) ? codes.map(String) : []
+  if (list.length === 0) return [document.createTextNode(text)]
+  const nodes: Node[] = [document.createTextNode(`${text} (`)]
+  list.forEach((code, index) => {
+    if (index > 0) nodes.push(document.createTextNode(', '))
+    nodes.push(codeChip(code, 'code-link').element)
+  })
+  nodes.push(document.createTextNode(')'))
+  return nodes
+}
+
+/** A Learning in Action part's tags and minutes; editable controls when the lesson is editable. */
+function partMeta(part: PmNode, ctx: EditorViewContext): HTMLElement {
+  const data = dataOf(part)
+  const id = String(part.attrs.id)
+  const label = findChildByKey(part, 'label')?.textContent ?? ''
+  const name = partName(label || undefined, undefined) || 'this part'
+  const meta = fixed('span', 'part-meta')
+  ;((data.standards as string[] | undefined) ?? []).forEach((code) => {
+    const wrap = h('span', 'chip-wrap')
+    wrap.append(codeChip(code).element)
+    if (ctx.editable) {
+      const remove = button('chip-x', '×', () => ctx.removePartStandard(id, code))
+      remove.setAttribute('aria-label', `Remove ${code} from ${name}`)
+      wrap.append(remove)
+    }
+    meta.append(wrap)
+  })
+  if (ctx.editable) {
+    const add = button('chipadd sm', '', () => ctx.addPartStandard(id, name, add))
+    add.append(icon('plus'), document.createTextNode('Standard'))
+    add.setAttribute('aria-label', `Add a standard to ${name}`)
+    meta.append(add)
+    const minutes = document.createElement('input')
+    minutes.type = 'number'
+    minutes.min = '1'
+    minutes.className = 'input part-minutes'
+    minutes.dataset.control = 'true'
+    minutes.value = typeof data.minutes === 'number' ? String(data.minutes) : ''
+    minutes.setAttribute('aria-label', `Minutes for ${name}`)
+    minutes.addEventListener('change', () => {
+      const value = minutes.value.trim()
+      ctx.setPartMinutes(id, value === '' ? null : Math.round(Number(value)))
+    })
+    const unit = h('span', 'caption part-min-unit', 'min')
+    const group = h('span', 'part-min-edit')
+    group.append(minutes, unit)
+    meta.append(group)
+  } else if (typeof data.minutes === 'number') {
+    meta.append(h('span', 'caption part-min', minutesLabel(data.minutes)))
+  }
+  return meta
 }
 
 // ---------- field_text ----------
@@ -260,7 +337,7 @@ function fieldText(node: PmNode, where: Where, ctx: EditorViewContext): NodeView
     const dom = h('div', 'title-field')
     const frontMatter = parent ? findChild(parent, FRONT_MATTER_NODE) : null
     const unitTitle = frontMatter ? String(dataOf(frontMatter).unitTitle ?? '') : ''
-    dom.append(fixed('div', 'kicker', `Unit ${ctx.unitNumber}: ${unitTitle}`))
+    dom.append(fixed('div', 'kicker', unitKicker(ctx.unitNumber, unitTitle)))
     const heading = h('h1', 'lt')
     heading.append(fixed('span', 'pre', `${ctx.lessonLabel}: `))
     const content = h('span', 'field')
@@ -280,8 +357,20 @@ function fieldText(node: PmNode, where: Where, ctx: EditorViewContext): NodeView
       const content = h('li', 'chip sm word')
       return { dom: content, content }
     }
-    const content = h('li')
-    return { dom: content, content }
+    const dom = h('li')
+    const content = h('span', 'field')
+    dom.append(content)
+    if (ctx.editable && where.getPos) {
+      const getPos = where.getPos
+      const remove = button('item-remove', '×', () => {
+        const pos = getPos()
+        if (pos !== undefined) ctx.removeListItem(pos + 1)
+      })
+      remove.setAttribute('aria-label', 'Remove item')
+      remove.title = 'Remove item'
+      dom.append(remove)
+    }
+    return { dom, content }
   }
 
   if (parentName === FIELD_GROUP_NODE) {
@@ -351,29 +440,24 @@ function fieldText(node: PmNode, where: Where, ctx: EditorViewContext): NodeView
 
   if (parentName === PART_NODE) {
     const inAction = where.sectionKind === 'learning_in_action'
+    const hasTitle = parent ? findChildByKey(parent, 'title') !== null : false
     if (key === 'label') {
       const dom = h(inAction ? 'h3' : 'h4', inAction ? 'part-h part-label' : 'routine')
-      if (inAction) dom.append(fixed('span', 'pre', 'Part\u00a0'))
+      // Generated labels already read "Part A"; only a bare letter gets "Part".
+      const bare = partName(node.textContent, undefined) !== node.textContent
+      if (inAction && bare) dom.append(fixed('span', 'pre', 'Part\u00a0'))
       const content = h('span', 'field')
       dom.append(content)
-      if (inAction) dom.append(fixed('span', 'pre', ':'))
+      if (inAction && hasTitle) dom.append(fixed('span', 'pre', ':'))
+      if (inAction && !hasTitle && parent) dom.append(partMeta(parent, ctx))
       return { dom, content }
     }
     if (key === 'title') {
       const dom = h(inAction ? 'h3' : 'div', inAction ? 'part-h part-title' : 'part-sub')
       const content = h('span', 'field')
+      content.dataset.placeholder = 'Part title'
       dom.append(content)
-      if (inAction && parent) {
-        const part = dataOf(parent)
-        const meta = fixed('span', 'part-meta')
-        ;((part.standards as string[] | undefined) ?? []).forEach((code) =>
-          meta.append(h('span', 'chip sm', code)),
-        )
-        if (typeof part.minutes === 'number') {
-          meta.append(h('span', 'caption part-min', minutesLabel(part.minutes)))
-        }
-        dom.append(meta)
-      }
+      if (inAction && parent) dom.append(partMeta(parent, ctx))
       return { dom, content }
     }
     const { dom, content } = gutter('Purpose', 'purpose')
@@ -576,7 +660,9 @@ function fieldGroup(node: PmNode, where: Where): NodeViewParts {
     const criterion = dataOf(node)
     const dom = h('div', 'criterion')
     if (typeof criterion.standard === 'string') {
-      dom.append(fixed('span', 'chip sm crit-std', criterion.standard))
+      const holder = fixed('span', 'crit-std')
+      holder.append(codeChip(criterion.standard).element)
+      dom.append(holder)
     }
     const content = h('div')
     dom.append(content)
@@ -595,6 +681,14 @@ function blockView(node: PmNode, ctx: EditorViewContext): NodeViewParts {
   let dom: HTMLElement
   let content: HTMLElement
 
+  const boxedCodes = (iconName: IconName, title: string, codes: unknown) => {
+    dom = h('div', 'box')
+    const bt = fixed('div', 'bt')
+    bt.append(icon(iconName), ...titleWithCodes(title, codes))
+    dom.append(bt)
+    content = h('div', 'box-body')
+    dom.append(content)
+  }
   const boxed = (iconName: IconName, title: string, className = '') => {
     dom = h('div', `box ${className}`)
     dom.append(boxTitle(iconName, title))
@@ -607,13 +701,13 @@ function blockView(node: PmNode, ctx: EditorViewContext): NodeViewParts {
       boxed('info', 'Teacher tip')
       break
     case 'pulse_check':
-      boxed('check', `Pulse check${codesNote(data.standards)}`)
+      boxedCodes('check', 'Pulse check', data.standards)
       break
     case 'check_for_understanding':
-      boxed('target', `Check for understanding${codesNote(data.standards)}`)
+      boxedCodes('target', 'Check for understanding', data.standards)
       break
     case 'reflection':
-      boxed('target', `Reflection${codesNote(data.standards)}`)
+      boxedCodes('target', 'Reflection', data.standards)
       break
     case 'rubric':
       boxed('target', 'Rubric')
@@ -743,7 +837,7 @@ function partView(node: PmNode, where: Where, ctx: EditorViewContext): NodeViewP
   const add = button('add-blk', '', () => toggleMenu())
   const plus = h('span', 'plus')
   plus.append(icon('plus'))
-  add.append(plus, document.createTextNode('Add a block'))
+  add.append(plus, document.createTextNode('Add a block: Say, Directions, Ask, Teacher tip…'))
   add.setAttribute('aria-haspopup', 'menu')
   add.setAttribute('aria-expanded', 'false')
   const menu = h('div', 'float menu block-menu')

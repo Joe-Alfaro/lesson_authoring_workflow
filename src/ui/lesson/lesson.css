@@ -1192,10 +1192,6 @@ ul.chips,
 .lesson-pm .rsel {
   border-radius: 2px;
 }
-.ProseMirror-separator,
-.ProseMirror-trailingBreak {
-  display: none;
-}
 
 /* rail */
 .rail-seq {
@@ -1393,4 +1389,77 @@ ul.chips,
   white-space: nowrap;
   font-style: normal;
   pointer-events: none;
+}
+
+/* validation fixes: list item removal, part controls, in-body codes, save blocked */
+.lesson-pm li {
+  position: relative;
+}
+.item-remove {
+  position: absolute;
+  right: -28px;
+  top: 2px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-3);
+  font: 400 16px/1 var(--ui);
+  cursor: pointer;
+  opacity: 0;
+}
+.lesson-pm li:hover > .item-remove,
+.lesson-pm li:focus-within > .item-remove,
+.item-remove:focus-visible {
+  opacity: 1;
+}
+.item-remove:hover {
+  background: var(--desk);
+  color: var(--st-failed);
+}
+.code-chip {
+  cursor: help;
+}
+button.chip.code-chip {
+  font-family: var(--ui);
+}
+.code-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+.chipadd.sm {
+  height: 22px;
+  font-size: 12px;
+  padding: 0 6px;
+}
+.part-min-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+}
+.part-minutes {
+  width: 56px;
+  height: 26px;
+  padding: 0 6px;
+  font: 400 13px var(--ui);
+}
+.part-min-unit {
+  font-weight: 400;
+}
+.save-blocked {
+  color: var(--st-review);
+  background: var(--st-review-t);
+  font-size: 13px;
+  white-space: nowrap;
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

@@ -44,7 +44,7 @@
     "@tiptap/extension-text": "^3.32.0",
     "@tiptap/pm": "^3.32.0",
     "@tiptap/react": "^3.32.0",
-    "@tiptap/y-tiptap": "^3.0.10",
+    "@tiptap/y-tiptap": "3.0.9",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.4",
     "next": "^16.4.3",

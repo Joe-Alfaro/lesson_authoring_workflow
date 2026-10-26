@@ -87,11 +87,29 @@ export async function loadStandards(db: Database, codes?: string[]): Promise<Sta
       code: standards.code,
       framework: standards.framework,
       strand: standards.strand,
+      grade: standards.grade,
+      details: standards.details,
       text: standards.text,
     })
     .from(standards)
   const rows = codes ? await query.where(inArray(standards.code, codes)) : await query
-  return rows.sort((a, b) => a.code.localeCompare(b.code, 'en', { numeric: true }))
+  return rows
+    .map(({ grade, details, ...row }) => ({
+      ...row,
+      strand: strandLabel(row.strand, grade, details),
+    }))
+    .sort((a, b) => a.code.localeCompare(b.code, 'en', { numeric: true }))
+}
+
+/** "Reading Standards for Literature, grade 6" (the seed keeps the strand's name in details). */
+export function strandLabel(
+  strand: string,
+  grade: number,
+  details: Record<string, unknown>,
+): string {
+  const name =
+    typeof details.strand_name === 'string' ? details.strand_name.trim().replace(/\.$/, '') : ''
+  return name ? `${name}, grade ${grade}` : strand
 }
 
 /** Every standard code a lesson mentions (front matter, parts, blocks). */
