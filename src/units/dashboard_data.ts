@@ -1,6 +1,6 @@
 // Everything the unit page (R9-R12, R24, R25) shows, read once per render and sent to the client
 // component as plain JSON. Live updates re-run this through router.refresh().
-import { and, count, eq, inArray, isNotNull } from 'drizzle-orm'
+import { and, count, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { generationJobs, generationRuns, lessons, promptVersions, users } from '../db/schema'
 import type { LessonStatus } from '../db/schema'
@@ -19,6 +19,7 @@ import { modelLabel } from '../ui/dashboard/format'
 import type { RowStatus } from '../ui/dashboard/status_pill'
 import { getMyLessons, getUnitDashboard, type DashboardLesson } from '../workflow/dashboard'
 import { bannerAuthor } from './banner'
+import { outlineTitle } from './outline_title'
 import { getUnitOverview } from './queries'
 
 export interface DashboardRow {
@@ -198,17 +199,21 @@ export async function getUnitDashboardData(
   const contentIds = new Set(withContent.map((row) => row.id))
   const generationById = new Map(progress.lessons.map((lesson) => [lesson.lessonId, lesson]))
   const stoppedRun = run?.status === 'stopped_cap'
+  const outlineById = new Map(
+    overview.lessons.map((lesson) => [lesson.id, outlineTitle(lesson.description)]),
+  )
 
   const rows = dashboard.lessons.map((lesson): DashboardRow => {
     const generation = generationById.get(lesson.id)
     const status = generation?.status ?? 'not_started'
     const hasContent = contentIds.has(lesson.id)
+    const outline = outlineById.get(lesson.id) ?? lesson.outlineLine
     return {
       id: lesson.id,
       lessonNumber: lesson.lessonNumber,
       isFlex: lesson.isFlex,
-      title: lesson.title,
-      outlineLine: lesson.outlineLine,
+      title: hasContent ? lesson.title : outline,
+      outlineLine: outline,
       lessonType: lesson.lessonType,
       arcId: lesson.arc?.id ?? null,
       status: rowStatus(lesson.status, status, hasContent),
@@ -278,14 +283,14 @@ export interface MyLessonsData {
 }
 
 /** A lesson listed outside its unit page (My lessons): workflow status, no generation detail. */
-function plainRow(lesson: DashboardLesson, hasContent: boolean): DashboardRow {
+function plainRow(lesson: DashboardLesson, hasContent: boolean, outline: string): DashboardRow {
   const generation: LessonGenerationStatus = hasContent ? 'generated' : 'not_started'
   return {
     id: lesson.id,
     lessonNumber: lesson.lessonNumber,
     isFlex: lesson.isFlex,
-    title: lesson.title,
-    outlineLine: lesson.outlineLine,
+    title: hasContent ? lesson.title : outline,
+    outlineLine: outline,
     lessonType: lesson.lessonType,
     arcId: lesson.arc?.id ?? null,
     status: rowStatus(lesson.status, generation, hasContent),
@@ -304,20 +309,31 @@ function plainRow(lesson: DashboardLesson, hasContent: boolean): DashboardRow {
 export async function getMyLessonsData(db: Database, userId: string): Promise<MyLessonsData> {
   const mine = await getMyLessons(db, userId)
   const ids = mine.units.flatMap((group) => group.lessons.map((lesson) => lesson.id))
-  const withContent =
+  const details =
     ids.length === 0
       ? []
       : await db
-          .select({ id: lessons.id })
+          .select({
+            id: lessons.id,
+            description: lessons.description,
+            hasContent: sql<boolean>`${lessons.content} is not null`,
+          })
           .from(lessons)
-          .where(and(inArray(lessons.id, ids), isNotNull(lessons.content)))
-  const contentIds = new Set(withContent.map((row) => row.id))
+          .where(inArray(lessons.id, ids))
+  const byId = new Map(details.map((row) => [row.id, row]))
   return {
     units: mine.units.map((group) => ({
       id: group.unit.id,
       heading: `Unit ${group.unit.unitNumber}: ${group.unit.anchorTextTitle}`,
       counts: group.counts,
-      rows: group.lessons.map((lesson) => plainRow(lesson, contentIds.has(lesson.id))),
+      rows: group.lessons.map((lesson) => {
+        const row = byId.get(lesson.id)
+        return plainRow(
+          lesson,
+          row?.hasContent ?? false,
+          row ? outlineTitle(row.description) : lesson.outlineLine,
+        )
+      }),
     })),
     now: new Date().toISOString(),
   }

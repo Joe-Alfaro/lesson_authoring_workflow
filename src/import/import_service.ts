@@ -126,6 +126,11 @@ async function loadKnownCodes(db: Database): Promise<Set<string>> {
 
 const PAGE_RANGE = /\bpp?\.\s*\d+(?:\s*[–-]\s*\d+)?/
 
+/** The first page range in an outline description ("pp. 1–8"), or null. */
+export function firstPageRange(description: string): string | null {
+  return description.match(PAGE_RANGE)?.[0] ?? null
+}
+
 function toEldPreview(rows: EldRow[], items: ParsedItem[]): EldPreview {
   const { matches, warnings, unmatched } = matchEldRows(rows, items)
   return {
@@ -149,7 +154,7 @@ function toPreview(importId: string, payload: PendingImportPayload): ImportPrevi
         arcName: item.arcName,
         lessonType: item.lessonType,
         title: item.description.split('\n')[0]!.trim(),
-        pages: item.description.match(PAGE_RANGE)?.[0] ?? null,
+        pages: firstPageRange(item.description),
         description: item.description,
         focusStandards: normalized.codes.focus,
         focusStandardsText: item.focusStandards,
