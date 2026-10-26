@@ -1,4 +1,4 @@
-import { requireRole } from '../../../../../../../auth/require_role'
+import { requireApiRole } from '../../../../../../../auth/require_role'
 import { getDb } from '../../../../../../../db/client'
 import { workflowErrorResponse } from '../../../../../../../workflow/http'
 import { restoreVersion } from '../../../../../../../workflow/versions'
@@ -10,7 +10,10 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string; versionId: string }> },
 ): Promise<Response> {
-  const user = await requireRole(['author', 'reviewer', 'approver'])
+  const user = await requireApiRole(['author', 'reviewer', 'approver'])
+  if (user instanceof Response) {
+    return user
+  }
   const { id, versionId } = await params
   try {
     const result = await restoreVersion(getDb(), { lessonId: id, versionId, userId: user.id })

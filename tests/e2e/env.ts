@@ -27,3 +27,15 @@ export const E2E_STATE_FILE = join(tmpdir(), `lesson_authoring_e2e_${E2E_PORT}.j
 export interface E2eState {
   databaseUrl: string
 }
+
+/**
+ * Generation settings of the e2e app and its fake worker (src/generation/settings.ts names).
+ * The model is the Haiku-class default, so costs use real prices; the fake LLM never calls it.
+ */
+export const E2E_GENERATION_ENV = {
+  GENERATION_MODEL: 'claude-haiku-5-5',
+  GENERATION_CONCURRENCY: '4',
+  GENERATION_MAX_ATTEMPTS: '2',
+  GENERATION_SPEND_CAP_USD: '5',
+  SPEND_CAP_USD: '20',
+} as const

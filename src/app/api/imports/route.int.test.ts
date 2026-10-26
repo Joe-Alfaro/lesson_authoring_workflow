@@ -14,8 +14,8 @@ import {
 } from 'vitest'
 import { STANDARDS_DIR, filledEldCsv, sampleOutlineCsv } from '../../../../tests/import_fixtures'
 
-const { requireRole } = vi.hoisted(() => ({ requireRole: vi.fn() }))
-vi.mock('../../../auth/require_role', () => ({ requireRole }))
+const { requireApiRole } = vi.hoisted(() => ({ requireApiRole: vi.fn() }))
+vi.mock('../../../auth/require_role', () => ({ requireApiRole }))
 
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1AbC-dEf_123456789xyz/edit?usp=sharing'
 const NOT_SHARED = /must be shared.*anyone with the link/i
@@ -89,8 +89,12 @@ describe('import API', () => {
   beforeEach(async () => {
     const { units } = await import('../../../db/schema')
     await db.delete(units)
-    requireRole.mockReset()
-    requireRole.mockResolvedValue({ id: authorId, email: 'api-author@example.com', role: 'author' })
+    requireApiRole.mockReset()
+    requireApiRole.mockResolvedValue({
+      id: authorId,
+      email: 'api-author@example.com',
+      role: 'author',
+    })
   })
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -113,7 +117,7 @@ describe('import API', () => {
     expect(preview.warnings).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'RL.6.9.a' })]),
     )
-    expect(requireRole).toHaveBeenCalledWith(['author'])
+    expect(requireApiRole).toHaveBeenCalledWith(['author'])
     expect(await unitCount()).toBe(0)
 
     const confirmed = await routes.confirm.POST(
@@ -223,11 +227,14 @@ describe('import API', () => {
   })
 
   it('checks the author role before doing anything', async () => {
-    requireRole.mockRejectedValue(new Error('forbidden'))
+    // The guard's own refusal (D-032 (4)): the route returns it as is.
+    requireApiRole.mockResolvedValue(Response.json({ error: 'Not allowed' }, { status: 403 }))
 
-    await expect(
-      routes.preview.POST(fileRequest('/api/imports', sampleOutlineCsv(), 'outline.csv')),
-    ).rejects.toThrow('forbidden')
+    const response = await routes.preview.POST(
+      fileRequest('/api/imports', sampleOutlineCsv(), 'outline.csv'),
+    )
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ error: 'Not allowed' })
     expect(await unitCount()).toBe(0)
   })
 })

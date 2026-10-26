@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { signOut } from '../auth/auth'
 import type { SessionUser } from '../auth/credentials'
+import { avatarColour, initials } from './avatar'
 import { MainNav } from './main_nav'
-import { avatarColour, initials } from './people'
 
 const ROLE_LABELS: Record<SessionUser['role'], string> = {
   author: 'Author',

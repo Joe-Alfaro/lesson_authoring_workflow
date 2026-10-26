@@ -13,6 +13,14 @@ export default defineConfig({
       },
       {
         test: {
+          name: 'component',
+          include: ['src/**/*.test.tsx'],
+          environment: 'jsdom',
+          setupFiles: ['tests/component_setup.ts'],
+        },
+      },
+      {
+        test: {
           name: 'integration',
           include: ['src/**/*.int.test.ts'],
           environment: 'node',

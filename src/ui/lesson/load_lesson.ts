@@ -8,6 +8,7 @@ import { getLessonGeneration } from '../../generation/service'
 import { isUuid } from '../../import/is_uuid'
 import { LessonContent } from '../../lesson/schema'
 import { getLessonHistory } from '../../workflow/service'
+import { promptProvenanceText } from './prompt_provenance'
 
 export interface LessonPageData {
   id: string
@@ -22,12 +23,6 @@ export interface LessonPageData {
   provenance: string | null
   /** Who approved it and when, for the lock notice (R23). */
   approval: { name: string; at: string } | null
-}
-
-/** "claude-haiku-5-5" -> "Haiku-class". */
-export function modelClass(model: string): string {
-  const family = /claude-([a-z]+)/i.exec(model)?.[1] ?? model
-  return `${family.charAt(0).toUpperCase()}${family.slice(1)}-class`
 }
 
 export async function loadLessonPage(
@@ -69,9 +64,7 @@ export async function loadLessonPage(
     content: parsed.success ? parsed.data : null,
     assignee:
       row.assigneeId && row.assigneeName ? { id: row.assigneeId, name: row.assigneeName } : null,
-    provenance: generation
-      ? `Prompt v${generation.promptVersion}, ${modelClass(generation.model)}`
-      : null,
+    provenance: generation ? promptProvenanceText(generation) : null,
     approval:
       row.status === 'approved' && approved?.actor
         ? { name: approved.actor.name, at: approved.at.toISOString() }
