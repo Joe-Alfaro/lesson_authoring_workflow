@@ -24,9 +24,27 @@ export const AUTHOR = { email: 'author01@example.com', name: 'Author 01', role: 
 export class E2eDb {
   constructor(private readonly pool: pg.Pool) {}
 
-  /** Removes everything an import or an editor creates; seeded users and standards stay. */
+  /**
+   * Removes everything an import or an editor creates; seeded users and standards stay. A late
+   * collab store from the previous test (lessons row, then yjs_documents) can deadlock with the
+   * TRUNCATE, which locks the tables in the other order; Postgres then aborts one side (40P01),
+   * so the reset retries.
+   */
   async resetImports(): Promise<void> {
-    await this.pool.query('TRUNCATE units, pending_imports, yjs_documents RESTART IDENTITY CASCADE')
+    const attempts = 3
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        await this.pool.query(
+          'TRUNCATE units, pending_imports, yjs_documents RESTART IDENTITY CASCADE',
+        )
+        return
+      } catch (error) {
+        const code = (error as { code?: string }).code
+        if (code !== '40P01' || attempt >= attempts) throw error
+        console.warn(`[e2e] reset deadlocked with a late app write; retry ${attempt}`)
+        await new Promise((resolve) => setTimeout(resolve, 200 * attempt))
+      }
+    }
   }
 
   async count(table: 'units' | 'pending_imports' | 'arcs'): Promise<number> {
