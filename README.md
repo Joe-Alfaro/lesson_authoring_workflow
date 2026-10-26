@@ -149,9 +149,14 @@ Generation uses the Haiku-class model by default (`GENERATION_MODEL`; the start 
 Sonnet- and Opus-class models), and AI assist uses `ASSIST_MODEL` (Haiku-class by default). The
 start dialog shows the estimate before anything is spent. Three caps apply, all from `.env`:
 
-- `GENERATION_SPEND_CAP_USD` (default $5): the cap for one run. No new lesson starts once a run's
-  cost reaches it.
+- `GENERATION_SPEND_CAP_USD` (default $5): the cap for one run.
 - `SPEND_CAP_USD` (default $20): the total across every run and AI assist call in this database.
+
+Each model call reserves one lesson estimate against both caps before it starts, so spend can end
+above a cap by at most the last admitted call's estimate plus what a call in flight costs beyond
+its estimate (and, for the global cap, AI assist calls made meanwhile). Details:
+[Caps and reservations](docs/architecture.md#generation-pipeline).
+
 - `GENERATION_CONCURRENCY` (default 4) and `GENERATION_MAX_ATTEMPTS` (default 2, one repair retry)
   bound how many calls run at once and per lesson.
 

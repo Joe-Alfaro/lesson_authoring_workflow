@@ -167,9 +167,12 @@ store open documents before the container stops.
   from `GET /api/collab-token`. There is no `NEXT_PUBLIC_COLLAB_URL`: `NEXT_PUBLIC_` values are
   fixed at build time, which would tie the image to one domain.
 - Spend guard (R12): `SPEND_CAP_USD` is the total for this database across every generation run
-  and AI assist call, so a public URL can spend at most $3 (the reserve in D-038). The web app
-  checks it when a run starts and before each assist call, the worker before every job. Raise it
-  on purpose for a bigger hosted run. Without `ANTHROPIC_API_KEY`, assist answers 503 and the
+  and AI assist call, so a public URL can spend about $3 at most. The web app checks it when a run
+  starts and before each assist call; the worker reserves one lesson estimate per model call
+  against it (and the run's cap). Spend can end above the cap by at most the last admitted call's
+  estimate, plus what a call in flight costs above its estimate, plus assist calls made meanwhile
+  (see "Caps and reservations" in [architecture.md](architecture.md)). Raise it on purpose for a
+  bigger hosted run. Without `ANTHROPIC_API_KEY`, assist answers 503 and the
   worker logs that generation is disabled.
 - Web and worker both create the generation queue, so `GENERATION_HEARTBEAT_SECONDS` and the
   other shared `GENERATION_*` values must match on both. `GENERATION_EFFORT` is the exception: only

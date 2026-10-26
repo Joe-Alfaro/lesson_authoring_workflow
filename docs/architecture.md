@@ -56,23 +56,23 @@ database.
 Drizzle schema in `src/db/schema.ts`, migrations in `drizzle/`. UUID keys, snake_case enums, money
 as `numeric(12,6)`.
 
-| Table               | Holds                                                                                                                                                                  | Key relations                                                                     |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `users`             | Email, name, bcrypt hash, role (`author`, `reviewer`, `approver`, `admin`)                                                                                             |                                                                                   |
-| `units`             | Grade, unit number, anchor text title, ISBN, banner, ELD warnings                                                                                                      | `created_by` → users                                                              |
-| `arcs`              | Arc name, description, order                                                                                                                                           | → units                                                                           |
-| `lessons`           | Every outline cell (plus `raw_row`), lesson number (null for flex days), position, status, `content` (JSONB lesson), assignee, last editor, import warnings, ELD input | → units, arcs; `assignee_id`, `last_edited_by` → users                            |
-| `pending_imports`   | A parsed outline between preview and confirm                                                                                                                           | → users                                                                           |
-| `standards`         | Code, framework, grade, strand, full text, extra source fields                                                                                                         |                                                                                   |
-| `lesson_standards`  | A lesson's normalized codes by kind (`focus`, `supporting`, `media`, `eld`)                                                                                            | → lessons; deliberately no FK to `standards` (unknown codes are kept and flagged) |
-| `prompt_versions`   | A unit's prompt template (system, style guide, per-type guidance), numbered per unit                                                                                   | → units                                                                           |
-| `generation_runs`   | Model, prompt version, status, cap, running cost                                                                                                                       | → units, prompt_versions                                                          |
-| `generation_jobs`   | One per lesson per run: status, attempts, error, tokens, cost                                                                                                          | → generation_runs, lessons (unique per run and lesson)                            |
-| `lesson_versions`   | Content snapshots with author, time and contributors                                                                                                                   | → lessons                                                                         |
-| `workflow_events`   | Every status transition: from, to, actor, note, time                                                                                                                   | → lessons                                                                         |
-| `assignment_events` | Every (re)assignment with the actor                                                                                                                                    | → lessons                                                                         |
-| `yjs_documents`     | The encoded Yjs state per collaborative document                                                                                                                       | keyed by document name `lesson:<id>`                                              |
-| `assist_calls`      | Each AI assist call's model, tokens and cost                                                                                                                           | → lessons (set null on delete, so spend survives), users                          |
+| Table               | Holds                                                                                                                                                                                                | Key relations                                                                     |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `users`             | Email, name, bcrypt hash, role (`author`, `reviewer`, `approver`, `admin`)                                                                                                                           |                                                                                   |
+| `units`             | Grade, unit number, anchor text title, ISBN, banner, ELD warnings                                                                                                                                    | `created_by` → users                                                              |
+| `arcs`              | Arc name, description, order                                                                                                                                                                         | → units                                                                           |
+| `lessons`           | Every outline cell (plus `raw_row`), lesson number (null for flex days), position, status, `content` (JSONB lesson), assignee, last editor, import warnings, ELD input, review hints from generation | → units, arcs; `assignee_id`, `last_edited_by` → users                            |
+| `pending_imports`   | A parsed outline between preview and confirm                                                                                                                                                         | → users                                                                           |
+| `standards`         | Code, framework, grade, strand, full text, extra source fields                                                                                                                                       |                                                                                   |
+| `lesson_standards`  | A lesson's normalized codes by kind (`focus`, `supporting`, `media`, `eld`)                                                                                                                          | → lessons; deliberately no FK to `standards` (unknown codes are kept and flagged) |
+| `prompt_versions`   | A unit's prompt template (system, style guide, per-type guidance), numbered per unit                                                                                                                 | → units                                                                           |
+| `generation_runs`   | Model, prompt version, status, cap, running cost                                                                                                                                                     | → units, prompt_versions                                                          |
+| `generation_jobs`   | One per lesson per run: status, attempts (model calls over every try), error, tokens, cost, reserved spend                                                                                           | → generation_runs, lessons (unique per run and lesson)                            |
+| `lesson_versions`   | Content snapshots with author, time and contributors                                                                                                                                                 | → lessons                                                                         |
+| `workflow_events`   | Every status transition: from, to, actor, note, time                                                                                                                                                 | → lessons                                                                         |
+| `assignment_events` | Every (re)assignment with the actor                                                                                                                                                                  | → lessons                                                                         |
+| `yjs_documents`     | The encoded Yjs state per collaborative document                                                                                                                                                     | keyed by document name `lesson:<id>`                                              |
+| `assist_calls`      | Each AI assist call's model, tokens and cost                                                                                                                                                         | → lessons (set null on delete, so spend survives), users                          |
 
 pg-boss keeps its queue in its own `pgboss` schema in the same database. A lesson's generation
 provenance (model, prompt version, tokens, cost) is read from its latest generated job joined to
@@ -108,7 +108,7 @@ sequenceDiagram
   W->>PG: run row pinned to the prompt version,<br/>one job row + one pg-boss job per lesson
   W-->>A: 201, returns at once
   loop up to GENERATION_CONCURRENCY at a time
-    K->>PG: fetch job; check run status and caps
+    K->>PG: fetch job; admit the call:<br/>reserve one estimate under the caps
     K->>PG: job + lesson Generating, NOTIFY
     K->>K: build prompt (template, outline row,<br/>standards full text, neighbours, ELD)
     K->>M: system + schema + prompt (streamed)
@@ -159,34 +159,47 @@ run.
 **Post-processing** (`post_process.ts`). A pure function fixes what code can fix for free instead
 of paying for a retry: it moves each pulse check's correct option to a per-lesson letter (models
 otherwise favour one position), normalizes Learning in Action part labels, keeps at most 6
-addressed vocabulary words that the lesson actually uses, and assigns ids. It runs after
-validation and only reorders, relabels or filters, so it can't make a valid lesson invalid.
+addressed vocabulary words that the lesson actually uses, keeps the first two teacher tips, trims
+quick-check exemplar responses to two sentences, and assigns ids. It runs after validation and only
+reorders, relabels, trims or filters, so it can't make a valid lesson invalid. Slips code can't fix
+(the correct pulse-check option being the longest one) are stored with the lesson as review hints
+(`lessons.polish_warnings`) and shown in the editor's lesson bar; they never cost a model call or
+fail a lesson.
 
-**Jobs, restarts and crashes** (`queue.ts`). pg-boss runs in the same Postgres. Each job checks
-first whether its run was cancelled or its lesson already generated, so a restarted worker
-resumes the remaining jobs without redoing finished ones. A running job keeps a pg-boss heartbeat
-(`GENERATION_HEARTBEAT_SECONDS`, 60 s) instead of a fixed expiry: real calls took up to about two
-minutes, so a short expiry would retry live calls and pay twice. The worker also sweeps every half
-heartbeat for jobs whose worker died, so their lesson is retried within about a minute rather than
-on pg-boss's slower monitor pass.
+**Jobs, restarts and crashes** (`queue.ts`, `worker.ts`). pg-boss runs in the same Postgres.
+Each job checks first whether its run was cancelled or its lesson already generated, so a
+restarted worker resumes the remaining jobs without redoing finished ones. A running job keeps a
+pg-boss heartbeat (`GENERATION_HEARTBEAT_SECONDS`, 60 s) instead of a fixed expiry: real calls took
+up to about two minutes, so a short expiry would retry live calls and pay twice. The worker also
+sweeps every half heartbeat for jobs whose worker died, so their lesson is retried within about a
+minute rather than on pg-boss's slower monitor pass. `generation_jobs.attempts` counts model calls
+across every try, so a crash retry continues the count and a lesson never gets more than
+`GENERATION_MAX_ATTEMPTS` calls. A job whose crash retries ran out, or whose retry finds its run
+cancelled or its cap reached, is settled by the sweep or the retry: the job is failed or cancelled,
+the lesson goes back to Failed (or Draft when it already had content) with a note, and the run
+finishes.
 
-**Caps** (R12). Two limits apply: the run's cap (`GENERATION_SPEND_CAP_USD`, default $5, shown in
-the start dialog, raisable by an admin with a Resume) and a global budget (`SPEND_CAP_USD`,
-default $20) over every run and AI assist call in the database. A run is refused at start when its
-estimate exceeds what is left of the global budget, and the worker checks both before every job.
-When a cap is reached no new job starts and the unit shows "stopped: spend cap reached"; finished
-lessons are kept.
+**Caps and reservations** (R12). Two limits apply: the run's cap (`GENERATION_SPEND_CAP_USD`,
+default $5, shown in the start dialog, raisable by an admin with a Resume) and a global budget
+(`SPEND_CAP_USD`, default $20) over every run and AI assist call in the database. A run is refused
+at start when its estimate exceeds what is left of the global budget. In the worker, every model
+call, first attempt or repair, is admitted the same way: under a Postgres advisory lock the job
+reserves one lesson estimate (`generation_jobs.reserved_usd`, the same per-lesson figure the start
+dialog uses) and the run and global guards compare spent + reserved with each cap. Because the
+reservation lives in the database, this holds across every run and every worker process. A call's
+cost is recorded before its reservation is released, so money is never counted as neither.
 
-> **Status: in progress.** The cap check above runs before each job, so jobs already in flight
-> can finish past a cap: the overshoot is at most `GENERATION_CONCURRENCY` lesson costs. The M5
-> hardening work (contract in `src/generation/README.md`, "M5 robustness contract") replaces this
-> with **reservations**: a job reserves one lesson estimate when it starts
-> (`generation_jobs.reserved_usd`) and releases it when it ends, and both guards compare spent +
-> reserved with the cap under a Postgres advisory lock, so even several worker processes overshoot
-> by at most one estimate. A job blocked only by others' reservations waits instead of stopping
-> the run. The same work counts attempts across crash retries (a lesson never gets more than
-> `GENERATION_MAX_ATTEMPTS` calls), fails lessons whose crash retries ran out so their run
-> finishes, and stores non-blocking "review hints" for style slips code can't fix.
+- Real spend at or over a cap stops the run: no new call starts, finished lessons are kept, and
+  the unit shows "stopped: spend cap reached". A job whose cap is reached or whose run is cancelled
+  during its call makes no repair call.
+- Spend plus other jobs' reservations at or over a cap makes a job wait (it rechecks every second)
+  rather than stop the run, so a run whose estimate is above what lessons really cost still spends
+  up to its cap. A job holds a reservation only while admitted to a call, so waiting jobs never
+  wait on each other.
+- **Bound:** a call starts only while spend + reservations is below the cap, so recorded spend ends
+  below the cap plus the last admitted call's estimate, plus whatever a call in flight costs above
+  its estimate (a lesson longer than the estimate). For the global cap, AI assist calls made
+  meanwhile add their own cost (they are checked against the cap, not reserved).
 
 **Live progress** (R9). Each status change sends a `NOTIFY` on `generation_progress`. The web
 process holds one `LISTEN` connection (`src/db/notify_hub.ts`) and fans events out to every open
@@ -359,8 +372,8 @@ keystroke; editors see status changes up to 2 s late.
 
 ## What we'd do next
 
-- **Finish and measure the spend hardening** (reservations, attempt limits across crashes), then
-  run a real 41-lesson unit on the API to replace R29's projection with a measurement.
+- **Run a real 41-lesson unit on the API** to replace R29's projection with a measurement
+  (latency, repair-retry share, rate limits).
 - **Watch a lesson being written** (R13): the model call already streams; parse partial JSON and
   push completed sections to the open lesson page.
 - **Comments** (R26) on lessons and passages, using the side panel's extension point.
