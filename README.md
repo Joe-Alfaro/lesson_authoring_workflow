@@ -73,19 +73,21 @@ upserted by code.
 
 ## Scripts
 
-| Script                                                | What it does                                                    |
-| ----------------------------------------------------- | --------------------------------------------------------------- |
-| `npm run dev`                                         | Runs web, worker and collab with reload                         |
-| `npm run dev:web` / `dev:worker` / `dev:collab`       | Runs one process                                                |
-| `npm run build`                                       | Production build: `next build` (standalone) and `dist/` bundles |
-| `npm run start:web` / `start:worker` / `start:collab` | Runs one production process after `npm run build`               |
-| `npm run db:generate`                                 | Writes a new migration in `drizzle/` from `src/db/schema.ts`    |
-| `npm run db:migrate`                                  | Applies migrations                                              |
-| `npm run db:seed`                                     | Seeds demo accounts and standards                               |
-| `npm run check`                                       | Format check, lint, type check, unit and integration tests      |
-| `npm run test:unit` / `test:integration`              | One test project                                                |
-| `npm run test:e2e`                                    | Playwright end-to-end tests (see `tests/e2e/README.md`)         |
-| `npm run docker:smoke`                                | Builds the production image and smoke-tests all three services  |
+| Script                                                | What it does                                                               |
+| ----------------------------------------------------- | -------------------------------------------------------------------------- |
+| `npm run dev`                                         | Runs web, worker and collab with reload                                    |
+| `npm run dev:web` / `dev:worker` / `dev:collab`       | Runs one process                                                           |
+| `npm run build`                                       | Production build: `next build` (standalone) and `dist/` bundles            |
+| `npm run start:web` / `start:worker` / `start:collab` | Runs one production process after `npm run build`                          |
+| `npm run db:generate`                                 | Writes a new migration in `drizzle/` from `src/db/schema.ts`               |
+| `npm run db:migrate`                                  | Applies migrations                                                         |
+| `npm run db:seed`                                     | Seeds demo accounts and standards                                          |
+| `npm run check`                                       | Format check, lint, type check, unit and integration tests                 |
+| `npm run test:unit` / `test:integration`              | One test project                                                           |
+| `npm run test:e2e`                                    | Playwright end-to-end tests (see `tests/e2e/README.md`)                    |
+| `npm run docker:smoke`                                | Builds the production image and smoke-tests all three services             |
+| `npm run load:reviewers` / `load:generation`          | R28 / R29 load runs against a production build (see `docs/performance.md`) |
+| `npm run load:fake-model`                             | Stand-in Anthropic API for `load:generation` (never calls a model)         |
 
 Integration tests (`*.int.test.ts`) start a throwaway Postgres 16 container with Testcontainers,
 so Docker must be running. To use an existing empty database instead, set `TEST_DATABASE_URL`.
