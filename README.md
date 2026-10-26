@@ -91,6 +91,11 @@ Each answers `GET /health` with 200 when it can reach the database (503 otherwis
 unset locally so the three processes keep their own ports. Secrets come only from `.env`, which
 is git-ignored; `.env.example` lists every variable.
 
+To use other ports, run `PORT=<n> npm run dev:web`, `PORT=<n> npm run dev:worker` and
+`PORT=<n> npm run dev:collab` in separate terminals and set `COLLAB_URL=ws://localhost:<collab
+port>` for the web process; the stand-in model below takes `FAKE_MODEL_PORT` (match it in
+`ANTHROPIC_BASE_URL`).
+
 ### Demo accounts (local only)
 
 `npm run db:seed` creates these accounts. Their password is `SEED_PASSWORD`, or `demo-password`
@@ -112,7 +117,9 @@ Re-running the seed is safe: it upserts the accounts (resetting their password t
 
 1. Sign in as `author01@example.com`, open **Units** and choose **Import an outline**.
 2. Choose **Upload CSV**, pick `data/sample_unit/lesson_outline.csv` and, optionally, the ELD file
-   `data/sample_unit/eld_scope_and_sequence.csv`, then **Read outline**.
+   `data/sample_unit/eld_scope_and_sequence.csv`, then **Read outline**. The sample ELD file's
+   content columns are empty, so it adds nothing to generation: a notice that its content columns
+   are empty and that 7 ELD rows didn't match a lesson is expected.
 3. Check the preview (41 lessons in 4 arcs, 6 flex days; lessons 22, 26 and 31 carry a standards
    warning) and choose **Create unit with 41 lessons**.
 4. On the unit page, **Generate lessons...** shows the lessons, model, prompt version, estimated
@@ -147,7 +154,7 @@ practice runs. The stand-in only writes lessons, so AI assist needs a real key.
 Set `ANTHROPIC_API_KEY` in `.env`, leave `ANTHROPIC_BASE_URL` empty, and restart `npm run dev`.
 Generation uses the Haiku-class model by default (`GENERATION_MODEL`; the start dialog also offers
 Sonnet- and Opus-class models), and AI assist uses `ASSIST_MODEL` (Haiku-class by default). The
-start dialog shows the estimate before anything is spent. Three caps apply, all from `.env`:
+start dialog shows the estimate before anything is spent. Two caps apply, both from `.env`:
 
 - `GENERATION_SPEND_CAP_USD` (default $5): the cap for one run.
 - `SPEND_CAP_USD` (default $20): the total across every run and AI assist call in this database.
@@ -157,8 +164,8 @@ above a cap by at most the last admitted call's estimate plus what a call in fli
 its estimate (and, for the global cap, AI assist calls made meanwhile). Details:
 [Caps and reservations](docs/architecture.md#generation-pipeline).
 
-- `GENERATION_CONCURRENCY` (default 4) and `GENERATION_MAX_ATTEMPTS` (default 2, one repair retry)
-  bound how many calls run at once and per lesson.
+`GENERATION_CONCURRENCY` (default 4) and `GENERATION_MAX_ATTEMPTS` (default 2, one repair retry)
+bound how many calls run at once and per lesson.
 
 Try a few lessons first: select them in the table and choose **Selected lessons** in the start
 dialog.

@@ -108,7 +108,7 @@ sequenceDiagram
   W->>PG: run row pinned to the prompt version,<br/>one job row + one pg-boss job per lesson
   W-->>A: 201, returns at once
   loop up to GENERATION_CONCURRENCY at a time
-    K->>PG: fetch job; admit the call:<br/>reserve one estimate under the caps
+    K->>PG: fetch job, admit the call:<br/>reserve one estimate under the caps
     K->>PG: job + lesson Generating, NOTIFY
     K->>K: build prompt (template, outline row,<br/>standards full text, neighbours, ELD)
     K->>M: system + schema + prompt (streamed)
