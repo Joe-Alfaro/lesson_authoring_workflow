@@ -200,8 +200,7 @@ connections with two editors open.
 
 ## Post-deploy smoke checklist
 
-Replace `<web>` and `<collab>` with the generated domains. Export isn't on `main` yet, so it isn't
-in the list.
+Replace `<web>` and `<collab>` with the generated domains.
 
 1. Health, all 200:
    - `curl -s -o /dev/null -w '%{http_code}\n' https://<web>/health`
@@ -219,6 +218,10 @@ in the list.
    tab shows a `wss://<collab>` connection, and each browser sees the other's typing.
 6. As an approver, Submit for review, then Approve lesson: the other browser's editor locks
    without a reload ("This lesson is approved, so editing is locked.").
+7. Export (R16): on the unit page, the approved lesson's row menu > Download JSON and Download
+   HTML save `unit-4-lesson-<n>-....json` / `.html`; the HTML opens offline with "Approved by". The
+   header Export > Download unit JSON lists that lesson under `lessons`. Signed out, `curl -s -o
+/dev/null -w '%{http_code}\n' https://<web>/api/units/<unit id>/export` prints 401.
 
 ## Checking the image locally
 
