@@ -7,7 +7,8 @@
 //   GET  /__fake/requests                                 every request received, oldest first
 //   POST /__fake/reset                                    clear the queue and the request log
 // A request with nothing queued gets a 400 invalid_request_error (not retried by the SDK), so a
-// spec that forgot to script an answer fails loudly instead of hanging.
+// spec that forgot to script an answer fails loudly instead of hanging. The load scripts pass
+// `respond` instead, which answers every request that has nothing queued (scripts/load).
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 
 export interface FakeResponse {

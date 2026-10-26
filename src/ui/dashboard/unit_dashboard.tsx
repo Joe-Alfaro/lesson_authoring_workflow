@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from 'react'
 import type { Role } from '../../auth/roles'
 import type { UnitDashboardData, DashboardRow } from '../../units/dashboard_data'
 import { Breadcrumbs } from '../breadcrumbs'
+import { download, unitExportHref } from '../download'
 import {
   CheckIcon,
   DownloadIcon,
@@ -24,6 +25,7 @@ import { GenerationSummary } from './generation_summary'
 import { LessonTable, type RowActions } from './lesson_table'
 import { RaiseCapDialog } from './raise_cap_dialog'
 import { RegenerateDialog } from './regenerate_dialog'
+import { RowMenu } from './row_menu'
 import { StartGenerationDialog, type StartOptions } from './start_generation_dialog'
 import { StatusChips, type ChipStatus } from './status_chips'
 import { STATUS_LOOKS, type RowStatus } from './status_pill'
@@ -397,10 +399,32 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
           </button>
         ) : null}
         {anyContent && !active && !stopped ? (
-          <button type="button" className="btn" disabled title="Export arrives with R16">
-            <DownloadIcon />
-            Export
-          </button>
+          <RowMenu
+            label="Export"
+            trigger={{
+              className: 'btn',
+              content: (
+                <>
+                  <DownloadIcon />
+                  Export
+                </>
+              ),
+            }}
+            entries={[
+              {
+                kind: 'action',
+                label: 'Download unit JSON',
+                icon: <DownloadIcon />,
+                onSelect: () => download(unitExportHref(data.unit.id, 'json')),
+              },
+              {
+                kind: 'action',
+                label: 'Download unit HTML',
+                icon: <DownloadIcon />,
+                onSelect: () => download(unitExportHref(data.unit.id, 'html')),
+              },
+            ]}
+          />
         ) : null}
       </div>
 
@@ -509,11 +533,19 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
               </p>
             </div>
             <div className="row">
-              <button type="button" className="btn" disabled title="Export arrives with R16">
+              <button
+                type="button"
+                className="btn"
+                onClick={() => download(unitExportHref(data.unit.id, 'json'))}
+              >
                 <DownloadIcon />
                 Download unit JSON
               </button>
-              <button type="button" className="btn" disabled title="Export arrives with R16">
+              <button
+                type="button"
+                className="btn"
+                onClick={() => download(unitExportHref(data.unit.id, 'html'))}
+              >
                 <DownloadIcon />
                 Download unit HTML
               </button>

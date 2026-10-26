@@ -69,5 +69,6 @@ whose cap is the raised cap minus the stopped run's cost; finished lessons are n
 again.
 
 Approvers see the bulk bar's Regenerate button disabled (the roles table gives regeneration to
-authors). Export (R16) is not built: the Export, Download unit JSON/HTML and row download items
-are present and disabled.
+authors). Export (R16, `src/export/README.md`): the row menu's Download JSON / HTML (disabled for rows
+without content) and the unit-complete banner's Download unit JSON / HTML download from the export
+routes, and so does the header Export menu (Download unit JSON / HTML).

@@ -36,9 +36,7 @@ export default async function LessonViewPage({ params }: { params: Promise<{ id:
         <StatusPill status={lesson.status} />
         <span className="spacer" />
         <span className="caption hide-m">Read-only view</span>
-        {lesson.content ? (
-          <HtmlButton fileName={`${label.toLowerCase().replace(/\s+/g, '-')}.html`} title={label} />
-        ) : null}
+        {lesson.content ? <HtmlButton lessonId={lesson.id} /> : null}
         <Link className="btn sm primary" href={`/lessons/${lesson.id}`}>
           <Icon name="pencil" />
           Open editor
