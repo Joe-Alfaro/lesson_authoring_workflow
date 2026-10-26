@@ -1,5 +1,7 @@
 # Production image against a throwaway Postgres, as Railway runs it (npm run docker:smoke).
 # Own project name and host ports, so it never touches the dev database or other sessions.
+# The model is a fake Anthropic API on the host (scripts/docker_smoke_flow.ts), reached through
+# ANTHROPIC_BASE_URL with a fake key: the real adapter runs and no call can reach Anthropic.
 name: law_deploy_smoke
 
 x-app: &app
@@ -9,6 +11,26 @@ x-app: &app
     postgres: { condition: service_healthy }
   labels:
     ao.session: ${AO_SESSION_ID:-none}
+  extra_hosts: ['host.docker.internal:host-gateway']
+
+# The values .railway/railway.ts sets on web and worker.
+x-generation: &generation
+  ANTHROPIC_API_KEY: smoke-fake-key
+  ANTHROPIC_BASE_URL: http://host.docker.internal:${SMOKE_FAKE_LLM_PORT:-3923}
+  SPEND_CAP_USD: '3'
+  GENERATION_SPEND_CAP_USD: '1'
+  GENERATION_MODEL: claude-haiku-5-5
+  GENERATION_CONCURRENCY: '2'
+  GENERATION_MAX_ATTEMPTS: '2'
+  GENERATION_EFFORT: medium
+  GENERATION_HEARTBEAT_SECONDS: '60'
+  PGBOSS_POOL_MAX: '2'
+
+x-health: &health
+  test: ['CMD-SHELL', 'wget -qO- "http://127.0.0.1:$$PORT/health" > /dev/null']
+  interval: 2s
+  timeout: 3s
+  retries: 30
 
 services:
   postgres:
@@ -17,6 +39,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: lesson_authoring
+    # Published so the smoke run can count connections; not on Railway.
+    ports: ['${SMOKE_POSTGRES_PORT:-3924}:5432']
     labels:
       ao.session: ${AO_SESSION_ID:-none}
     healthcheck:
@@ -29,17 +53,16 @@ services:
     <<: *app
     ports: ['${SMOKE_WEB_PORT:-3920}:3000']
     environment:
+      <<: *generation
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/lesson_authoring
       PORT: '3000'
       AUTH_SECRET: ${SMOKE_AUTH_SECRET:?}
       SEED_PASSWORD: ${SMOKE_SEED_PASSWORD:?}
+      ASSIST_MODEL: claude-haiku-5-5
+      DB_POOL_MAX: '10'
       # What the browser connects to: the collab service's public URL.
       COLLAB_URL: ws://localhost:${SMOKE_COLLAB_PORT:-3921}
-    healthcheck: &health
-      test: ['CMD-SHELL', 'wget -qO- "http://127.0.0.1:$$PORT/health" > /dev/null']
-      interval: 2s
-      timeout: 3s
-      retries: 30
+    healthcheck: *health
 
   worker:
     <<: *app
@@ -47,12 +70,10 @@ services:
     # Private on Railway; published here only so the smoke test can read /health.
     ports: ['${SMOKE_WORKER_PORT:-3922}:4100']
     environment:
+      <<: *generation
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/lesson_authoring
       PORT: '4100'
-      # Empty key: the smoke test never calls the model.
-      ANTHROPIC_API_KEY: ''
-      SPEND_CAP_USD: '1'
-      GENERATION_MODEL: claude-haiku-5-5
+      DB_POOL_MAX: '5'
     healthcheck: *health
 
   collab:
@@ -62,5 +83,6 @@ services:
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/lesson_authoring
       PORT: '4200'
+      DB_POOL_MAX: '10'
       AUTH_SECRET: ${SMOKE_AUTH_SECRET:?}
     healthcheck: *health

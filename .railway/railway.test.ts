@@ -68,7 +68,14 @@ describe('.railway/railway.ts (R31)', () => {
     const web = variables(services.get('web'))
     expect(web.AUTH_SECRET).toEqual({ type: 'preserve' })
     expect(web.SEED_PASSWORD).toEqual({ type: 'preserve' })
-    expect(variables(services.get('worker')).ANTHROPIC_API_KEY).toEqual({ type: 'preserve' })
+    // AI assist runs in web; the worker reads the same key from web, so it is set once.
+    expect(web.ANTHROPIC_API_KEY).toEqual({ type: 'preserve' })
+    expect(variables(services.get('worker')).ANTHROPIC_API_KEY).toEqual({
+      type: 'reference',
+      resource: 'service.web',
+      output: 'ANTHROPIC_API_KEY',
+    })
+    expect(variables(services.get('collab')).ANTHROPIC_API_KEY).toBeUndefined()
     expect(variables(services.get('collab')).AUTH_SECRET).toEqual({
       type: 'reference',
       resource: 'service.web',
@@ -80,14 +87,41 @@ describe('.railway/railway.ts (R31)', () => {
     })
   })
 
-  it('gives web and worker the same spend cap (R12) and no model key to web', async () => {
+  it('gives web and worker the same spend cap (R12) and generation queue settings', async () => {
     const { services } = await compile()
     const web = variables(services.get('web'))
     const worker = variables(services.get('worker'))
-    for (const name of ['SPEND_CAP_USD', 'GENERATION_SPEND_CAP_USD', 'GENERATION_MODEL']) {
+    // Both create the generation queue, so its heartbeat must match or they keep changing it.
+    for (const name of [
+      'SPEND_CAP_USD',
+      'GENERATION_SPEND_CAP_USD',
+      'GENERATION_MODEL',
+      'GENERATION_HEARTBEAT_SECONDS',
+    ]) {
       expect(web[name]).toMatchObject({ type: 'literal' })
       expect(worker[name]).toEqual(web[name])
     }
-    expect(web.ANTHROPIC_API_KEY).toBeUndefined()
+    expect(web.ASSIST_MODEL).toMatchObject({ type: 'literal' })
+    expect(variables(services.get('collab')).SPEND_CAP_USD).toBeUndefined()
+  })
+
+  it('sizes every pool so the services fit well inside Postgres max_connections', async () => {
+    const { services } = await compile()
+    const size = (service: string, name: string): number => {
+      const value = variables(services.get(service))[name]
+      return value?.type === 'literal' ? Number(value.value) : NaN
+    }
+    // web: app pool + 1 LISTEN + pg-boss; worker: app pool + pg-boss; collab: app pool + 1 LISTEN.
+    const total =
+      size('web', 'DB_POOL_MAX') +
+      1 +
+      size('web', 'PGBOSS_POOL_MAX') +
+      size('worker', 'DB_POOL_MAX') +
+      size('worker', 'PGBOSS_POOL_MAX') +
+      size('collab', 'DB_POOL_MAX') +
+      1
+    // Plus a migrate or seed run (web's pool) beside them, under Railway Postgres's default 100.
+    expect(total + size('web', 'DB_POOL_MAX')).toBeLessThanOrEqual(60)
+    expect(variables(services.get('collab')).PGBOSS_POOL_MAX).toBeUndefined()
   })
 })

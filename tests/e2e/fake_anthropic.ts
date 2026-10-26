@@ -56,7 +56,18 @@ function sse(response: ServerResponse, event: string, data: unknown) {
   response.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
 }
 
-export async function startFakeAnthropic(port: number): Promise<{ stop(): Promise<void> }> {
+export interface FakeAnthropicOptions {
+  /**
+   * Answers a request that has nothing queued; without it such a request gets the 400 above. The
+   * Docker smoke run (scripts/docker_smoke_flow.ts) uses it to write lessons from the prompt.
+   */
+  answer?: (request: FakeRequest) => FakeResponse
+}
+
+export async function startFakeAnthropic(
+  port: number,
+  options: FakeAnthropicOptions = {},
+): Promise<{ stop(): Promise<void> }> {
   let queue: FakeResponse[] = []
   let requests: FakeRequest[] = []
   let counter = 0
@@ -68,13 +79,14 @@ export async function startFakeAnthropic(port: number): Promise<{ stop(): Promis
       messages?: { content: unknown }[]
       stream?: boolean
     }
-    requests.push({
+    const received: FakeRequest = {
       model: body.model,
       system: textOf(body.system),
       prompt: (body.messages ?? []).map((message) => textOf(message.content)).join('\n'),
       receivedAt: new Date().toISOString(),
-    })
-    const next = queue.shift()
+    }
+    requests.push(received)
+    const next = queue.shift() ?? options.answer?.(received)
     if (!next) {
       sendJson(response, 400, {
         type: 'error',
