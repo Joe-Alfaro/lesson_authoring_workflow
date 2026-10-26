@@ -228,3 +228,14 @@ through, in one labelled `Current text` (one of each per changed field).
   `R20-ai-instruction`, `R21-regenerate-section`, `R21-section-preview`, `R22-alignment-check`,
   `R23-workflow-states-<status>-<role>`, `R23-request-changes`, `R23-approved-locked-live`,
   `R23-history`, `R14-version-history-changes`, `R14-version-diff`.
+
+## Implementation notes (M4, D-047)
+
+- Live status reaches open editors through `GET /api/lessons/[id]/events` (SSE, `{ type: 'status',
+status }` on each `lesson_status_changed` for that lesson); the collab server still enforces the
+  lock itself.
+- Editor previews are decorations in `src/ui/editor/assist_plugin.ts`; the toolbar, cards and the
+  section proposal are in `src/ui/editor/assist_layer.tsx`; the version diff is
+  `src/ui/editor/version_diff.ts`.
+- Shift+Home / Shift+End select to the start / end of the current field (keyboard selection
+  before `Alt+/`).

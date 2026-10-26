@@ -3,7 +3,7 @@
 // global SPEND_CAP_USD, roles and the approved/generating lock. Contract: src/assist/README.md.
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { eq, sql } from 'drizzle-orm'
+import { eq, inArray, sql } from 'drizzle-orm'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { connectTestDb } from '../../tests/db'
 import {
@@ -117,13 +117,29 @@ function allIds(lesson: Lesson): string[] {
 describe('AI assist service', () => {
   const { pool, db } = connectTestDb()
   let people: FixtureUsers
+  // Rows of these codes as earlier files left them (e.g. fixture text), restored in afterAll.
+  let previousStandards: (typeof standards.$inferSelect)[] = []
 
   beforeAll(async () => {
     await runMigrations(pool)
+    const records = standardRecords()
+    previousStandards = await db
+      .select()
+      .from(standards)
+      .where(
+        inArray(
+          standards.code,
+          records.map((r) => r.code),
+        ),
+      )
+    // Earlier files may have loaded fixture standards under the same codes: use the real text.
     await db
       .insert(standards)
-      .values(standardRecords().map((r) => ({ ...r, grade: 6 })))
-      .onConflictDoNothing()
+      .values(records.map((r) => ({ ...r, grade: 6 })))
+      .onConflictDoUpdate({
+        target: standards.code,
+        set: { text: sql`excluded.text`, strand: sql`excluded.strand` },
+      })
   })
   beforeEach(async () => {
     await cleanWorkflowData(db)
@@ -133,6 +149,12 @@ describe('AI assist service', () => {
   afterAll(async () => {
     await db.execute(sql`DELETE FROM assist_calls`)
     await cleanWorkflowData(db)
+    // Leave the standards as this file found them, so nothing leaks into later files.
+    const codes = standardRecords().map((r) => r.code)
+    await db.delete(standards).where(inArray(standards.code, codes))
+    if (previousStandards.length > 0) {
+      await db.insert(standards).values(previousStandards)
+    }
     await pool.end()
   })
 

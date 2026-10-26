@@ -3,6 +3,7 @@ import { and, desc, eq, sql } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { lessonVersions, lessons, users } from '../db/schema'
 import { isUuid } from '../import/is_uuid'
+import { LessonContent } from '../lesson/schema'
 import { LessonLockedError, VersionNotFoundError } from './errors'
 import { notifyContentReplaced } from './lesson_events'
 import {
@@ -12,12 +13,18 @@ import {
   lockLesson,
   snapshotIfChanged,
 } from './lesson_rows'
+import { changedAreas } from './version_changes'
 
 export interface VersionSummary {
   id: string
   createdAt: Date
   /** Null when generation wrote the version. */
   author: { id: string; name: string } | null
+}
+
+export interface VersionListItem extends VersionSummary {
+  /** Areas changed since the previous (older) version (R14); [] for the oldest. */
+  changes: string[]
 }
 
 export interface LessonVersion extends VersionSummary {
@@ -69,16 +76,22 @@ export async function saveLessonContent(
   })
 }
 
-/** Versions newest first, without content (R14). */
-export async function listVersions(db: Database, lessonId: string): Promise<VersionSummary[]> {
+/** Versions newest first, without content, each with what it changed (R14). */
+export async function listVersions(db: Database, lessonId: string): Promise<VersionListItem[]> {
   await assertLessonExists(db, lessonId)
   const rows = await db
-    .select(summaryColumns)
+    .select({ ...summaryColumns, content: lessonVersions.content })
     .from(lessonVersions)
     .leftJoin(users, eq(users.id, lessonVersions.authorId))
     .where(eq(lessonVersions.lessonId, lessonId))
     .orderBy(desc(lessonVersions.createdAt))
-  return rows.map(toSummary)
+  const contents = rows.map((row) => LessonContent.safeParse(row.content))
+  return rows.map((row, index) => {
+    const after = contents[index]!
+    const before = contents[index + 1]
+    const changes = after.success && before?.success ? changedAreas(before.data, after.data) : []
+    return { ...toSummary(row), changes }
+  })
 }
 
 /** One version with its content, or null when it is unknown or belongs to another lesson. */

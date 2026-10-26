@@ -43,6 +43,8 @@ export interface EditorViewContext {
   removePart(partId: string): void
   addBlock(afterBlockId: string, type: Block['type']): void
   removeBlock(blockId: string): void
+  /** R21: present only when this user may use AI assist on this lesson. */
+  regenerateSection?: (sectionId: string, kind: Section['kind']) => void
 }
 
 type Json = Record<string, unknown>
@@ -718,6 +720,15 @@ function sectionView(node: PmNode, where: Where, ctx: EditorViewContext): NodeVi
     h('h2', undefined, SECTION_NAMES[kind] ?? kind),
     h('span', 'mins', minutesLabel(Number(data.minutes ?? 0))),
   )
+  const regenerate = ctx.regenerateSection
+  if (ctx.editable && regenerate) {
+    const sectionId = String(node.attrs.id)
+    const ai = button('btn quiet sm sec-regen', '', () => regenerate(sectionId, kind))
+    ai.append(icon('sparkle'), document.createTextNode('Regenerate'))
+    ai.setAttribute('aria-label', `Regenerate ${SECTION_NAMES[kind] ?? kind} with AI`)
+    head.append(ai)
+  }
+  dom.dataset.sectionId = String(node.attrs.id)
   dom.append(head)
   const content = h('div', 'sec-body')
   dom.append(content)

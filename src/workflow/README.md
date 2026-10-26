@@ -80,7 +80,7 @@ assertLessonEditable(db, lessonId) -> void // throws LessonLockedError when appr
 ```ts
 type VersionSummary = { id; createdAt: Date; author: { id; name } | null } // null = generated
 saveLessonContent(db, { lessonId, userId, content }) -> { versionId }
-listVersions(db, lessonId) -> VersionSummary[] // newest first, no content
+listVersions(db, lessonId) -> (VersionSummary & { changes: string[] })[] // newest first, no content (R14 changes: src/assist/README.md)
 getVersion(db, { lessonId, versionId }) -> (VersionSummary & { lessonId; content }) | null
 restoreVersion(db, { lessonId, versionId, userId }) -> { versionId } // the new version
 ```

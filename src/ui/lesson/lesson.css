@@ -1394,3 +1394,206 @@ ul.chips,
   font-style: normal;
   pointer-events: none;
 }
+
+/* ---------- AI assist (R20, R21, R22) ---------- */
+.docwrap {
+  position: relative;
+}
+.ai-mark {
+  color: var(--sec-action);
+  display: inline-grid;
+  place-items: center;
+}
+.ai-toolbar {
+  white-space: nowrap;
+}
+.ai-ask {
+  width: 560px;
+  max-width: calc(100% - 16px);
+  padding: 8px;
+  gap: 8px;
+}
+.ai-ask .ai-mark {
+  width: 28px;
+}
+.ai-ask .input {
+  flex: 1;
+  height: 36px;
+  font-size: 15px;
+}
+.ai-card-host {
+  margin: 10px 0 4px 108px;
+}
+.ai-card {
+  padding: 14px 16px;
+  max-width: 600px;
+  font: 14px/20px var(--ui);
+}
+.ai-card .row {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ai-card .progress {
+  margin-top: 10px;
+}
+.ai-card .caption {
+  margin-top: 0;
+}
+.ai-card > .caption {
+  margin-top: 8px;
+}
+.ai-actions {
+  margin-top: 12px;
+}
+.ai-hint {
+  max-width: 250px;
+}
+.ai-hidden {
+  display: none;
+}
+.ai-diff .del,
+.ai-diff .ins {
+  border-radius: 2px;
+}
+.ai-error {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  width: min(620px, calc(100vw - 32px));
+  box-shadow: var(--float);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ins {
+    animation: ai-settle 0.6s ease-out;
+  }
+}
+@keyframes ai-settle {
+  from {
+    background: #b8e6c6;
+  }
+}
+
+/* section heading: Regenerate (R21) */
+.sec-regen {
+  margin-left: 8px;
+  align-self: center;
+}
+.sec-h .sec-regen .ico {
+  color: var(--sec-action);
+}
+
+/* proposed section in place (R21-section-preview) */
+.ai-proposal {
+  margin-bottom: 12px;
+}
+.ai-proposal .ai-actions {
+  margin-top: 10px;
+  gap: 8px;
+}
+.sec.ai-proposing:not(.show-current) > .sec-body > :not(.ai-proposal-host),
+.sec.ai-proposing:not(.show-current) > .add-part {
+  display: none;
+}
+.sec.ai-proposing .sec-regen {
+  display: none;
+}
+.proposal-doc .lesson-body > :not(.sec),
+.proposal-doc .sec.homework,
+.proposal-doc .sec-h,
+.proposal-doc .pacing-widget {
+  display: none;
+}
+.proposal-doc .sec {
+  margin: 0;
+  padding: 0;
+}
+.prop .blk,
+.prop .routine,
+.prop .part-h {
+  background: #eef9f2;
+  box-shadow:
+    -14px 0 0 #eef9f2,
+    14px 0 0 #eef9f2;
+}
+.prop .box {
+  background: #eef9f2;
+}
+
+/* alignment panel (R22-alignment-check) */
+.align-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+}
+.align-list > li {
+  padding: 14px 0;
+  border-top: 1px solid var(--rule);
+}
+.align-list .std-text {
+  margin-top: 4px;
+  font: 13px/18px var(--read);
+  color: var(--ink-2);
+}
+.align-list .reason {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.align-list .chips {
+  margin-top: 8px;
+}
+.ev-chip {
+  font-weight: 400;
+  text-decoration: none;
+  color: var(--ink);
+}
+.ev-chip:hover {
+  border-color: var(--ink-2);
+}
+.align-progress {
+  margin-top: 16px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .jump-flash {
+    animation: jump-flash 1.6s ease-out;
+  }
+}
+@keyframes jump-flash {
+  from {
+    background: var(--select);
+  }
+}
+
+/* versions: what changed, Current (R14) */
+.version .row {
+  gap: 8px;
+  align-items: baseline;
+}
+.current-tag {
+  color: var(--ink-2);
+}
+.diff-field > .c,
+.diff-field > .field,
+.diff-field .field,
+li.diff-field,
+.diff-field.prose,
+.diff-field > .prose {
+  background: #dcf2e3;
+  color: #0f4424;
+  text-decoration: underline;
+  text-decoration-color: #4caf72;
+  text-underline-offset: 3px;
+}
+.diff-current {
+  margin-right: 2px;
+}
+
+/* history (R23-history) */
+.side blockquote.note {
+  margin: 6px 0 0;
+}
+.opt {
+  font-weight: 400;
+}

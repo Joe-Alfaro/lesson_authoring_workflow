@@ -272,7 +272,7 @@ test.describe('Selection actions (R20)', () => {
     await fakeLlm.respond({ output: { text: SUGGESTION } })
     await selectParagraph(page, SAY_TEXT)
     await selectionToolbar(page).getByRole('button', { name: 'Rewrite' }).click()
-    await expect(page.getByRole('alert')).toContainText(
+    await expect(page.getByRole('main').getByRole('alert')).toContainText(
       `AI budget used up: $${E2E_SPEND_CAP_USD.toFixed(2)} of the $${E2E_SPEND_CAP_USD.toFixed(2)} spend cap is spent. Ask an admin to raise SPEND_CAP_USD.`,
     )
     await expect(suggestionCard(page)).toHaveCount(0)
@@ -471,7 +471,7 @@ test.describe('Standards alignment check (R22)', () => {
       'Students cite what the narrator says at two pause points.',
     )
     await expect(items.nth(0).getByRole('link', { name: /Pulse check/ })).toBeVisible()
-    await expect(items.nth(0).getByRole('link', { name: 'Part A' })).toBeVisible()
+    await expect(items.nth(0).getByRole('link', { name: 'Part A', exact: true })).toBeVisible()
     await expect(items.nth(1)).toContainText('RL.6.2')
     await expect(items.nth(1)).toContainText(standardText('RL.6.2'))
     await expect(items.nth(1)).toContainText('Missing')

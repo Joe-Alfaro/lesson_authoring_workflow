@@ -3,7 +3,7 @@
 import { and, asc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 import type { PgBoss } from 'pg-boss'
 import type { Database } from '../db/client'
-import { generationJobs, generationRuns, lessons, promptVersions } from '../db/schema'
+import { assistCalls, generationJobs, generationRuns, lessons, promptVersions } from '../db/schema'
 import { estimateCostUsd, MODEL_PRICES, priceFor, type PriceTable } from './llm'
 import { notifyLessonProgressAll, runStatusLabel } from './progress'
 import { getCurrentPromptVersion } from './prompt_versions'
@@ -53,12 +53,15 @@ export class NotFoundError extends Error {
   }
 }
 
-/** Total LLM spend across all runs (D-024 global cap). */
+/** Total LLM spend: every generation run plus every AI assist call (D-024, D-046 global cap). */
 export async function getTotalSpendUsd(db: Pick<Database, 'select'>): Promise<number> {
-  const [row] = await db
+  const [runs] = await db
     .select({ total: sql<string>`coalesce(sum(${generationRuns.costUsd}), 0)` })
     .from(generationRuns)
-  return Number(row?.total ?? 0)
+  const [assist] = await db
+    .select({ total: sql<string>`coalesce(sum(${assistCalls.costUsd}), 0)` })
+    .from(assistCalls)
+  return Number(runs?.total ?? 0) + Number(assist?.total ?? 0)
 }
 
 /** Average measured cost of this unit's generated lessons on `model`, or null if none (D-024). */

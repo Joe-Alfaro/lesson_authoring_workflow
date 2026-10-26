@@ -13,6 +13,8 @@ export interface LessonPageData {
   id: string
   unitId: string
   unitNumber: number
+  /** The unit's grade ("Simplify for grade 6", R20). */
+  grade: number
   number: number | null
   status: LessonStatus
   /** Null until the lesson is generated (or when stored content no longer validates). */
@@ -41,6 +43,7 @@ export async function loadLessonPage(
       id: lessons.id,
       unitId: lessons.unitId,
       unitNumber: units.unitNumber,
+      grade: units.grade,
       number: lessons.lessonNumber,
       status: lessons.status,
       content: lessons.content,
@@ -64,6 +67,7 @@ export async function loadLessonPage(
     id: row.id,
     unitId: row.unitId,
     unitNumber: row.unitNumber,
+    grade: row.grade,
     number: row.number,
     status: row.status,
     content: parsed.success ? parsed.data : null,

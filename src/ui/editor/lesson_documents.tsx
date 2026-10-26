@@ -16,6 +16,7 @@ import { CaretLabels, renderCaret } from './caret_labels'
 import { userColour } from './collab'
 import { lessonNodeViews, type EditorViewContext } from './node_views'
 import { PacingWidget } from './pacing'
+import { VersionDiff } from './version_diff'
 
 function attributes(label: string, editable: boolean): Record<string, string> {
   // Tiptap adds role="textbox" unless told otherwise; a locked lesson is a document, not a field.
@@ -80,19 +81,28 @@ export function LiveDocument({
 export function PreviewDocument({
   content,
   ctx,
+  diffAgainst,
+  className = 'lesson-pm',
 }: {
   content: JSONContent
   ctx: EditorViewContext
+  /** Current field texts (R14): fields that differ are highlighted. */
+  diffAgainst?: Map<string, string>
+  className?: string
 }) {
   const editor = useEditor(
     {
       immediatelyRender: false,
       editable: false,
       content,
-      extensions: [...lessonEditorExtensions(lessonNodeViews(ctx)), PacingWidget],
-      editorProps: { attributes: { class: 'lesson-pm', role: 'document' } },
+      extensions: [
+        ...lessonEditorExtensions(lessonNodeViews(ctx)),
+        PacingWidget,
+        ...(diffAgainst ? [VersionDiff(diffAgainst)] : []),
+      ],
+      editorProps: { attributes: { class: className, role: 'document' } },
     },
-    [content],
+    [content, diffAgainst],
   )
   return <EditorContent editor={editor} />
 }

@@ -1,5 +1,5 @@
 // Display names for lesson schema values (editor, lesson view, export).
-import type { LessonType, Section } from './schema'
+import type { Block, LessonType, Section } from './schema'
 
 export type SectionKind = Section['kind']
 
@@ -64,4 +64,26 @@ export function lessonLabel(number: number | null): string {
 
 export function minutesLabel(minutes: number): string {
   return `${minutes} min`
+}
+
+/** A block's visible label in the editor gutter or box title (R22 evidence chips). */
+export const BLOCK_LABELS: Record<Block['type'], string> = {
+  routine: 'Routine',
+  teach: 'Teach',
+  paragraph: 'Teacher',
+  say: 'Say',
+  directions: 'Directions',
+  ask: 'Ask',
+  connection: 'Connection',
+  display: 'Display',
+  list: 'List',
+  table: 'Table',
+  teacher_tip: 'Teacher tip',
+  sentence_starter: 'Starter',
+  pulse_check: 'Pulse check',
+  check_for_understanding: 'Check for understanding',
+  reflection: 'Reflection',
+  eld_instructions: 'Integrated ELD instructions',
+  student_support: 'Additional student support',
+  rubric: 'Rubric',
 }

@@ -35,6 +35,11 @@ export const ICON_PATHS = {
   download: '<path d="M8 2.5v8M4.8 7.5L8 10.7l3.2-3.2"/><path d="M2.5 11v2.5h11V11"/>',
   dot: '<circle cx="8" cy="8" r="5.5"/>',
   pen: '<path d="M3 13l2.5-.5L13 5l-2-2-7.5 7.5z"/><path d="M9 13h4"/>',
+  sparkle:
+    '<path d="M8 1.8l1.3 3.6 3.6 1.3-3.6 1.3L8 11.6 6.7 8 3.1 6.7l3.6-1.3z"/><path d="M12.6 11.2l.5 1.3 1.3.5-1.3.5-.5 1.3-.5-1.3-1.3-.5 1.3-.5z"/>',
+  close: '<path d="M4 4l8 8M12 4l-8 8"/>',
+  refresh:
+    '<path d="M13.2 6.5A5.5 5.5 0 003.3 5"/><path d="M2.8 9.5a5.5 5.5 0 009.9 1.5"/><path d="M3 2.3V5h2.7M13 13.7V11h-2.7"/>',
   warning: '<path d="M8 2l6.3 11.3H1.7z"/><path d="M8 6.3v3.2M8 11.4v.1"/>',
 } as const
 

@@ -312,6 +312,24 @@ export const yjsDocuments = pgTable('yjs_documents', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+/** One row per AI assist model call, retries included (R20-R22); counts in SPEND_CAP_USD. */
+export const assistCalls = pgTable(
+  'assist_calls',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // Spend stays counted after its lesson or user is deleted.
+    lessonId: uuid('lesson_id').references(() => lessons.id, { onDelete: 'set null' }),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    kind: text('kind').notNull(),
+    model: text('model').notNull(),
+    tokensIn: integer('tokens_in').notNull(),
+    tokensOut: integer('tokens_out').notNull(),
+    costUsd: usd('cost_usd').notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [index('assist_calls_lesson_idx').on(table.lessonId, table.createdAt)],
+)
+
 export type Role = (typeof userRole.enumValues)[number]
 export type LessonStatus = (typeof lessonStatus.enumValues)[number]
 export type StandardFramework = (typeof standardFramework.enumValues)[number]

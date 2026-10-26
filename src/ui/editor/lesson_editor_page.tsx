@@ -1,7 +1,8 @@
 'use client'
-// The lesson editor page (R14, R15, R17, R18, R23 lock; mockups R17-lesson-editor,
-// R15-standard-picker, R14-version-history, R14-restore-confirm, R23-approved-locked).
-// AI assist (R20-R22) plugs in later through `assistSlot` in the lesson bar and new side panel tabs.
+// The lesson editor page (R14, R15, R17, R18, R23; mockups R17-lesson-editor,
+// R15-standard-picker, R14-version-history, R14-restore-confirm, R23-workflow-states,
+// R23-request-changes, R23-history, R23-approved-locked) with AI assist (R20-R22: assist_layer.tsx,
+// the Alignment tab and the lesson bar's `assistSlot`).
 import type { Editor, JSONContent } from '@tiptap/core'
 import type { Command } from '@tiptap/pm/state'
 import Link from 'next/link'
@@ -36,14 +37,25 @@ import { useLessonCollab, type SaveState } from './collab'
 import { formatShort, formatWhen } from './format_time'
 import { LiveDocument, PreviewDocument } from './lesson_documents'
 import type { EditorViewContext } from './node_views'
+import { AssistLayer, type AssistLayerHandle } from './assist_layer'
+import { RequestChangesDialog } from './request_changes_dialog'
 import { RestoreDialog } from './restore_dialog'
-import { SidePanel, type HistoryItem, type PanelTab, type VersionItem } from './side_panel'
+import {
+  SidePanel,
+  type AlignmentResult,
+  type AlignmentState,
+  type HistoryItem,
+  type PanelTab,
+  type VersionItem,
+} from './side_panel'
+import { fieldTexts } from './version_diff'
 import { StandardPicker, type PickerTarget } from './standard_picker'
 
 export interface EditorLesson {
   id: string
   unitId: string
   unitNumber: number
+  grade: number
   number: number | null
   status: LessonStatus
   content: LessonContent
@@ -61,8 +73,38 @@ export interface EditorUser {
 const ACTION_LABELS: Partial<Record<WorkflowAction, string>> = {
   submit: 'Submit for review',
   resubmit: 'Resubmit for review',
+  request_changes: 'Request changes',
   approve: 'Approve lesson',
   reopen: 'Reopen for edits',
+}
+
+/** AI assist (R20-R22) is for reviewers and above on an editable lesson. */
+const ASSIST_ROLES: Role[] = ['reviewer', 'approver', 'admin']
+
+/** Live status (R23): the lesson's status as it changes, from the SSE feed. */
+function useLiveStatus(lessonId: string, initial: LessonStatus, onChange: () => void) {
+  const [status, setStatus] = useState(initial)
+  // A server refresh brings a newer status in props; it wins over the last pushed one.
+  const [fromServer, setFromServer] = useState(initial)
+  if (fromServer !== initial) {
+    setFromServer(initial)
+    setStatus(initial)
+  }
+  const changed = useRef(onChange)
+  useEffect(() => {
+    changed.current = onChange
+  }, [onChange])
+  useEffect(() => {
+    const source = new EventSource(`/api/lessons/${lessonId}/events`)
+    source.onmessage = (event) => {
+      const message = JSON.parse(String(event.data)) as { type?: string; status?: LessonStatus }
+      if (message.type !== 'status' || !message.status) return
+      setStatus(message.status)
+      changed.current()
+    }
+    return () => source.close()
+  }, [lessonId])
+  return [status, setStatus] as const
 }
 
 /** Actions that save a version of the latest edits first (D-024), so the editor flushes. */
@@ -227,26 +269,48 @@ export function LessonEditorPage({
   user: EditorUser
   collabUrl: string
   standards: StandardRef[]
-  /** Extension point for the AI assist toolbar (R20-R22, next milestone). */
+  /** Extension point in the lesson bar, after the AI assist button (Comments, R26). */
   assistSlot?: ReactNode
 }) {
   const router = useRouter()
   const label = lessonLabel(lesson.number)
-  const editable = isEditableStatus(lesson.status)
+  const [panel, setPanel] = useState<PanelTab | null>(null)
+  const panelRef = useRef<PanelTab | null>(null)
+  panelRef.current = panel
+  const onStatusChange = useCallback(() => {
+    // Approval details and the assignee come from the server; panels refresh their lists.
+    router.refresh()
+    if (panelRef.current === 'history') void loadHistoryRef.current()
+    if (panelRef.current === 'versions') void loadVersionsRef.current()
+  }, [router])
+  const [status, setStatus] = useLiveStatus(lesson.id, lesson.status, onStatusChange)
+  const editable = isEditableStatus(status)
+  const canAssist = editable && ASSIST_ROLES.includes(user.role)
   const collabUser = useMemo(() => ({ id: user.id, name: user.name }), [user.id, user.name])
   const collab = useLessonCollab(lesson.id, collabUrl, collabUser)
   const [editor, setEditor] = useState<Editor | null>(null)
   const [outline, setOutline] = useState(() => outlineOf(null, lesson.content))
-  const [panel, setPanel] = useState<PanelTab | null>(null)
   const [versions, setVersions] = useState<VersionItem[] | null>(null)
   const [history, setHistory] = useState<HistoryItem[] | null>(null)
-  const [preview, setPreview] = useState<{ version: VersionItem; doc: JSONContent } | null>(null)
+  const [preview, setPreview] = useState<{
+    version: VersionItem
+    doc: JSONContent
+    current: Map<string, string>
+  } | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [restoreBusy, setRestoreBusy] = useState(false)
   const [restoreError, setRestoreError] = useState<string | null>(null)
   const [picker, setPicker] = useState<PickerTarget | null>(null)
   const [actionBusy, setActionBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [requesting, setRequesting] = useState(false)
+  const [alignment, setAlignment] = useState<AlignmentState>({
+    result: null,
+    busy: false,
+    error: null,
+  })
+  const assistRef = useRef<AssistLayerHandle | null>(null)
+  const [docwrap, setDocwrap] = useState<HTMLElement | null>(null)
 
   useEffect(() => setStandardReference(standards), [standards])
 
@@ -283,10 +347,16 @@ export function LessonEditorPage({
       removePart: (partId) => run(removePart(partId)),
       addBlock: (after, type) => run(addBlock(after, type)),
       removeBlock: (blockId) => run(removeBlock(blockId)),
+      regenerateSection: canAssist
+        ? (sectionId, kind) => assistRef.current?.regenerateSection(sectionId, kind)
+        : undefined,
     }),
-    [editable, label, lesson.unitNumber, run],
+    [canAssist, editable, label, lesson.unitNumber, run],
   )
-  const previewCtx = useMemo<EditorViewContext>(() => ({ ...ctx, editable: false }), [ctx])
+  const previewCtx = useMemo<EditorViewContext>(
+    () => ({ ...ctx, editable: false, regenerateSection: undefined }),
+    [ctx],
+  )
 
   useEffect(() => {
     if (!editor) return
@@ -315,17 +385,51 @@ export function LessonEditorPage({
     setHistory(body.events)
   }, [lesson.id])
 
+  const loadVersionsRef = useRef(loadVersions)
+  const loadHistoryRef = useRef(loadHistory)
+  useEffect(() => {
+    loadVersionsRef.current = () => loadVersions().catch(() => undefined)
+    loadHistoryRef.current = () => loadHistory().catch(() => undefined)
+  }, [loadVersions, loadHistory])
+
+  const checkAlignment = useCallback(async () => {
+    setAlignment((current) => ({ ...current, busy: true, error: null }))
+    try {
+      const response = await fetch(`/api/lessons/${lesson.id}/assist/alignment`, {
+        method: 'POST',
+      })
+      const result = await readJson<AlignmentResult>(response)
+      setAlignment({ result, busy: false, error: null })
+    } catch (error) {
+      setAlignment((current) => ({ ...current, busy: false, error: (error as Error).message }))
+    }
+  }, [lesson.id])
+
   function showPanel(tab: PanelTab | null) {
     setPanel(tab)
     if (tab === 'versions') void loadVersions().catch(() => setVersions([]))
     if (tab === 'history') void loadHistory().catch(() => setHistory([]))
   }
 
+  function openAlignment() {
+    if (panel === 'alignment') {
+      setPanel(null)
+      return
+    }
+    setPanel('alignment')
+    // The check runs when the panel opens (R22).
+    void checkAlignment()
+  }
+
   async function openVersion(version: VersionItem) {
     const body = await readJson<{ content: LessonContent }>(
       await fetch(`/api/lessons/${lesson.id}/versions/${version.id}`, { cache: 'no-store' }),
     )
-    setPreview({ version, doc: lessonToDoc(body.content) })
+    // R14: compare with the lesson as it is now in this editor.
+    const current = new Map<string, string>()
+    const live = editorRef.current
+    if (live) fieldTexts(live.state.doc).forEach((field, key) => current.set(key, field.text))
+    setPreview({ version, doc: lessonToDoc(body.content), current })
     window.scrollTo({ top: 0 })
   }
 
@@ -351,30 +455,35 @@ export function LessonEditorPage({
     }
   }
 
-  async function takeAction(action: WorkflowAction) {
+  async function takeAction(action: WorkflowAction, note?: string): Promise<boolean> {
     setActionBusy(true)
     setActionError(null)
     try {
       if (FLUSH_FIRST.includes(action)) await collab.flush()
-      await readJson(
+      const body = await readJson<{ status: LessonStatus }>(
         await fetch(`/api/lessons/${lesson.id}/transitions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action }),
+          body: JSON.stringify({ action, note }),
         }),
       )
-      router.refresh()
+      setStatus(body.status)
+      onStatusChange()
+      return true
     } catch (error) {
       setActionError((error as Error).message)
+      return false
     } finally {
       setActionBusy(false)
     }
   }
 
-  const actions = availableActions(lesson.status, user.role).filter(
-    (action) => ACTION_LABELS[action],
-  )
-  const reviewerLocked = lesson.status === 'approved' && actions.length === 0
+  const actions = availableActions(status, user.role).filter((action) => ACTION_LABELS[action])
+  const reviewerLocked = status === 'approved' && actions.length === 0
+  const panelTabs: PanelTab[] = canAssist
+    ? ['alignment', 'history', 'versions']
+    : ['history', 'versions']
+  const shownPanel = panel === 'alignment' && !canAssist ? null : panel
   const initialDoc = useMemo(() => lessonToDoc(lesson.content), [lesson.content])
 
   return (
@@ -387,7 +496,7 @@ export function LessonEditorPage({
           /
         </span>
         <span className="t">{label}</span>
-        <StatusPill status={lesson.status} />
+        <StatusPill status={status} />
         {lesson.assignee ? (
           <span className="row caption assigned">
             Assigned to
@@ -399,21 +508,36 @@ export function LessonEditorPage({
         ) : null}
         {lesson.provenance ? <span className="caption">{lesson.provenance}</span> : null}
         <span className="spacer" />
-        {assistSlot}
         <Presence names={collab.others} />
         <span className="caption row save-state" aria-live="polite">
-          <Icon name={editable ? 'cloud' : 'lock'} />
-          {editable ? SAVE_LABELS[collab.saveState] : 'Locked'}
+          <Icon name={editable ? 'cloud' : status === 'generating' ? 'cloud' : 'lock'} />
+          {editable
+            ? SAVE_LABELS[collab.saveState]
+            : status === 'generating'
+              ? 'Generating sections'
+              : 'Locked'}
         </span>
         <button
           type="button"
-          className={`btn quiet sm${panel === 'versions' ? ' on' : ''}`}
+          className={`btn quiet sm${panel === 'versions' || panel === 'history' ? ' on' : ''}`}
           aria-label="Version history"
           aria-pressed={panel === 'versions'}
           onClick={() => showPanel(panel === 'versions' ? null : 'versions')}
         >
           <Icon name="history" />
         </button>
+        {canAssist ? (
+          <button
+            type="button"
+            className={`btn quiet sm${shownPanel === 'alignment' ? ' on' : ''}`}
+            aria-label="Alignment check"
+            aria-pressed={shownPanel === 'alignment'}
+            onClick={openAlignment}
+          >
+            <Icon name="target" />
+          </button>
+        ) : null}
+        {assistSlot}
         <Link className="btn sm" href={`/lessons/${lesson.id}/view`}>
           <Icon name="eye" />
           Lesson view
@@ -421,37 +545,48 @@ export function LessonEditorPage({
         {reviewerLocked ? (
           <span className="caption locked-hint">Locked. Ask an approver to reopen.</span>
         ) : null}
-        {lesson.status === 'in_review' && actions.length === 0 ? (
+        {status === 'in_review' && actions.length === 0 && user.role !== 'author' ? (
           <span className="caption">Waiting for an approver</span>
+        ) : null}
+        {status === 'generating' ? (
+          <span className="caption">Opens for editing when generation finishes</span>
         ) : null}
         {actions.map((action) => (
           <button
             key={action}
             type="button"
-            className={action === 'reopen' ? 'btn' : 'btn primary'}
+            className={action === 'reopen' || action === 'request_changes' ? 'btn' : 'btn primary'}
             disabled={actionBusy}
-            onClick={() => void takeAction(action)}
+            onClick={() => {
+              if (action === 'request_changes') {
+                setActionError(null)
+                setRequesting(true)
+                return
+              }
+              void takeAction(action)
+            }}
           >
+            {action === 'approve' ? <Icon name="check" /> : null}
             {ACTION_LABELS[action]}
           </button>
         ))}
       </div>
-      {actionError ? (
+      {actionError && !requesting ? (
         <p className="notice err action-error" role="alert">
           {actionError}
         </p>
       ) : null}
 
       <div
-        className={`workspace${panel ? '' : ' no-side'}${editable && !preview ? '' : ' locked'}`}
+        className={`workspace${shownPanel ? '' : ' no-side'}${editable && !preview ? '' : ' locked'}`}
       >
         <Rail outline={outline} homework={lesson.content.body.homework !== null} />
-        <main className="docwrap">
+        <main className="docwrap" ref={setDocwrap}>
           {!editable ? (
             <div className="notice info lock-notice" role="status">
               <Icon name="lock" />
               <div>
-                {lesson.status === 'approved' ? (
+                {status === 'approved' ? (
                   <>
                     <b>This lesson is approved, so editing is locked.</b>{' '}
                     {lesson.approval
@@ -461,8 +596,8 @@ export function LessonEditorPage({
                   </>
                 ) : (
                   <>
-                    <b>This lesson is being generated, so editing is locked.</b> It opens for
-                    editing when generation finishes.
+                    <b>This lesson is being generated, so editing is locked.</b> You can edit it as
+                    soon as the new content is ready.
                   </>
                 )}
               </div>
@@ -476,7 +611,7 @@ export function LessonEditorPage({
                   Viewing the version from {formatWhen(preview.version.createdAt)} by{' '}
                   {preview.version.author?.name ?? 'System'}.
                 </b>{' '}
-                Read-only.
+                <span>Read-only. Highlighted text differs from the current lesson.</span>
                 <div className="row preview-actions">
                   {editable ? (
                     <button
@@ -503,13 +638,17 @@ export function LessonEditorPage({
               className="doc"
               aria-label={`${label}, version from ${formatWhen(preview.version.createdAt)}`}
             >
-              <PreviewDocument content={preview.doc} ctx={previewCtx} />
+              <PreviewDocument
+                content={preview.doc}
+                ctx={previewCtx}
+                diffAgainst={preview.current}
+              />
             </article>
           ) : null}
           <article className="doc" aria-label={`${label} editor`} hidden={preview !== null}>
             {collab.synced && collab.provider ? (
               <LiveDocument
-                key={lesson.status}
+                key={editable ? 'editable' : 'locked'}
                 collab={collab}
                 ctx={ctx}
                 label={`${label} editor`}
@@ -522,12 +661,17 @@ export function LessonEditorPage({
             )}
           </article>
         </main>
-        {panel ? (
+        {shownPanel ? (
           <SidePanel
-            tab={panel}
-            onTab={showPanel}
+            tab={shownPanel}
+            tabs={panelTabs}
+            onTab={(tab) =>
+              tab === 'alignment' && !alignment.result ? openAlignment() : showPanel(tab)
+            }
             versions={versions}
             history={history}
+            alignment={alignment}
+            onCheckAlignment={() => void checkAlignment()}
             selectedVersion={preview?.version.id ?? null}
             onOpenVersion={(version) => void openVersion(version)}
           />
@@ -543,6 +687,31 @@ export function LessonEditorPage({
             run(addStandard(picker.group, code, standards))
             setPicker(null)
           }}
+        />
+      ) : null}
+      {editor && docwrap && canAssist ? (
+        <AssistLayer
+          editor={editor}
+          lessonId={lesson.id}
+          grade={lesson.grade}
+          content={lesson.content}
+          previewCtx={previewCtx}
+          wrap={docwrap}
+          handleRef={assistRef}
+        />
+      ) : null}
+      {requesting ? (
+        <RequestChangesDialog
+          lessonLabel={label}
+          assignee={lesson.assignee?.name ?? null}
+          busy={actionBusy}
+          error={actionError}
+          onCancel={() => setRequesting(false)}
+          onSubmit={(note) =>
+            void takeAction('request_changes', note).then((ok) => {
+              if (ok) setRequesting(false)
+            })
+          }
         />
       ) : null}
       {confirming && preview ? (

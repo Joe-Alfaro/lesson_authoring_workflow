@@ -45,7 +45,7 @@ function isTrusted(tr: Transaction): boolean {
   return Boolean(tr.getMeta(STRUCTURE_META) || tr.getMeta(ySyncPluginKey))
 }
 
-function moveInField(view: EditorView, where: 'start' | 'end'): boolean {
+function moveInField(view: EditorView, where: 'start' | 'end', extend = false): boolean {
   // Right after a click the DOM selection can be ahead of the editor state, so read it first.
   const dom = view.dom.ownerDocument.getSelection()
   const $from =
@@ -54,7 +54,12 @@ function moveInField(view: EditorView, where: 'start' | 'end'): boolean {
       : view.state.selection.$from
   if (!$from.parent.isTextblock) return false
   const pos = where === 'start' ? $from.start() : $from.end()
-  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, pos)))
+  // Shift extends the selection from its anchor (used before Alt+/ for AI assist, R20).
+  const anchor = extend ? view.state.selection.anchor : pos
+  const sameField = view.state.doc.resolve(anchor).parent === $from.parent
+  view.dispatch(
+    view.state.tr.setSelection(TextSelection.create(view.state.doc, sameField ? anchor : pos, pos)),
+  )
   return true
 }
 
@@ -91,6 +96,8 @@ export const StructureGuard = Extension.create({
       // (macOS has no line start/end on these keys in a contenteditable).
       Home: ({ editor }) => moveInField(editor.view, 'start'),
       End: ({ editor }) => moveInField(editor.view, 'end'),
+      'Shift-Home': ({ editor }) => moveInField(editor.view, 'start', true),
+      'Shift-End': ({ editor }) => moveInField(editor.view, 'end', true),
     }
   },
 })
