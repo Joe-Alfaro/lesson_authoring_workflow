@@ -33,7 +33,7 @@ process with its start command. `.railway/railway.ts` sets everything below exce
 | `GENERATION_MODEL`             | `claude-haiku-5-5`                        | `claude-haiku-5-5`           |                              | no      |
 | `GENERATION_CONCURRENCY`       | `2`                                       | `2`                          |                              | no      |
 | `GENERATION_MAX_ATTEMPTS`      | `2`                                       | `2`                          |                              | no      |
-| `GENERATION_EFFORT`            | `medium`                                  | `medium`                     |                              | no      |
+| `GENERATION_EFFORT`            |                                           | `medium`                     |                              | no      |
 | `GENERATION_HEARTBEAT_SECONDS` | `60`                                      | `60`                         |                              | no      |
 | `DB_POOL_MAX`                  | `10`                                      | `5`                          | `10`                         | no      |
 | `PGBOSS_POOL_MAX`              | `2`                                       | `2`                          |                              | no      |
@@ -171,30 +171,32 @@ store open documents before the container stops.
   checks it when a run starts and before each assist call, the worker before every job. Raise it
   on purpose for a bigger hosted run. Without `ANTHROPIC_API_KEY`, assist answers 503 and the
   worker logs that generation is disabled.
-- Web and worker both create the generation queue, so `GENERATION_HEARTBEAT_SECONDS` (and the
-  other `GENERATION_*` values) must match on both.
+- Web and worker both create the generation queue, so `GENERATION_HEARTBEAT_SECONDS` and the
+  other shared `GENERATION_*` values must match on both. `GENERATION_EFFORT` is the exception: only
+  the worker's generation calls read it (assist sets its own effort).
 - Hosted demo passwords come from `SEED_PASSWORD`; the README's `demo-password` does not work
   there.
 
 ### Postgres connections
 
-`DB_POOL_MAX` sizes each process's query pool (default 10) and `PGBOSS_POOL_MAX` pg-boss's own
-pool (default 2). Live feeds don't hold pool clients: a process that LISTENs shares one dedicated
-connection for it. At most:
+`DB_POOL_MAX` sizes each process's pool (default 10) and `PGBOSS_POOL_MAX` pg-boss's own pool
+(default 2). Web's live feeds share one dedicated LISTEN connection outside its pool. Collab's
+LISTEN for lesson status changes takes one client from its pool, so it has `DB_POOL_MAX` - 1 left
+for queries. At most:
 
 | Service       | Formula                                      | With the values above  |
 | ------------- | -------------------------------------------- | ---------------------- |
 | `web`         | `DB_POOL_MAX` + 1 LISTEN + `PGBOSS_POOL_MAX` | 10 + 1 + 2 = 13        |
 | `worker`      | `DB_POOL_MAX` + `PGBOSS_POOL_MAX`            | 5 + 2 = 7              |
-| `collab`      | `DB_POOL_MAX` + 1 LISTEN                     | 10 + 1 = 11            |
+| `collab`      | `DB_POOL_MAX` (LISTEN included)              | 10                     |
 | migrate, seed | web's `DB_POOL_MAX` while they run           | up to 10               |
-| Total         |                                              | 31, 41 during a deploy |
+| Total         |                                              | 30, 40 during a deploy |
 
 Postgres's default `max_connections` is 100 (check with `SHOW max_connections;`), so this leaves
 room for a second web replica or a `psql` session. Keep the total under the limit if you raise a
 pool. The worker runs `GENERATION_CONCURRENCY` (2) jobs at a time, so 5 is enough; collab keeps
-the default 10 for the R28 load (25 reviewers). The local smoke run measured 16 connections with
-two editors open.
+the default 10 (9 for queries) for the R28 load (25 reviewers). The local smoke run measured 16
+connections with two editors open.
 
 ## Post-deploy smoke checklist
 

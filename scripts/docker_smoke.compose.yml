@@ -22,7 +22,6 @@ x-generation: &generation
   GENERATION_MODEL: claude-haiku-5-5
   GENERATION_CONCURRENCY: '2'
   GENERATION_MAX_ATTEMPTS: '2'
-  GENERATION_EFFORT: medium
   GENERATION_HEARTBEAT_SECONDS: '60'
   PGBOSS_POOL_MAX: '2'
 
@@ -74,6 +73,7 @@ services:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/lesson_authoring
       PORT: '4100'
       DB_POOL_MAX: '5'
+      GENERATION_EFFORT: medium
     healthcheck: *health
 
   collab:

@@ -102,6 +102,9 @@ describe('.railway/railway.ts (R31)', () => {
       expect(worker[name]).toEqual(web[name])
     }
     expect(web.ASSIST_MODEL).toMatchObject({ type: 'literal' })
+    // Only the worker's Anthropic client reads the generation effort.
+    expect(worker.GENERATION_EFFORT).toMatchObject({ type: 'literal' })
+    expect(web.GENERATION_EFFORT).toBeUndefined()
     expect(variables(services.get('collab')).SPEND_CAP_USD).toBeUndefined()
   })
 
@@ -111,16 +114,17 @@ describe('.railway/railway.ts (R31)', () => {
       const value = variables(services.get(service))[name]
       return value?.type === 'literal' ? Number(value.value) : NaN
     }
-    // web: app pool + 1 LISTEN + pg-boss; worker: app pool + pg-boss; collab: app pool + 1 LISTEN.
+    // web: app pool + 1 LISTEN + pg-boss; worker: app pool + pg-boss; collab: app pool (its LISTEN
+    // connection is one of the pool's clients).
     const total =
       size('web', 'DB_POOL_MAX') +
       1 +
       size('web', 'PGBOSS_POOL_MAX') +
       size('worker', 'DB_POOL_MAX') +
       size('worker', 'PGBOSS_POOL_MAX') +
-      size('collab', 'DB_POOL_MAX') +
-      1
+      size('collab', 'DB_POOL_MAX')
     // Plus a migrate or seed run (web's pool) beside them, under Railway Postgres's default 100.
+    expect(total).toBe(30)
     expect(total + size('web', 'DB_POOL_MAX')).toBeLessThanOrEqual(60)
     expect(variables(services.get('collab')).PGBOSS_POOL_MAX).toBeUndefined()
   })

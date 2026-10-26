@@ -21,7 +21,7 @@ export SMOKE_AUTH_SECRET SMOKE_SEED_PASSWORD
 compose() { docker compose -f scripts/docker_smoke.compose.yml "$@"; }
 cleanup() {
   if [ "${SMOKE_KEEP:-}" = 1 ]; then
-    echo "SMOKE_KEEP=1: containers left running (docker compose -p law_deploy_smoke down -v)"
+    echo "SMOKE_KEEP=1: containers left running (docker compose -p ${COMPOSE_PROJECT_NAME:-law_deploy_smoke} down -v)"
   else
     compose down -v --remove-orphans > /dev/null 2>&1 || true
   fi

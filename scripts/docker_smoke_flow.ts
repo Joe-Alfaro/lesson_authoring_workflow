@@ -245,9 +245,9 @@ try {
       "SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname = 'lesson_authoring' AND backend_type = 'client backend'",
     )
     const used = result.rows[0]!.n - 2 // this script's own pool
-    // docs/deploy.md: web 10 + 1 + 2, worker 5 + 2, collab 10 + 1.
-    if (used > 31) throw new Error(`${used} connections`)
-    return `${used} of at most 31`
+    // docs/deploy.md: web 10 + 1 + 2, worker 5 + 2, collab 10 (its LISTEN included).
+    if (used > 30) throw new Error(`${used} connections`)
+    return `${used} of at most 30`
   })
 
   await step('approver submits and approves; the reviewer’s open editor locks live', async () => {

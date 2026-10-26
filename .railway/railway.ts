@@ -23,13 +23,13 @@ const GENERATION_ENV = {
   GENERATION_MODEL: 'claude-haiku-5-5',
   GENERATION_CONCURRENCY: '2',
   GENERATION_MAX_ATTEMPTS: '2',
-  GENERATION_EFFORT: 'medium',
   GENERATION_HEARTBEAT_SECONDS: '60',
 }
 
 // Postgres connections (docs/deploy.md): web DB_POOL_MAX + 1 LISTEN + PGBOSS_POOL_MAX = 13,
-// worker DB_POOL_MAX + PGBOSS_POOL_MAX = 7, collab DB_POOL_MAX + 1 LISTEN = 11. 31 in all, plus
-// up to 10 for a migrate or seed run, well under Railway Postgres's default of 100.
+// worker DB_POOL_MAX + PGBOSS_POOL_MAX = 7, collab DB_POOL_MAX = 10 (its LISTEN connection comes
+// from the pool). 30 in all, plus up to 10 for a migrate or seed run, well under Postgres's
+// default of 100.
 
 export default defineRailway((_ctx, project) => {
   const db = postgres('Postgres')
@@ -68,6 +68,8 @@ export default defineRailway((_ctx, project) => {
       DB_POOL_MAX: '5',
       PGBOSS_POOL_MAX: '2',
       ...GENERATION_ENV,
+      // Thinking effort of the generation calls; only the worker's Anthropic client reads it.
+      GENERATION_EFFORT: 'medium',
     },
   })
 
@@ -78,7 +80,7 @@ export default defineRailway((_ctx, project) => {
     env: {
       DATABASE_URL: db.env.DATABASE_URL,
       PORT: '4200',
-      // Room for the R28 load: 25 reviewers storing documents.
+      // Room for the R28 load (25 reviewers storing documents); one client holds the LISTEN.
       DB_POOL_MAX: '10',
       // Collab tokens are signed by web, so collab must verify with the same secret.
       AUTH_SECRET: web.env.AUTH_SECRET,
