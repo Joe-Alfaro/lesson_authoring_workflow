@@ -183,17 +183,33 @@ row already has `attempts >= maxAttempts` fails without a model call (lesson Fai
 
 ### Caps count jobs in flight (R12, D-045 (3))
 
-A job reserves one lesson estimate (the run's per-lesson estimate, as `estimateRunCost`;
-`estimateLessonCostUsd`) when it starts and releases it when it finishes
-(`generation_jobs.reserved_usd`, set and checked under one Postgres advisory lock, so two workers
-can't both take the last room); the run and global (`SPEND_CAP_USD`) guards compare
-spent + reserved with the cap, across every run and worker process (so the reservation lives in
-the database). Only rows in `generating` count, so a reservation left on a finished row can't
-block admission for good. Total spend can then exceed a cap by at most one lesson estimate, with any
-concurrency. A job blocked only by other jobs' reservations waits for them rather than stopping
-the run: the run is `stopped_cap` once its real spend reaches the cap, so a run whose estimate is
-above what lessons really cost still spends up to its cap. A waiting job polls every second; when its worker stops, it hands
-itself back to the queue unstarted.
+Every model call, first or repair, is admitted the same way: the job reserves one lesson
+estimate (the run's per-lesson estimate, as `estimateRunCost`; `estimateLessonCostUsd`) for the
+call and releases it when the job finishes or waits again (`generation_jobs.reserved_usd`, set
+and checked under one Postgres advisory lock, so two workers can't both take the last room). The
+run and global (`SPEND_CAP_USD`) guards compare spent + reserved with the cap, across every run
+and worker process (so the reservation lives in the database). A call's cost is recorded before
+its reservation is released, so it is never counted as neither.
+
+- **Admission:** the run must still be active (cancelled: the job is cancelled; `stopped_cap`:
+  as a cap reached). Real spend at or over a cap stops the run (`stopped_cap`). Spend plus other
+  jobs' reservations at or over a cap makes the job wait (polling every second) rather than stop
+  the run, so a run whose estimate is above what lessons really cost still spends up to its cap.
+  When its worker stops, a waiting job hands itself back to the queue.
+- **Who holds room:** only rows in `generating` count, and a job holds a reservation only while
+  admitted to a call: each admission first releases the job's own (a crash retry's leftover one,
+  or its last call's), so jobs waiting for room, crash retries included, never wait on each
+  other. A dead worker's row keeps its reservation until its retry is admitted or waits, or the
+  sweep fails it, so at most about one heartbeat window plus the retry delay.
+- **Repairs:** a job whose run was cancelled, or whose cap was reached, during its last call
+  makes no repair call: it is cancelled with an error ("The run was cancelled before the repair
+  attempt." / "Stopped: spend cap reached before the repair attempt."), and its lesson moves back
+  (Failed, or Draft when it has content) with that note.
+- **Bound:** each call starts only while spend + reservations < cap, so recorded spend ends below
+  the cap plus the last admitted call's estimate, plus whatever a call in flight costs above its
+  estimate (a lesson longer than the estimate). For the global cap, AI assist calls made
+  meanwhile add their own cost (they are checked, not reserved). A call whose worker died
+  records no cost (no usage comes back).
 
 ### Prompt polish (R7, D-045 (4))
 

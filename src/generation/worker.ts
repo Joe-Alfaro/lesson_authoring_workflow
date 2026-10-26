@@ -359,7 +359,15 @@ async function generateLesson(ctx: GenerationContext, job: JobRow, run: RunRow):
   }
   const lesson = { unitId: run.unitId, lessonNumber: input.lesson.lessonNumber }
 
-  async function attempt(number: number, previousErrors: string[]): Promise<AttemptOutcome> {
+  async function attempt(number: number, previousErrors: string[]): Promise<AttemptOutcome | null> {
+    // A repair call is admitted like a first call: the run may have been cancelled or a cap
+    // reached during the last one. Null: the job was settled or handed back.
+    if (
+      previousErrors.length > 0 &&
+      !(await awaitAdmission(ctx, job, run, lesson, REPAIR_REASONS))
+    ) {
+      return null
+    }
     await db
       .update(generationJobs)
       .set({ attempts: number, updatedAt: new Date() })
@@ -422,7 +430,7 @@ async function generateLesson(ctx: GenerationContext, job: JobRow, run: RunRow):
 
   // `attempts` counts calls over every try of the queue job: a crash retry continues from it, and
   // a dead worker's last call is not paid for again (D-055 (2)).
-  const outcome: AttemptOutcome =
+  const outcome: AttemptOutcome | null =
     job.attempts >= ctx.maxAttempts
       ? {
           ok: false,
@@ -431,6 +439,9 @@ async function generateLesson(ctx: GenerationContext, job: JobRow, run: RunRow):
           ],
         }
       : await attempt(job.attempts + 1, [])
+  if (outcome === null) {
+    return
+  }
   if (outcome.ok) {
     await saveLesson(db, job, run.unitId, lesson.lessonNumber, outcome.content)
     await moveLesson(db, job.lessonId, 'draft')
@@ -452,21 +463,79 @@ async function generateLesson(ctx: GenerationContext, job: JobRow, run: RunRow):
 }
 
 /**
- * A job that won't start (run no longer active, or a cap reached): cancelled with its reservation
- * released. A crash retry finds its lesson still Generating from the dead try; it moves back
- * (Failed, or Draft when it has content) so nothing is left Generating.
+ * A job that may not make its next call (run no longer active, or a cap reached): cancelled with
+ * its reservation released. When its lesson is Generating (a crash retry, or a repair after the
+ * first call) the lesson moves back (Failed, or Draft when it has content) with `reason`, which is
+ * also the job's error, so nothing is left Generating.
  */
-async function cancelUnstartedJob(
+async function cancelJob(
   db: Database,
-  job: Pick<JobRow, 'id' | 'lessonId' | 'status'>,
-  lesson: { status: string },
+  job: Pick<JobRow, 'id' | 'lessonId'>,
   lessonRef: { unitId: string; lessonNumber: number | null },
-  crashReason: string,
+  reason: string | null,
 ): Promise<void> {
-  await setJobStatus(db, job, lessonRef, 'cancelled', { reservedUsd: 0 })
-  // `job` is the row as loaded: Generating means a dead worker had admitted it.
-  if (job.status === 'generating' && lesson.status === 'generating') {
-    await moveLessonAfterFailure(db, job.lessonId, crashReason)
+  await setJobStatus(db, job, lessonRef, 'cancelled', {
+    reservedUsd: 0,
+    ...(reason ? { error: reason } : {}),
+  })
+  if (reason) {
+    await moveLessonAfterFailure(db, job.lessonId, reason)
+  }
+}
+
+/** Why a job in flight stops before its next call: the run was cancelled, or a cap reached. */
+interface StopReasons {
+  cancelled: string
+  capped: string
+}
+
+const CRASH_RETRY_REASONS: StopReasons = {
+  cancelled: CANCELLED_AFTER_CRASH_REASON,
+  capped: CAPPED_AFTER_CRASH_REASON,
+}
+
+const REPAIR_REASONS: StopReasons = {
+  cancelled: 'The run was cancelled before the repair attempt.',
+  capped: 'Stopped: spend cap reached before the repair attempt.',
+}
+
+/**
+ * Spend guard before every model call, first or repair (D-055 (3)): true once the job is admitted.
+ * Otherwise false, and the job is settled (run inactive or a cap reached) or, when the worker is
+ * stopping, handed back to the queue. `inFlight` (its lesson is Generating) says what to tell the
+ * lesson; null for a job that never started.
+ */
+async function awaitAdmission(
+  ctx: GenerationContext,
+  job: JobRow,
+  run: RunRow,
+  lessonRef: { unitId: string; lessonNumber: number | null },
+  inFlight: StopReasons | null,
+): Promise<boolean> {
+  const db = ctx.db
+  for (;;) {
+    const admission = await admitJob(ctx, job, run.id, lessonRef)
+    if (admission === 'start') {
+      return true
+    }
+    if (admission === 'inactive') {
+      await cancelJob(db, job, lessonRef, inFlight?.cancelled ?? null)
+      await finishRunIfDone(db, run.id)
+      return false
+    }
+    if (admission === 'stop') {
+      await cancelJob(db, job, lessonRef, inFlight?.capped ?? null)
+      await stopRunAtCap(db, run)
+      return false
+    }
+    if (ctx.stopping) {
+      // Not started: another worker picks the job up later (a crash retry from `attempts`).
+      await ctx.options.boss.send(GENERATE_LESSON_QUEUE, {
+        jobId: job.id,
+      } satisfies GenerateLessonJobData)
+      return false
+    }
+    await new Promise((resolve) => setTimeout(resolve, ADMISSION_WAIT_MS))
   }
 }
 
@@ -483,34 +552,10 @@ async function processJob(ctx: GenerationContext, jobId: string): Promise<void> 
   if ((FINAL_JOB_STATUSES as readonly string[]).includes(job.status)) {
     return
   }
-  if (!(ACTIVE_RUN_STATUSES as readonly string[]).includes(run.status)) {
-    await cancelUnstartedJob(db, job, lesson, lessonRef, CANCELLED_AFTER_CRASH_REASON)
-    await finishRunIfDone(db, run.id)
+  // A row Generating with its lesson Generating: a dead worker had admitted it (crash retry).
+  const crashRetry = job.status === 'generating' && lesson.status === 'generating'
+  if (!(await awaitAdmission(ctx, job, run, lessonRef, crashRetry ? CRASH_RETRY_REASONS : null))) {
     return
-  }
-
-  // Spend guard: a job starts only while the run and the global budget have room.
-  for (;;) {
-    const admission = await admitJob(ctx, job, run.id, lessonRef)
-    if (admission === 'start') {
-      break
-    }
-    if (admission === 'inactive') {
-      await cancelUnstartedJob(db, job, lesson, lessonRef, CANCELLED_AFTER_CRASH_REASON)
-      await finishRunIfDone(db, run.id)
-      return
-    }
-    if (admission === 'stop') {
-      await cancelUnstartedJob(db, job, lesson, lessonRef, CAPPED_AFTER_CRASH_REASON)
-      await stopRunAtCap(db, run)
-      return
-    }
-    if (ctx.stopping) {
-      // Not started: another worker picks the job up later.
-      await ctx.options.boss.send(GENERATE_LESSON_QUEUE, { jobId } satisfies GenerateLessonJobData)
-      return
-    }
-    await new Promise((resolve) => setTimeout(resolve, ADMISSION_WAIT_MS))
   }
   await moveLesson(db, job.lessonId, 'generating')
 
@@ -543,16 +588,19 @@ async function admitJob(
   return ctx.db.transaction(async (tx) => {
     // One admission at a time, so two jobs can't both take the last room under a cap.
     await tx.execute(sql`select pg_advisory_xact_lock(${ADMISSION_LOCK_KEY})`)
+    // A job holds a reservation only while admitted to a call: a crash retry's leftover one, or
+    // the last call's, is released here, so jobs waiting for room never wait on each other.
+    await tx.update(generationJobs).set({ reservedUsd: 0 }).where(eq(generationJobs.id, job.id))
     const [run] = await tx.select().from(generationRuns).where(eq(generationRuns.id, runId))
     if (!run || !(ACTIVE_RUN_STATUSES as readonly string[]).includes(run.status)) {
-      return 'inactive'
+      return run?.status === 'stopped_cap' ? 'stop' : 'inactive'
     }
     const spentUsd = await getTotalSpendUsd(tx)
     if (run.costUsd >= run.capUsd || spentUsd >= ctx.globalCapUsd) {
       return 'stop'
     }
-    // Only jobs in flight hold room: a crash retry's own leftover reservation doesn't count
-    // against it, and a stale one on a finished row can't block admission for good.
+    // Only jobs in flight hold room: a stale reservation on a finished row can't block admission
+    // for good.
     const [reserved] = await tx
       .select({
         run: sql<string>`coalesce(sum(${generationJobs.reservedUsd}) filter (where ${generationJobs.runId} = ${runId}), 0)`,
