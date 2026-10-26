@@ -32,6 +32,8 @@ export interface LessonPageData {
   assignee: { id: string; name: string } | null
   /** "Prompt v3, Haiku-class" when generated content exists. */
   provenance: string | null
+  /** Non-blocking review hints from the last generation (D-055 (4)). */
+  polishWarnings: string[]
   /** Who approved it and when, for the lock notice (R23). */
   approval: { name: string; at: string } | null
 }
@@ -51,6 +53,7 @@ export async function loadLessonPage(
       number: lessons.lessonNumber,
       status: lessons.status,
       content: lessons.content,
+      polishWarnings: lessons.polishWarnings,
       assigneeId: assignee.id,
       assigneeName: assignee.name,
     })
@@ -85,6 +88,7 @@ export async function loadLessonPage(
     assignee:
       row.assigneeId && row.assigneeName ? { id: row.assigneeId, name: row.assigneeName } : null,
     provenance: generation ? promptProvenanceText(generation) : null,
+    polishWarnings: row.polishWarnings,
     approval:
       row.status === 'approved' && approved?.actor
         ? { name: approved.actor.name, at: approved.at.toISOString() }

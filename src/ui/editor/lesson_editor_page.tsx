@@ -77,6 +77,8 @@ export interface EditorLesson {
   content: LessonContent
   assignee: { id: string; name: string } | null
   provenance: string | null
+  /** Non-blocking review hints from the last generation (D-055 (4)). */
+  polishWarnings?: string[]
   approval: { name: string; at: string } | null
 }
 
@@ -560,6 +562,12 @@ export function LessonEditorPage({
           </span>
         ) : null}
         {lesson.provenance ? <span className="caption">{lesson.provenance}</span> : null}
+        {(lesson.polishWarnings ?? []).map((warning) => (
+          <span key={warning} className="caption row polish-hint" title={warning}>
+            <Icon name="info" />
+            <span className="polish-hint-text">Review hint: {warning}</span>
+          </span>
+        ))}
         <span className="spacer" />
         <Presence names={collab.others} />
         {editable && blocking ? (

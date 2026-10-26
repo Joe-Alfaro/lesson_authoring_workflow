@@ -86,6 +86,20 @@ async function measuredCostPerLesson(
   return row?.average == null ? null : Number(row.average)
 }
 
+/**
+ * One lesson's estimated cost on `model`: the unit's measured average, else the default estimate
+ * (D-024). The worker reserves this much for each job in flight (D-055 (3)).
+ */
+export async function estimateLessonCostUsd(
+  db: Database,
+  unitId: string,
+  model: string,
+  prices: PriceTable = MODEL_PRICES,
+): Promise<number> {
+  const measured = await measuredCostPerLesson(db, unitId, model)
+  return measured ?? estimateCostUsd(model, 1, prices)
+}
+
 async function estimateFor(
   deps: GenerationDeps,
   unitId: string,
@@ -94,8 +108,7 @@ async function estimateFor(
 ): Promise<number> {
   const prices = deps.prices ?? MODEL_PRICES
   priceFor(model, prices)
-  const measured = await measuredCostPerLesson(deps.db, unitId, model)
-  return measured === null ? estimateCostUsd(model, lessonCount, prices) : measured * lessonCount
+  return lessonCount * (await estimateLessonCostUsd(deps.db, unitId, model, prices))
 }
 
 async function numberedLessonIds(db: Database, unitId: string): Promise<string[]> {

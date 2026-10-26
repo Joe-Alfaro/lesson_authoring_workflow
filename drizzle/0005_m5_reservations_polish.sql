@@ -1,0 +1,2 @@
+ALTER TABLE "generation_jobs" ADD COLUMN "reserved_usd" numeric(12, 6) DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "lessons" ADD COLUMN "polish_warnings" jsonb DEFAULT '[]'::jsonb NOT NULL;

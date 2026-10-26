@@ -164,9 +164,10 @@ When pg-boss has no retry left for a job whose worker died (the queue job is `fa
 `generation_jobs` row still `generating`), the worker marks the row `failed` with a non-empty
 error, moves the lesson through `applySystemTransition` (Failed without content, a workflow event
 from Generating; Draft with a note when it has content, as for other failures), sends the progress
-event and finishes the run (`completed`, `finishedAt` set). Detection is the worker's own (for
-example the lost-heartbeat sweep, or a dead-letter queue); a row whose queue job is waiting for a
-retry is left alone.
+event and finishes the run (`completed`, `finishedAt` set). Detection is the worker's
+lost-heartbeat sweep: after failing lost jobs it asks `findExhaustedGenerationJobs` for
+`generating` rows whose queue job is `failed` with no live (`created`, `retry`, `active`) try; a
+row whose queue job is waiting for a retry is left alone.
 
 ### Attempts carry across crash retries (R6, D-045 (2))
 
@@ -176,13 +177,16 @@ row already has `attempts >= maxAttempts` fails without a model call (lesson Fai
 
 ### Caps count jobs in flight (R12, D-045 (3))
 
-A job reserves one lesson estimate (the run's per-lesson estimate, as `estimateRunCost`) when it
-starts and releases it when it finishes; the run and global (`SPEND_CAP_USD`) guards compare
+A job reserves one lesson estimate (the run's per-lesson estimate, as `estimateRunCost`;
+`estimateLessonCostUsd`) when it starts and releases it when it finishes
+(`generation_jobs.reserved_usd`, set and checked under one Postgres advisory lock, so two workers
+can't both take the last room); the run and global (`SPEND_CAP_USD`) guards compare
 spent + reserved with the cap, across every run and worker process (so the reservation lives in
 the database). Total spend can then exceed a cap by at most one lesson estimate, with any
 concurrency. A job blocked only by other jobs' reservations waits for them rather than stopping
 the run: the run is `stopped_cap` once its real spend reaches the cap, so a run whose estimate is
-above what lessons really cost still spends up to its cap.
+above what lessons really cost still spends up to its cap. A waiting job polls every second; when its worker stops, it hands
+itself back to the queue unstarted.
 
 ### Prompt polish (R7, D-045 (4))
 
@@ -197,14 +201,14 @@ above what lessons really cost still spends up to its cap.
   sentences. A sentence ends at `.`, `!` or `?` (and a closing quote or bracket right after it)
   followed by whitespace and an uppercase letter or an opening quote, so `p. 4` and `pp. 16–22`
   are not sentence ends.
-- **Pulse check length:** the code can't rewrite option text, so the default template has a line
-  saying the correct option must not be the longest, and `polishHints` returns a repair hint
-  (naming the pulse check and "longest") when the correct option is strictly the longest one in
-  every pulse check of the lesson (a tie, or one check where it isn't, gives no hint). After
-  validation, a lesson with hints is retried with them in the repair prompt while attempts remain;
-  the last attempt's valid lesson is saved anyway (polish never fails a lesson). Costs of every
-  attempt count as usual. Cost note: every polish retry is a full extra call, so if a model
-  ignores the prompt line this doubles a lesson's cost (the run cap still bounds it).
+- **Pulse check length (hint-only, PM on D-055 (4)):** the code can't rewrite option text, so the
+  default template has a line saying the correct option must not be the longest, and
+  `polishHints` returns a review hint (naming the pulse check and "longest") when the correct
+  option is strictly the longest one in every pulse check of the lesson (a tie, or one check where
+  it isn't, gives no hint). The worker saves the lesson as usual and stores the hints in
+  `lessons.polish_warnings` (empty when there are none), and the lesson bar shows each as a small
+  "Review hint". There is no repair retry for it: polish never costs a model call or fails a
+  lesson.
 
 ### Malformed JSON (R7, Sonnet probe)
 

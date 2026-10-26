@@ -363,32 +363,9 @@ describe('generation hardening (M5: R6, R7, R11, R12)', () => {
   })
 
   describe('prompt polish the worker enforces (R7, D-045 (4))', () => {
-    it('retries with a repair hint when the correct pulse check option is the longest', async () => {
-      const unit = await createTestUnit(db, { lessons: 1 })
-      const llm = createFakeLlm({
-        respond: (_request, call) => (call.index === 0 ? longestCorrectBody() : coreLessonBody()),
-      })
-      const { runId } = await startRun(deps, { unitId: unit.unitId, model: TEST_MODEL, capUsd: 1 })
-      await startWorker(llm, { maxAttempts: 2 })
-
-      const run = await waitForRun(runId, ['completed'])
-
-      expect(llm.calls).toHaveLength(2)
-      const hints = polishHints({
-        schemaVersion: 1,
-        frontMatter: coreFrontMatter(),
-        body: longestCorrectBody(),
-      })
-      expect(hints.length).toBeGreaterThan(0)
-      const retry = llm.calls[1]!.request
-      hints.forEach((hint: string) => expect(`${retry.system}\n${retry.prompt}`).toContain(hint))
-      expect(run.jobs[0]).toEqual(
-        expect.objectContaining({ status: 'generated', attempts: 2, tokensIn: 2000 }),
-      )
-      expect(run.costUsd).toBeCloseTo(2 * TEST_CALL_COST, 10)
-    })
-
-    it('saves the last attempt anyway: polish never fails a valid lesson', async () => {
+    // PM on D-055 (4): hint-only. The prompt asks for it; a lesson that ignores it is saved with a
+    // non-blocking polish warning for reviewers, without an extra model call.
+    it('stores a polish warning, without a retry, when the correct pulse check option is the longest', async () => {
       const unit = await createTestUnit(db, { lessons: 1 })
       const llm = createFakeLlm({ respond: () => longestCorrectBody() })
       const { runId } = await startRun(deps, { unitId: unit.unitId, model: TEST_MODEL, capUsd: 1 })
@@ -396,9 +373,38 @@ describe('generation hardening (M5: R6, R7, R11, R12)', () => {
 
       const run = await waitForRun(runId, ['completed'])
 
-      expect(llm.calls).toHaveLength(2)
-      expect(run.jobs[0]).toEqual(expect.objectContaining({ status: 'generated', attempts: 2 }))
-      expect((await lessonRow(unit.lessonIds[0]!)).status).toBe('draft')
+      expect(llm.calls).toHaveLength(1)
+      const request = llm.calls[0]!.request
+      const promptLine = `${request.system}\n${request.prompt}`
+        .split('\n')
+        .find((line) => /pulse.?check/i.test(line) && /longest/i.test(line))
+      expect(promptLine, 'the prompt line about the correct option length').toBeDefined()
+      const hints = polishHints({
+        schemaVersion: 1,
+        frontMatter: coreFrontMatter(),
+        body: longestCorrectBody(),
+      })
+      expect(hints.length).toBeGreaterThan(0)
+      expect(run.jobs[0]).toEqual(
+        expect.objectContaining({ status: 'generated', attempts: 1, tokensIn: 1000 }),
+      )
+      expect(run.costUsd).toBeCloseTo(TEST_CALL_COST, 10)
+      const row = await lessonRow(unit.lessonIds[0]!)
+      expect(row.status).toBe('draft')
+      expect(row.polishWarnings).toEqual(hints)
+    })
+
+    it('stores no polish warning when the lesson follows the prompt', async () => {
+      const unit = await createTestUnit(db, { lessons: 1 })
+      const llm = createFakeLlm()
+      const { runId } = await startRun(deps, { unitId: unit.unitId, model: TEST_MODEL, capUsd: 1 })
+      await startWorker(llm, { maxAttempts: 2 })
+
+      const run = await waitForRun(runId, ['completed'])
+
+      expect(llm.calls).toHaveLength(1)
+      expect(run.jobs[0]).toEqual(expect.objectContaining({ status: 'generated', attempts: 1 }))
+      expect((await lessonRow(unit.lessonIds[0]!)).polishWarnings).toEqual([])
     })
   })
 
