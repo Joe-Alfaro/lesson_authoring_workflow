@@ -251,6 +251,14 @@ describe('DEFAULT_PROMPT_TEMPLATE: tuning from the M2 smoke run', () => {
     expect(defaultText()).toMatch(/exemplar[^\n]*1-2 sentences for quick checks/i)
   })
 
+  it('tells the model the correct pulse check option must not be the longest (D-045 (4))', () => {
+    const line = defaultText()
+      .split('\n')
+      .find((l) => /pulse.?check/i.test(l) && /longest/i.test(l))
+    expect(line, 'a prompt line about the length of the correct pulse check option').toBeDefined()
+    expect(line).toMatch(/correct/i)
+  })
+
   it('labels Learning in Action parts "Part A", "Part B"', () => {
     expect(defaultText()).toMatch(/"Part A"[^\n]*"Part B"/)
   })

@@ -114,6 +114,30 @@ describe('CancelRunDialog', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Cancel run' }))
     expect(onConfirm).toHaveBeenCalledTimes(1)
   })
+
+  // D-045 addendum: "The 0 queued lessons won't start" reads wrong; zero counts are left out.
+  it.each([
+    [
+      { queued: 0, generating: 4, generated: 15 },
+      ['4 lessons being generated will finish and be kept', '15 generated lessons'],
+    ],
+    [
+      { queued: 20, generating: 0, generated: 15 },
+      ["20 queued lessons won't start", '15 generated lessons'],
+    ],
+    [
+      { queued: 20, generating: 4, generated: 0 },
+      ["20 queued lessons won't start", '4 lessons being generated will finish and be kept'],
+    ],
+    [{ queued: 0, generating: 1, generated: 0 }, ['1 lesson being generated will finish']],
+  ])('leaves zero counts out of the text (%j)', (counts, kept) => {
+    render(<CancelRunDialog {...counts} onConfirm={() => {}} onClose={() => {}} />)
+    const text = screen.getByRole('alertdialog', { name: 'Cancel this run?' }).textContent ?? ''
+
+    expect(text).not.toMatch(/\b0\b/)
+    kept.forEach((phrase) => expect(text).toContain(phrase))
+    expect(text).toContain('You can generate the rest later.')
+  })
 })
 
 describe('RegenerateDialog', () => {
