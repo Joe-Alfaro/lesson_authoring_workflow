@@ -192,9 +192,19 @@ describe('crash retries and repair calls under caps (M5 follow-up: R6, R11, R12)
     await startWorker(llm, { concurrency: 4, maxAttempts: 2, on: bossA })
     await startWorker(llm, { concurrency: 4, maxAttempts: 2, on: bossB })
 
-    await expect.poll(async () => (await getRun(db, runId))?.status, POLL).toBe('stopped_cap')
-    await expect.poll(async () => unfinished((await getRun(db, runId))!).length, POLL).toBe(0)
-    await new Promise((resolve) => setTimeout(resolve, 1_000))
+    // Settled: no job or lesson left in flight, every reservation released (the worker writes
+    // these in steps). Nothing in flight means no call can still start.
+    await expect
+      .poll(async () => {
+        const current = (await getRun(db, runId))!
+        return {
+          run: current.status,
+          unfinished: unfinished(current).length,
+          generating: await generatingLessons(unit.lessonIds),
+          reserved: (await reservedUsd(runId)).some((usd) => usd !== 0),
+        }
+      }, POLL)
+      .toEqual({ run: 'stopped_cap', unfinished: 0, generating: 0, reserved: false })
     const run = (await getRun(db, runId))!
 
     // Before: each admitted job made its repair call too (cap + 3.5 estimates).
@@ -227,10 +237,21 @@ describe('crash retries and repair calls under caps (M5 follow-up: R6, R11, R12)
     await cancelRun(deps, runId)
     gate.release()
 
+    // Settled: job cancelled, lesson moved back and the reservation released (written in steps).
+    // The attempt that would make the repair call has returned by then.
     await expect
-      .poll(async () => (await getRun(db, runId))!.jobs[0]!.status, POLL)
-      .toBe('cancelled')
-    await new Promise((resolve) => setTimeout(resolve, 1_000))
+      .poll(async () => {
+        const [lesson] = await db
+          .select({ status: lessons.status })
+          .from(lessons)
+          .where(eq(lessons.id, lessonId))
+        return {
+          job: (await getRun(db, runId))!.jobs[0]!.status,
+          lesson: lesson!.status,
+          reserved: await reservedUsd(runId),
+        }
+      }, POLL)
+      .toEqual({ job: 'cancelled', lesson: 'failed', reserved: [0] })
     expect(llm.calls).toHaveLength(1)
     const run = (await getRun(db, runId))!
     expect(run.status).toBe('cancelled')

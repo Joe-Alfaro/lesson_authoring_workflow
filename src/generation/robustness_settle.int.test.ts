@@ -155,9 +155,16 @@ describe('settling crash retries that may not run (M5 follow-up: R6, R12)', () =
     const llm = createFakeLlm()
     await startWorker(llm, spentBefore + 1.5 * LESSON_ESTIMATE_USD)
 
+    // The worker settles in steps (job, then lesson, then run): wait for all of them.
     await expect
-      .poll(async () => (await jobRows(jobIds)).map((job) => job.status).sort(), CRASH_POLL)
-      .toEqual(['cancelled', 'cancelled'])
+      .poll(
+        async () => ({
+          jobs: (await jobRows(jobIds)).map((job) => job.status).sort(),
+          lessons: [(await lessonRow(newLessonId)).status, (await lessonRow(regenLessonId)).status],
+        }),
+        CRASH_POLL,
+      )
+      .toEqual({ jobs: ['cancelled', 'cancelled'], lessons: ['failed', 'draft'] })
     const rows = await jobRows(jobIds)
     expect(rows.map((job) => job.reservedUsd)).toEqual([0, 0])
     expect(llm.calls).toHaveLength(0)
@@ -193,7 +200,17 @@ describe('settling crash retries that may not run (M5 follow-up: R6, R12)', () =
     // While the worker was dead, other spend used up the global budget.
     const capped = createFakeLlm()
     const cappedWorker = await startWorker(capped, await getTotalSpendUsd(db))
-    await expect.poll(async () => (await jobRows(jobIds))[0]!.status, CRASH_POLL).toBe('cancelled')
+    // The worker settles in steps (job, then lesson, then run): wait for all of them.
+    await expect
+      .poll(
+        async () => ({
+          job: (await jobRows(jobIds))[0]!.status,
+          lesson: (await lessonRow(lessonId)).status,
+          run: (await getRun(db, runId))!.status,
+        }),
+        CRASH_POLL,
+      )
+      .toEqual({ job: 'cancelled', lesson: 'failed', run: 'stopped_cap' })
     expect((await jobRows(jobIds))[0]!.reservedUsd).toBe(0)
     expect(capped.calls).toHaveLength(0)
     expect((await getRun(db, runId))!.status).toBe('stopped_cap')
