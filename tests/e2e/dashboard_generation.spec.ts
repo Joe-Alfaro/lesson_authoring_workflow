@@ -426,6 +426,40 @@ test.describe('Unit dashboard: stopped by the spend cap (R12, D-024)', () => {
     expect(await dash.versionCount(unit, 1)).toBe(1)
     expect((await dash.lessonRow(unit, 1)).content?.body?.title).toBe(seededTitle(1))
   })
+
+  // D-045 addendum: the author's open page follows the admin's change; no reload needed.
+  test("an author's open dashboard enables Resume without a reload when an admin raises the cap elsewhere", async ({
+    page,
+    dash,
+    browser,
+  }) => {
+    const unit = await dash.importSampleUnit()
+    await seedSpendCapState(dash, unit)
+    await signIn(page)
+    await openUnit(page, unit)
+    const resume = page.getByRole('button', { name: 'Resume generation' })
+    await expect(resume).toBeDisabled()
+    await markDocument(page)
+
+    // The admin raises the cap in their own browser.
+    const adminContext = await browser.newContext()
+    try {
+      const admin = await adminContext.newPage()
+      await signIn(admin, ADMIN.email)
+      await openUnit(admin, unit)
+      await admin.getByRole('button', { name: 'Raise cap...' }).click()
+      const dialog = admin.getByRole('dialog')
+      await dialog.getByLabel('Spend cap for this run').fill('1')
+      await dialog.getByRole('button', { name: 'Save cap' }).click()
+      await expect(dialog).toBeHidden()
+    } finally {
+      await adminContext.close()
+    }
+
+    await expect(termValue(page, 'Spend cap')).toHaveText('$1.00', { timeout: LIVE_UPDATE_MS })
+    await expect(resume).toBeEnabled({ timeout: LIVE_UPDATE_MS })
+    await expectSameDocument(page)
+  })
 })
 
 test.describe('Unit dashboard: regenerate (R11)', () => {

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
-/** How often the page re-reads while a run is going, in case an event was missed. */
+/** How often the page re-reads while a run is going or waits on its cap, in case an event was missed. */
 const POLL_MS = 2_500
 /** Events come in bursts (a run start queues 41 lessons); one refresh covers a burst. */
 const DEBOUNCE_MS = 150
@@ -11,10 +11,11 @@ const DEBOUNCE_MS = 150
 /**
  * R9: re-renders the unit page from the server when the generation feed
  * (/api/units/:id/generation/events) reports a status change, without reloading the page.
- * While `active`, it also re-reads every few seconds so the run's own status and cost are
- * picked up even when no lesson changes.
+ * While `poll` (a run is going, or stopped at its cap), it also re-reads every few seconds so the
+ * run's own status, cost and cap are picked up even when no lesson changes (a cap raised by an
+ * admin elsewhere sends no lesson event).
  */
-export function useLiveRefresh(unitId: string, active: boolean): void {
+export function useLiveRefresh(unitId: string, poll: boolean): void {
   const router = useRouter()
 
   useEffect(() => {
@@ -34,10 +35,10 @@ export function useLiveRefresh(unitId: string, active: boolean): void {
   }, [unitId, router])
 
   useEffect(() => {
-    if (!active) {
+    if (!poll) {
       return
     }
     const interval = setInterval(() => router.refresh(), POLL_MS)
     return () => clearInterval(interval)
-  }, [active, router])
+  }, [poll, router])
 }

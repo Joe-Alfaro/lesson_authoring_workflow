@@ -152,6 +152,103 @@ duplicate).
 - **Exemplar length.** The template keeps "1-2 sentences for quick checks" (a regression guard).
 - `normalizeLessonContent` is pure (does not mutate its input) and its result still validates.
 
+## M5 robustness contract (red tests: `robustness.int.test.ts`, `post_process_polish.test.ts`, additions to `prompt_builder.test.ts`, `src/ui/dashboard/dialogs.test.tsx`, `tests/e2e/dashboard_generation.spec.ts`)
+
+D-045 and its addendum. No test calls a real model: the malformed-JSON test drives the real
+Anthropic adapter against `tests/e2e/fake_anthropic.ts` (`ANTHROPIC_BASE_URL`), whose scripted
+responses now take raw `text` as well as `output`.
+
+### Crash retries run out (R6, D-045 (1))
+
+When pg-boss has no retry left for a job whose worker died (the queue job is `failed`, the
+`generation_jobs` row still `generating`), the worker marks the row `failed` with a non-empty
+error, moves the lesson through `applySystemTransition` (Failed without content, a workflow event
+from Generating; Draft with a note when it has content, as for other failures), sends the progress
+event and finishes the run (`completed`, `finishedAt` set). Detection is the worker's
+lost-heartbeat sweep: after failing lost jobs it asks `findExhaustedGenerationJobs` for
+`generating` rows whose queue job is `failed` with no live (`created`, `retry`, `active`) try; a
+row whose queue job is waiting for a retry is left alone.
+
+A crash retry that may not run (red tests: `robustness_settle.int.test.ts`) is settled the same
+way: when the retry finds its run no longer active (cancelled while the worker was dead) or a cap
+reached, the row is `cancelled` with `reserved_usd` 0, and a lesson still Generating from the dead
+try moves back through `applySystemTransition` (Failed without content, Draft when it has
+content) with a note saying why.
+
+### Attempts carry across crash retries (R6, D-045 (2))
+
+`generation_jobs.attempts` counts model calls over every try of the queue job. A retried job
+continues at `attempts + 1`, so a lesson gets at most `maxAttempts` calls in total. A job whose
+row already has `attempts >= maxAttempts` fails without a model call (lesson Failed, run finishes).
+
+### Caps count jobs in flight (R12, D-045 (3))
+
+Every model call, first or repair, is admitted the same way: the job reserves one lesson
+estimate (the run's per-lesson estimate, as `estimateRunCost`; `estimateLessonCostUsd`) for the
+call and releases it when the job finishes or waits again (`generation_jobs.reserved_usd`, set
+and checked under one Postgres advisory lock, so two workers can't both take the last room). The
+run and global (`SPEND_CAP_USD`) guards compare spent + reserved with the cap, across every run
+and worker process (so the reservation lives in the database). A call's cost is recorded before
+its reservation is released, so it is never counted as neither.
+
+- **Admission:** the run must still be active (cancelled: the job is cancelled; `stopped_cap`:
+  as a cap reached). Real spend at or over a cap stops the run (`stopped_cap`). Spend plus other
+  jobs' reservations at or over a cap makes the job wait (polling every second) rather than stop
+  the run, so a run whose estimate is above what lessons really cost still spends up to its cap.
+  When its worker stops, a waiting job hands itself back to the queue.
+- **Who holds room:** only rows in `generating` count, and a job holds a reservation only while
+  admitted to a call: each admission first releases the job's own (a crash retry's leftover one,
+  or its last call's), so jobs waiting for room, crash retries included, never wait on each
+  other. A dead worker's row keeps its reservation until its retry is admitted or waits, or the
+  sweep fails it, so at most about one heartbeat window plus the retry delay.
+- **Repairs:** a job whose run was cancelled, or whose cap was reached, during its last call
+  makes no repair call: it is cancelled with an error ("The run was cancelled before the repair
+  attempt." / "Stopped: spend cap reached before the repair attempt."), and its lesson moves back
+  (Failed, or Draft when it has content) with that note.
+- **Bound:** each call starts only while spend + reservations < cap, so recorded spend ends below
+  the cap plus the last admitted call's estimate, plus whatever a call in flight costs above its
+  estimate (a lesson longer than the estimate). For the global cap, AI assist calls made
+  meanwhile add their own cost (they are checked, not reserved). A call whose worker died
+  records no cost (no usage comes back).
+
+### Prompt polish (R7, D-045 (4))
+
+`post_process.ts` adds `MAX_TEACHER_TIPS` (= 2), `MAX_QUICK_CHECK_EXEMPLAR_SENTENCES` (= 2) and
+`polishHints(content): string[]`.
+
+- **Teacher tips:** `normalizeLessonContent` keeps the first two `teacher_tip` blocks in lesson
+  order (sections, parts, blocks) and drops the rest. An extra tip that is the only block of its
+  part becomes a `paragraph` with the same text instead, so the part keeps a block (and its label,
+  standards and minutes) and the lesson still has at most two tips.
+- **Quick-check exemplars:** every `ask` is a quick check except those in Learning in Action of an
+  `academic_discussion` lesson (discussion questions take 2-4 sentence exemplars; writing models
+  are `display` blocks). `normalizeLessonContent` trims a quick-check exemplar to its first two
+  sentences. A sentence ends at `.`, `!` or `?` (and a closing quote or bracket right after it)
+  followed by whitespace and an uppercase letter or an opening quote, so `p. 4` and `pp. 16–22`
+  are not sentence ends.
+- **Pulse check length (hint-only, PM on D-055 (4)):** the code can't rewrite option text, so the
+  default template has a line saying the correct option must not be the longest, and
+  `polishHints` returns a review hint (naming the pulse check and "longest") when the correct
+  option is strictly the longest one in every pulse check of the lesson (a tie, or one check where
+  it isn't, gives no hint). The worker saves the lesson as usual and stores the hints in
+  `lessons.polish_warnings` (empty when there are none), and the lesson bar shows each as a small
+  "Review hint". There is no repair retry for it: polish never costs a model call or fails a
+  lesson.
+
+### Malformed JSON (R7, Sonnet probe)
+
+An answer that isn't valid JSON is an attempt like any other: the repair prompt says the answer
+was not valid JSON, the retry's valid lesson is saved, and both calls' tokens and cost count on
+the job, the run and `getLessonGeneration`. (Already true; the test is a regression guard.)
+
+### Dashboard (D-045 addendum)
+
+- An author's open dashboard picks up a cap raised by an admin elsewhere within 5 s (the cost
+  panel's Spend cap and an enabled Resume generation), without a reload. Today the page re-reads
+  only on lesson events or while a run is active.
+- `CancelRunDialog` leaves zero counts out of its text (no "The 0 queued lessons won't start"); the
+  non-zero facts and "You can generate the rest later." stay.
+
 ## Settings (`settings.ts`)
 
 `getGenerationSettings(env)` -> `{ model, concurrency, maxAttempts, capUsd }` from

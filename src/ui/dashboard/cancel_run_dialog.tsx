@@ -17,6 +17,25 @@ function noun(count: number): string {
   return count === 1 ? 'lesson' : 'lessons'
 }
 
+/** The dialog text without zero counts ("The 0 queued lessons won't start" reads wrong). */
+function cancelText(queued: number, generating: number, generated: number): string {
+  const sentences: string[] = []
+  if (queued > 0) {
+    sentences.push(`The ${queued} queued ${noun(queued)} won't start.`)
+  }
+  const kept = `the ${generated} generated ${noun(generated)}`
+  if (generating > 0) {
+    const along = generated > 0 ? `, along with ${kept}` : ''
+    sentences.push(
+      `The ${generating} ${noun(generating)} being generated will finish and be kept${along}.`,
+    )
+  } else if (generated > 0) {
+    sentences.push(`The ${generated} generated ${noun(generated)} will be kept.`)
+  }
+  sentences.push('You can generate the rest later.')
+  return sentences.join(' ')
+}
+
 /** R11: what stops and what is kept; "Keep running" is the safe choice. */
 export function CancelRunDialog({
   queued,
@@ -42,11 +61,7 @@ export function CancelRunDialog({
         </h2>
       </header>
       <div className="body">
-        <p id={`${id}-text`}>
-          The {queued} queued {noun(queued)} won&apos;t start. The {generating} {noun(generating)}{' '}
-          being generated will finish and be kept, along with the {generated} generated{' '}
-          {noun(generated)}. You can generate the rest later.
-        </p>
+        <p id={`${id}-text`}>{cancelText(queued, generating, generated)}</p>
       </div>
       <footer>
         <button ref={keepRef} type="button" className="btn" onClick={onClose}>

@@ -21,7 +21,7 @@ Structure:
 - Every focus standard must appear in the "standards" list of at least one Learning in Action part. Only use standard codes given in the request; never invent codes.
 - Every "ask" block has an exemplar: a strong but achievable grade 6 answer in complete sentences.
 - Each Learning in Action part and the Literacy Lab end with one "eld_instructions" block and one "student_support" block. Launch and Look Back do not have them.
-- Include at least one "pulse_check" in Learning in Action: four options, exactly one with correct=true, each with a one-sentence rationale that starts with "Correct:" or "Incorrect:".
+- Include at least one "pulse_check" in Learning in Action: four options, exactly one with correct=true, each with a one-sentence rationale that starts with "Correct:" or "Incorrect:". The correct option must not be the longest one: make at least one wrong option as long as it or longer.
 - Section and part purposes are one sentence starting "Students will ...".
 - Text fields are plain text. Use **bold** for target words and *italics* for titles of works; no HTML, no Markdown headings.
 - Do not reproduce passages from copyrighted texts. Refer to texts by title, chapter and page range, and quote at most a short phrase.

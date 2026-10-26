@@ -71,3 +71,32 @@ export async function failLostGenerationJobs(db: Database, boss: PgBoss): Promis
   }
   return lost.length
 }
+
+/** Queue job states in which pg-boss may still run the job. */
+const LIVE_QUEUE_STATES = ['created', 'retry', 'active']
+
+/**
+ * Ids of `generating` rows whose queue job pg-boss gave up on: the job is `failed` with no retry
+ * left, so no worker will ever finish the row (R6, D-045 (1)). A job waiting for a retry is live.
+ */
+export async function findExhaustedGenerationJobs(db: Database, boss: PgBoss): Promise<string[]> {
+  const generating = await db
+    .select({ id: generationJobs.id })
+    .from(generationJobs)
+    .where(eq(generationJobs.status, 'generating'))
+  const found = await Promise.all(
+    generating.map(async (row) => ({
+      id: row.id,
+      jobs: await boss.findJobs<GenerateLessonJobData>(GENERATE_LESSON_QUEUE, {
+        data: { jobId: row.id },
+      }),
+    })),
+  )
+  return found
+    .filter(
+      ({ jobs }) =>
+        jobs.some((job) => job.state === 'failed') &&
+        !jobs.some((job) => LIVE_QUEUE_STATES.includes(job.state)),
+    )
+    .map(({ id }) => id)
+}

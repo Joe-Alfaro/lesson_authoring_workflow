@@ -152,6 +152,8 @@ export const lessons = pgTable(
     status: lessonStatus('status').notNull().default('draft'),
     assigneeId: uuid('assignee_id').references(() => users.id, { onDelete: 'set null' }),
     content: jsonb('content').$type<unknown>(),
+    // D-055 (4): non-blocking review hints from the last generation (polishHints), shown to reviewers.
+    polishWarnings: jsonb('polish_warnings').$type<string[]>().notNull().default([]),
     lastEditedBy: uuid('last_edited_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: createdAt(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -284,6 +286,8 @@ export const generationJobs = pgTable(
     tokensIn: integer('tokens_in').notNull().default(0),
     tokensOut: integer('tokens_out').notNull().default(0),
     costUsd: usd('cost_usd').notNull().default(0),
+    // D-055 (3): one lesson estimate while the job is in flight, 0 otherwise; spend guards count it.
+    reservedUsd: usd('reserved_usd').notNull().default(0),
     createdAt: createdAt(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

@@ -96,7 +96,8 @@ export function UnitDashboard({ data, role }: { data: UnitDashboardData; role: R
   const { run, progress, rows } = data
   const active = run?.status === 'queued' || run?.status === 'running'
   const stopped = run?.status === 'stopped_cap'
-  useLiveRefresh(data.unit.id, active)
+  // A run stopped at its cap waits for an admin, who may raise the cap from another browser.
+  useLiveRefresh(data.unit.id, active || stopped)
 
   const canGenerate = role === 'author' || role === 'admin'
   const canAssign = role === 'author' || role === 'approver' || role === 'admin'

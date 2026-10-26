@@ -1231,6 +1231,16 @@ ul.chips,
 .lesson-bar .assigned {
   gap: 6px;
 }
+.lesson-bar .polish-hint {
+  gap: 4px;
+  min-width: 0;
+}
+.lesson-bar .polish-hint-text {
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .save-state {
   gap: 4px;
 }

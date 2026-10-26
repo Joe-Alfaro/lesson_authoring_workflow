@@ -13,7 +13,9 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 
 export interface FakeResponse {
   /** The JSON object the model "answers" (sent as the text of the reply). */
-  output: unknown
+  output?: unknown
+  /** Raw answer text instead of `output` (for example malformed JSON). */
+  text?: string
   /** Simulated latency before the answer starts. */
   delayMs?: number
   usage?: { inputTokens: number; outputTokens: number }
@@ -101,7 +103,7 @@ export async function startFakeAnthropic(
     if (response.destroyed) return
 
     const usage = next.usage ?? DEFAULT_USAGE
-    const text = JSON.stringify(next.output)
+    const text = next.text ?? JSON.stringify(next.output)
     counter += 1
     const message = {
       id: `msg_fake_${counter}`,
