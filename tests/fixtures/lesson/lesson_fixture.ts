@@ -151,7 +151,8 @@ export function coreLessonBody(): LessonBody {
                     rationale: 'This detail shows nervous behavior.',
                   },
                   {
-                    text: 'The school was large.',
+                    // Longer than the correct option: the correct one isn't the longest (D-045 (4)).
+                    text: 'The school was large, with long hallways and many classrooms.',
                     correct: false,
                     rationale: 'This describes the setting, not the character.',
                   },

@@ -152,6 +152,74 @@ duplicate).
 - **Exemplar length.** The template keeps "1-2 sentences for quick checks" (a regression guard).
 - `normalizeLessonContent` is pure (does not mutate its input) and its result still validates.
 
+## M5 robustness contract (red tests: `robustness.int.test.ts`, `post_process_polish.test.ts`, additions to `prompt_builder.test.ts`, `src/ui/dashboard/dialogs.test.tsx`, `tests/e2e/dashboard_generation.spec.ts`)
+
+D-045 and its addendum. No test calls a real model: the malformed-JSON test drives the real
+Anthropic adapter against `tests/e2e/fake_anthropic.ts` (`ANTHROPIC_BASE_URL`), whose scripted
+responses now take raw `text` as well as `output`.
+
+### Crash retries run out (R6, D-045 (1))
+
+When pg-boss has no retry left for a job whose worker died (the queue job is `failed`, the
+`generation_jobs` row still `generating`), the worker marks the row `failed` with a non-empty
+error, moves the lesson through `applySystemTransition` (Failed without content, a workflow event
+from Generating; Draft with a note when it has content, as for other failures), sends the progress
+event and finishes the run (`completed`, `finishedAt` set). Detection is the worker's own (for
+example the lost-heartbeat sweep, or a dead-letter queue); a row whose queue job is waiting for a
+retry is left alone.
+
+### Attempts carry across crash retries (R6, D-045 (2))
+
+`generation_jobs.attempts` counts model calls over every try of the queue job. A retried job
+continues at `attempts + 1`, so a lesson gets at most `maxAttempts` calls in total. A job whose
+row already has `attempts >= maxAttempts` fails without a model call (lesson Failed, run finishes).
+
+### Caps count jobs in flight (R12, D-045 (3))
+
+A job reserves one lesson estimate (the run's per-lesson estimate, as `estimateRunCost`) when it
+starts and releases it when it finishes; the run and global (`SPEND_CAP_USD`) guards compare
+spent + reserved with the cap, across every run and worker process (so the reservation lives in
+the database). Total spend can then exceed a cap by at most one lesson estimate, with any
+concurrency. A job blocked only by other jobs' reservations waits for them rather than stopping
+the run: the run is `stopped_cap` once its real spend reaches the cap, so a run whose estimate is
+above what lessons really cost still spends up to its cap.
+
+### Prompt polish (R7, D-045 (4))
+
+`post_process.ts` adds `MAX_TEACHER_TIPS` (= 2), `MAX_QUICK_CHECK_EXEMPLAR_SENTENCES` (= 2) and
+`polishHints(content): string[]`.
+
+- **Teacher tips:** `normalizeLessonContent` keeps the first two `teacher_tip` blocks in lesson
+  order (sections, parts, blocks) and drops the rest.
+- **Quick-check exemplars:** every `ask` is a quick check except those in Learning in Action of an
+  `academic_discussion` lesson (discussion questions take 2-4 sentence exemplars; writing models
+  are `display` blocks). `normalizeLessonContent` trims a quick-check exemplar to its first two
+  sentences. A sentence ends at `.`, `!` or `?` (and a closing quote or bracket right after it)
+  followed by whitespace and an uppercase letter or an opening quote, so `p. 4` and `pp. 16–22`
+  are not sentence ends.
+- **Pulse check length:** the code can't rewrite option text, so the default template has a line
+  saying the correct option must not be the longest, and `polishHints` returns a repair hint
+  (naming the pulse check and "longest") when the correct option is strictly the longest one in
+  every pulse check of the lesson (a tie, or one check where it isn't, gives no hint). After
+  validation, a lesson with hints is retried with them in the repair prompt while attempts remain;
+  the last attempt's valid lesson is saved anyway (polish never fails a lesson). Costs of every
+  attempt count as usual. Cost note: every polish retry is a full extra call, so if a model
+  ignores the prompt line this doubles a lesson's cost (the run cap still bounds it).
+
+### Malformed JSON (R7, Sonnet probe)
+
+An answer that isn't valid JSON is an attempt like any other: the repair prompt says the answer
+was not valid JSON, the retry's valid lesson is saved, and both calls' tokens and cost count on
+the job, the run and `getLessonGeneration`. (Already true; the test is a regression guard.)
+
+### Dashboard (D-045 addendum)
+
+- An author's open dashboard picks up a cap raised by an admin elsewhere within 5 s (the cost
+  panel's Spend cap and an enabled Resume generation), without a reload. Today the page re-reads
+  only on lesson events or while a run is active.
+- `CancelRunDialog` leaves zero counts out of its text (no "The 0 queued lessons won't start"); the
+  non-zero facts and "You can generate the rest later." stay.
+
 ## Settings (`settings.ts`)
 
 `getGenerationSettings(env)` -> `{ model, concurrency, maxAttempts, capUsd }` from
