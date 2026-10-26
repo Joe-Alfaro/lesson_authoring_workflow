@@ -95,22 +95,26 @@ export async function startCollabServer(options: CollabOptions): Promise<Running
       return { type: 'flushed', ok: false, reason: 'locked' }
     }
     compactLessonDoc(document)
-    await persistence.store(documentName, Y.encodeStateAsUpdate(document))
     const snapshot = yDocToLesson(document)
-    if (!snapshot.ok) {
-      // The last valid lessons.content stays; the Yjs state above keeps the reviewer's work.
-      return { type: 'flushed', ok: false, reason: 'invalid' }
-    }
     try {
-      await saveEditorSnapshot(db, {
+      // The Yjs row is the fence against a restore that committed before we heard of it: then
+      // nothing is written, and the content-replaced handler brings the doc up to date.
+      const result = await saveEditorSnapshot(db, {
         lessonId,
         userId: lastEditor.get(documentName) ?? null,
-        content: snapshot.lesson,
+        content: snapshot.ok ? snapshot.lesson : null,
+        yjs: { name: documentName, state: Y.encodeStateAsUpdate(document) },
       })
+      if (result.replaced) return { type: 'flushed', ok: true }
     } catch (error) {
-      if (error instanceof LessonLockedError)
+      // Locked, or the lesson is gone (unit deleted): nothing to store.
+      if (error instanceof LessonLockedError || error instanceof LessonNotFoundError)
         return { type: 'flushed', ok: false, reason: 'locked' }
       throw error
+    }
+    if (!snapshot.ok) {
+      // The last valid lessons.content stays; the stored Yjs state keeps the reviewer's work.
+      return { type: 'flushed', ok: false, reason: 'invalid' }
     }
     return { type: 'flushed', ok: true }
   }
@@ -220,7 +224,10 @@ export async function startCollabServer(options: CollabOptions): Promise<Running
       if (!document) return
       const row = await lessonRow(lessonId)
       const content = LessonContent.safeParse(row?.content)
-      if (content.success) replaceContent(document, content.data)
+      if (!content.success) return
+      replaceContent(document, content.data)
+      // Re-open the fence (the replace deleted the Yjs row), so later stores are written.
+      await persistence.store(name, Y.encodeStateAsUpdate(document))
     },
   })
 
