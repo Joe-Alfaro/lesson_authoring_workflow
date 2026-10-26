@@ -1,7 +1,7 @@
 /**
  * Checks run by scripts/docker_smoke.sh against the three production containers: health, sign-in
- * through Auth.js, a collab token from the web app, and two signed-in users editing one document
- * through the collab URL the web app is configured with. Never calls the model.
+ * through Auth.js, collab tokens from the web app and the collab server's token and document
+ * checks at the collab URL the web app is configured with. Never calls the model.
  *
  * Env: SMOKE_WEB_URL, SMOKE_WORKER_URL, SMOKE_COLLAB_HTTP_URL, SMOKE_COLLAB_URL (the web
  * service's COLLAB_URL), SMOKE_SEED_PASSWORD.
@@ -99,22 +99,6 @@ function openDocument(name: string, token: string) {
   return { document, outcome, close: () => provider?.destroy() }
 }
 
-function waitForText(document: Y.Doc, expected: string): Promise<boolean> {
-  const text = document.getText('body')
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(false), 10_000)
-    const observe = () => {
-      if (text.toString().includes(expected)) {
-        clearTimeout(timer)
-        text.unobserve(observe)
-        resolve(true)
-      }
-    }
-    text.observe(observe)
-    observe()
-  })
-}
-
 for (const [name, url] of [
   ['web', webUrl],
   ['worker', workerUrl],
@@ -155,23 +139,13 @@ const denied = openDocument(documentName, 'not-a-token')
 check(`collab rejects a bad token at ${collabUrl}`, (await denied.outcome) === 'denied')
 denied.close()
 
-const first = openDocument(documentName, authorToken)
-const second = openDocument(documentName, reviewerToken)
-const [firstOutcome, secondOutcome] = await Promise.all([first.outcome, second.outcome])
+// Collab serves lesson documents only (M3); the browser flow (docker_smoke_flow.ts) co-edits one.
+const unknown = openDocument(documentName, authorToken)
 check(
-  `two users connect to collab at ${collabUrl}`,
-  firstOutcome === 'synced' && secondOutcome === 'synced',
-  `${firstOutcome}/${secondOutcome}`,
+  'collab refuses a valid token for a document that is not a lesson',
+  (await unknown.outcome) === 'denied',
 )
-first.document.getText('body').insert(0, 'from author ')
-second.document.getText('body').insert(0, 'from reviewer ')
-const [secondSeesFirst, firstSeesSecond] = await Promise.all([
-  waitForText(second.document, 'from author'),
-  waitForText(first.document, 'from reviewer'),
-])
-check('edits reach the other user', secondSeesFirst && firstSeesSecond)
-first.close()
-second.close()
+unknown.close()
 
 console.log(failures === 0 ? 'All smoke checks passed' : `${failures} smoke check(s) failed`)
 process.exit(failures === 0 ? 0 : 1)

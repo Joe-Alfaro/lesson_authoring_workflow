@@ -16,7 +16,8 @@ FROM deps AS build
 COPY . .
 RUN npm run build
 
-# Runtime: no npm, no source, no dev dependencies; only Next's traced node_modules.
+# Runtime: no source and no dev dependencies; only Next's traced node_modules. The base image
+# ships npm, but nothing here runs it.
 FROM base AS runtime
 ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \

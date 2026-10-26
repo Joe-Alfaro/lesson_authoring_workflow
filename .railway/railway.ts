@@ -13,16 +13,23 @@ const DEPLOY = {
   restartPolicyMaxRetries: 10,
 } as const
 
-// R12 spend guard for a public URL. The web app checks it when a run starts, the worker before
-// every job. SPEND_CAP_USD is the total for this database across all runs; raise it on purpose.
+// R12 spend guard for a public URL. The web app checks it when a run starts and before AI assist,
+// the worker before every job. SPEND_CAP_USD is the total for this database across all runs and
+// assist calls; raise it on purpose. Web and worker both create the generation queue, so they
+// share these values (a different heartbeat would make them keep changing the queue).
 const GENERATION_ENV = {
   SPEND_CAP_USD: '3',
   GENERATION_SPEND_CAP_USD: '1',
   GENERATION_MODEL: 'claude-haiku-5-5',
   GENERATION_CONCURRENCY: '2',
   GENERATION_MAX_ATTEMPTS: '2',
-  GENERATION_EFFORT: 'medium',
+  GENERATION_HEARTBEAT_SECONDS: '60',
 }
+
+// Postgres connections (docs/deploy.md): web DB_POOL_MAX + 1 LISTEN + PGBOSS_POOL_MAX = 13,
+// worker DB_POOL_MAX + PGBOSS_POOL_MAX = 7, collab DB_POOL_MAX = 10 (its LISTEN connection comes
+// from the pool). 30 in all, plus up to 10 for a migrate or seed run, well under Postgres's
+// default of 100.
 
 export default defineRailway((_ctx, project) => {
   const db = postgres('Postgres')
@@ -37,6 +44,11 @@ export default defineRailway((_ctx, project) => {
       PORT: '3000',
       AUTH_SECRET: preserve(),
       SEED_PASSWORD: preserve(),
+      // AI assist (suggestions, regenerate section, alignment) calls the model from web.
+      ANTHROPIC_API_KEY: preserve(),
+      ASSIST_MODEL: 'claude-haiku-5-5',
+      DB_POOL_MAX: '10',
+      PGBOSS_POOL_MAX: '2',
       // The browser's WebSocket URL for the editor; resolved by Railway at deploy time.
       COLLAB_URL: 'wss://${{collab.RAILWAY_PUBLIC_DOMAIN}}',
       ...GENERATION_ENV,
@@ -50,8 +62,14 @@ export default defineRailway((_ctx, project) => {
     env: {
       DATABASE_URL: db.env.DATABASE_URL,
       PORT: '4100',
-      ANTHROPIC_API_KEY: preserve(),
+      // Set once on web.
+      ANTHROPIC_API_KEY: web.env.ANTHROPIC_API_KEY,
+      // Two concurrent jobs need few connections.
+      DB_POOL_MAX: '5',
+      PGBOSS_POOL_MAX: '2',
       ...GENERATION_ENV,
+      // Thinking effort of the generation calls; only the worker's Anthropic client reads it.
+      GENERATION_EFFORT: 'medium',
     },
   })
 
@@ -62,6 +80,8 @@ export default defineRailway((_ctx, project) => {
     env: {
       DATABASE_URL: db.env.DATABASE_URL,
       PORT: '4200',
+      // Room for the R28 load (25 reviewers storing documents); one client holds the LISTEN.
+      DB_POOL_MAX: '10',
       // Collab tokens are signed by web, so collab must verify with the same secret.
       AUTH_SECRET: web.env.AUTH_SECRET,
     },
