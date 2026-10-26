@@ -44,7 +44,7 @@ const ESTIMATE_NOTE =
 const PROGRESS_NOTE =
   'Lessons open as soon as they finish. You can close this page; generation keeps going.'
 const CANCEL_TEXT =
-  "The 20 queued lessons won't start, and the 4 lessons being generated stop. The 15 generated lessons are kept. You can generate the rest later."
+  "The 20 queued lessons won't start. The 4 lessons being generated will finish and be kept, along with the 15 generated lessons. You can generate the rest later."
 const NOT_STARTED = 'Not started: the spend cap stopped the run.'
 
 /** Generous wait for the fake worker (1 s per call, 4 at a time) to get through a run. */

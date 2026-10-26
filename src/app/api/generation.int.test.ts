@@ -260,6 +260,16 @@ describe('generation and prompt API', () => {
       expect(insert).not.toHaveBeenCalled()
     })
 
+    it('answers 400 for an empty lesson list and creates no run', async () => {
+      signIn(people.author)
+      const answer = await call(() =>
+        routes.runs.POST(request('/', 'POST', { lessonIds: [] }), params({ id: unit.unitId })),
+      )
+      expect(answer.status).toBe(400)
+      expect(answer.body.error).toEqual(expect.any(String))
+      expect(await db.select().from(schema.generationRuns)).toHaveLength(0)
+    })
+
     it('estimates the cost of the numbered lessons', async () => {
       signIn(people.author)
       const answer = await call(() =>

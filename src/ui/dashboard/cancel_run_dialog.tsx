@@ -13,8 +13,8 @@ interface CancelRunDialogProps {
   busy?: boolean
 }
 
-function lessons(count: number): string {
-  return count === 1 ? '1 lesson' : `${count} lessons`
+function noun(count: number): string {
+  return count === 1 ? 'lesson' : 'lessons'
 }
 
 /** R11: what stops and what is kept; "Keep running" is the safe choice. */
@@ -43,9 +43,9 @@ export function CancelRunDialog({
       </header>
       <div className="body">
         <p id={`${id}-text`}>
-          The {queued} queued {queued === 1 ? 'lesson' : 'lessons'} won&apos;t start, and the{' '}
-          {lessons(generating)} being generated stop. The {generated} generated{' '}
-          {generated === 1 ? 'lesson is' : 'lessons are'} kept. You can generate the rest later.
+          The {queued} queued {noun(queued)} won&apos;t start. The {generating} {noun(generating)}{' '}
+          being generated will finish and be kept, along with the {generated} generated{' '}
+          {noun(generated)}. You can generate the rest later.
         </p>
       </div>
       <footer>

@@ -43,6 +43,8 @@ export function GenerationSummary({ progress }: { progress: UnitProgress }) {
 
   if (run?.status === 'stopped_cap') {
     const failed = counts.failed > 0 ? ` and ${counts.failed} failed` : ''
+    // After an admin raises the cap, capUsd is the new cap, not the one the run stopped at.
+    const raised = run.capUsd > run.costUsd
     return (
       <section className="gsum" role="status" aria-label="Generation stopped">
         <div className="row stopped-title">
@@ -51,12 +53,14 @@ export function GenerationSummary({ progress }: { progress: UnitProgress }) {
         </div>
         <p className="stopped-text">
           {counts.generated} of {counts.total} lessons were generated before the run reached its{' '}
-          {formatUsd(run.capUsd)} cap. No new jobs were started; {counts.notGenerated} lessons were
-          not generated{failed}. Finished lessons are kept and can be edited.
+          {raised ? 'spend cap' : `${formatUsd(run.capUsd)} cap`}. No new jobs were started;{' '}
+          {counts.notGenerated} lessons were not generated{failed}. Finished lessons are kept and
+          can be edited.
         </p>
         <p className="sub">
-          To finish the unit, an admin raises the cap, then you can resume. Resuming generates only
-          the lessons that are missing.
+          {raised
+            ? `An admin raised the cap to ${formatUsd(run.capUsd)}. Resume generates only the lessons that are missing.`
+            : 'To finish the unit, an admin raises the cap, then you can resume. Resuming generates only the lessons that are missing.'}
         </p>
       </section>
     )

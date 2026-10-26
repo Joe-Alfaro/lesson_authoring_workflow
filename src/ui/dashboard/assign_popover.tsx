@@ -159,13 +159,19 @@ export function AssignPopover({
           {loadError}
         </p>
       ) : null}
-      <ul className="options" role="listbox" id={`${id}-list`} aria-label="Reviewers">
-        {reviewers === null && !loadError ? (
-          <li className="caption">Loading reviewers...</li>
-        ) : null}
-        {reviewers !== null && matches.length === 0 ? (
-          <li className="caption">No reviewer matches &quot;{query}&quot;.</li>
-        ) : null}
+      {reviewers === null && !loadError ? <p className="caption">Loading reviewers...</p> : null}
+      {reviewers !== null && matches.length === 0 ? (
+        <p className="caption">No reviewer matches &quot;{query}&quot;.</p>
+      ) : null}
+      {/* Focusable, so the scrolling list is reachable by keyboard: arrows move, Enter assigns. */}
+      <ul
+        className="options"
+        role="listbox"
+        id={`${id}-list`}
+        aria-label="Reviewers"
+        tabIndex={0}
+        aria-activedescendant={current ? `${id}-${current.id}` : undefined}
+      >
         {matches.map((reviewer) => (
           <li
             key={reviewer.id}

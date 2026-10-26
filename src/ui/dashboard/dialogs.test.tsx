@@ -103,7 +103,7 @@ describe('CancelRunDialog', () => {
     )
     const dialog = screen.getByRole('alertdialog', { name: 'Cancel this run?' })
     expect(dialog).toHaveTextContent(
-      "The 20 queued lessons won't start, and the 4 lessons being generated stop. The 15 generated lessons are kept. You can generate the rest later.",
+      "The 20 queued lessons won't start. The 4 lessons being generated will finish and be kept, along with the 15 generated lessons. You can generate the rest later.",
     )
     expect(within(dialog).getByRole('button', { name: 'Keep running' })).toHaveFocus()
     await expectNoAxeViolations(container)

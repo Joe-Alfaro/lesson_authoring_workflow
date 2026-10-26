@@ -27,6 +27,7 @@
     "test:unit": "vitest run --project unit",
     "test:component": "vitest run --project component",
     "test:integration": "vitest run --project integration",
+    "pretest:e2e": "node -e \"for (const dir of ['.next', 'dist']) require('node:fs').rmSync(dir, { recursive: true, force: true })\"",
     "test:e2e": "playwright test",
     "docker:smoke": "bash scripts/docker_smoke.sh",
     "scrub": "tsx scripts/scrub_check.ts",

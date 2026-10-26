@@ -30,5 +30,9 @@ npm run test:e2e -- tests/e2e/import.spec.ts -g "preview"
   after the mockup in `docs/design/lesson-authoring/`, for a reviewer to compare by eye. There
   are no pixel-diff assertions. Pages with forms are checked with axe (WCAG 2.1 A/AA).
 
+`npm run test:e2e` first deletes `.next` and `dist`: `next dev` started over the production build
+output (`npm run build`, standalone) has gone into a recompile loop that fails every sign-in.
+Run Playwright directly (`npx playwright test`) to keep a build you still need.
+
 These tests are not part of `npm run check`: starting Postgres and compiling the app with
 `next dev` takes about a minute before the first test runs.

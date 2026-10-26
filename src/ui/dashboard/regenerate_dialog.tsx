@@ -49,7 +49,10 @@ export function RegenerateDialog({
         </h2>
       </header>
       <div className="body" id={`${id}-text`}>
-        <p>{lessonNumbersText(lessonNumbers)} will be written again from their outline rows.</p>
+        <p>
+          {lessonNumbersText(lessonNumbers)} will be written again from{' '}
+          {count === 1 ? 'its outline row' : 'their outline rows'}.
+        </p>
         {edited > 0 ? (
           <div className="notice warn">
             <WarningIcon />
