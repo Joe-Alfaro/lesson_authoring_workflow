@@ -83,6 +83,14 @@ const ADMISSION_WAIT_MS = 1_000
 /** Why a dead worker's lesson fails once pg-boss has no retry left (D-045 (1)). */
 const EXHAUSTED_REASON = 'The worker stopped during generation and no retry is left.'
 
+/** Why a crash retry's lesson moves back without a new try: the run was cancelled meanwhile. */
+const CANCELLED_AFTER_CRASH_REASON =
+  'The worker stopped during generation and the run was cancelled before the retry.'
+
+/** Why a crash retry's lesson moves back without a new try: a spend cap was reached meanwhile. */
+const CAPPED_AFTER_CRASH_REASON =
+  'The worker stopped during generation and the spend cap was reached before the retry.'
+
 /**
  * Lesson status moves go through the review workflow (R23) so each one is a workflow event. A
  * lesson already Generating (a job retried after a worker crash) stays Generating.
@@ -156,7 +164,7 @@ async function setJobStatus(
   job: Pick<JobRow, 'id' | 'lessonId'>,
   lesson: { unitId: string; lessonNumber: number | null },
   status: LessonGenerationStatus & JobRow['status'],
-  fields: Partial<Pick<JobRow, 'error'>> = {},
+  fields: Partial<Pick<JobRow, 'error' | 'reservedUsd'>> = {},
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await tx
@@ -443,6 +451,25 @@ async function generateLesson(ctx: GenerationContext, job: JobRow, run: RunRow):
   )
 }
 
+/**
+ * A job that won't start (run no longer active, or a cap reached): cancelled with its reservation
+ * released. A crash retry finds its lesson still Generating from the dead try; it moves back
+ * (Failed, or Draft when it has content) so nothing is left Generating.
+ */
+async function cancelUnstartedJob(
+  db: Database,
+  job: Pick<JobRow, 'id' | 'lessonId' | 'status'>,
+  lesson: { status: string },
+  lessonRef: { unitId: string; lessonNumber: number | null },
+  crashReason: string,
+): Promise<void> {
+  await setJobStatus(db, job, lessonRef, 'cancelled', { reservedUsd: 0 })
+  // `job` is the row as loaded: Generating means a dead worker had admitted it.
+  if (job.status === 'generating' && lesson.status === 'generating') {
+    await moveLessonAfterFailure(db, job.lessonId, crashReason)
+  }
+}
+
 async function processJob(ctx: GenerationContext, jobId: string): Promise<void> {
   const db = ctx.db
   const row = await loadJob(db, jobId)
@@ -457,7 +484,7 @@ async function processJob(ctx: GenerationContext, jobId: string): Promise<void> 
     return
   }
   if (!(ACTIVE_RUN_STATUSES as readonly string[]).includes(run.status)) {
-    await setJobStatus(db, job, lessonRef, 'cancelled')
+    await cancelUnstartedJob(db, job, lesson, lessonRef, CANCELLED_AFTER_CRASH_REASON)
     await finishRunIfDone(db, run.id)
     return
   }
@@ -469,12 +496,12 @@ async function processJob(ctx: GenerationContext, jobId: string): Promise<void> 
       break
     }
     if (admission === 'inactive') {
-      await setJobStatus(db, job, lessonRef, 'cancelled')
+      await cancelUnstartedJob(db, job, lesson, lessonRef, CANCELLED_AFTER_CRASH_REASON)
       await finishRunIfDone(db, run.id)
       return
     }
     if (admission === 'stop') {
-      await setJobStatus(db, job, lessonRef, 'cancelled')
+      await cancelUnstartedJob(db, job, lesson, lessonRef, CAPPED_AFTER_CRASH_REASON)
       await stopRunAtCap(db, run)
       return
     }
@@ -524,14 +551,15 @@ async function admitJob(
     if (run.costUsd >= run.capUsd || spentUsd >= ctx.globalCapUsd) {
       return 'stop'
     }
-    // A crash retry's own leftover reservation doesn't count against it.
+    // Only jobs in flight hold room: a crash retry's own leftover reservation doesn't count
+    // against it, and a stale one on a finished row can't block admission for good.
     const [reserved] = await tx
       .select({
         run: sql<string>`coalesce(sum(${generationJobs.reservedUsd}) filter (where ${generationJobs.runId} = ${runId}), 0)`,
         all: sql<string>`coalesce(sum(${generationJobs.reservedUsd}), 0)`,
       })
       .from(generationJobs)
-      .where(ne(generationJobs.id, job.id))
+      .where(and(ne(generationJobs.id, job.id), eq(generationJobs.status, 'generating')))
     if (
       run.costUsd + Number(reserved?.run ?? 0) >= run.capUsd ||
       spentUsd + Number(reserved?.all ?? 0) >= ctx.globalCapUsd

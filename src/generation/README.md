@@ -169,6 +169,12 @@ lost-heartbeat sweep: after failing lost jobs it asks `findExhaustedGenerationJo
 `generating` rows whose queue job is `failed` with no live (`created`, `retry`, `active`) try; a
 row whose queue job is waiting for a retry is left alone.
 
+A crash retry that may not run (red tests: `robustness_settle.int.test.ts`) is settled the same
+way: when the retry finds its run no longer active (cancelled while the worker was dead) or a cap
+reached, the row is `cancelled` with `reserved_usd` 0, and a lesson still Generating from the dead
+try moves back through `applySystemTransition` (Failed without content, Draft when it has
+content) with a note saying why.
+
 ### Attempts carry across crash retries (R6, D-045 (2))
 
 `generation_jobs.attempts` counts model calls over every try of the queue job. A retried job
@@ -182,7 +188,8 @@ A job reserves one lesson estimate (the run's per-lesson estimate, as `estimateR
 (`generation_jobs.reserved_usd`, set and checked under one Postgres advisory lock, so two workers
 can't both take the last room); the run and global (`SPEND_CAP_USD`) guards compare
 spent + reserved with the cap, across every run and worker process (so the reservation lives in
-the database). Total spend can then exceed a cap by at most one lesson estimate, with any
+the database). Only rows in `generating` count, so a reservation left on a finished row can't
+block admission for good. Total spend can then exceed a cap by at most one lesson estimate, with any
 concurrency. A job blocked only by other jobs' reservations waits for them rather than stopping
 the run: the run is `stopped_cap` once its real spend reaches the cap, so a run whose estimate is
 above what lessons really cost still spends up to its cap. A waiting job polls every second; when its worker stops, it hands
@@ -194,7 +201,9 @@ itself back to the queue unstarted.
 `polishHints(content): string[]`.
 
 - **Teacher tips:** `normalizeLessonContent` keeps the first two `teacher_tip` blocks in lesson
-  order (sections, parts, blocks) and drops the rest.
+  order (sections, parts, blocks) and drops the rest. An extra tip that is the only block of its
+  part becomes a `paragraph` with the same text instead, so the part keeps a block (and its label,
+  standards and minutes) and the lesson still has at most two tips.
 - **Quick-check exemplars:** every `ask` is a quick check except those in Learning in Action of an
   `academic_discussion` lesson (discussion questions take 2-4 sentence exemplars; writing models
   are `display` blocks). `normalizeLessonContent` trims a quick-check exemplar to its first two

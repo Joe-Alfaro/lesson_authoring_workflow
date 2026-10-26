@@ -80,10 +80,14 @@ function normalizeSection(
   keepTip: () => boolean,
 ): Section {
   const parts = section.parts.map((part, index): Part => {
-    // A part never loses its only block (the schema needs one).
-    const blocks = part.blocks.filter(
-      (block) => block.type !== 'teacher_tip' || keepTip() || part.blocks.length === 1,
-    )
+    const blocks = part.blocks.flatMap((block): Block[] => {
+      if (block.type !== 'teacher_tip' || keepTip()) {
+        return [block]
+      }
+      // A part never loses its only block (the schema needs one): an extra tip that is the whole
+      // part stays as a plain paragraph, so the lesson still has at most two tips.
+      return part.blocks.length === 1 ? [{ type: 'paragraph', text: block.text }] : []
+    })
     return {
       ...part,
       ...(section.kind === 'learning_in_action' ? { label: partLabel(part.label, index) } : {}),
