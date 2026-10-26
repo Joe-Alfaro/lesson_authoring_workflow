@@ -1,8 +1,9 @@
 import { and, asc, count, eq, inArray, ne, or } from 'drizzle-orm'
 import type { Database } from '../db/client'
-import { lessons, users } from '../db/schema'
+import { assignmentEvents, lessons, users } from '../db/schema'
 import { isUuid } from '../import/is_uuid'
 import { InvalidAssigneeError, LessonNotFoundError } from './errors'
+import { clockNow } from './lesson_rows'
 
 export interface AssignableReviewer {
   id: string
@@ -23,7 +24,12 @@ function isAssignableRole(role: string): role is AssignableReviewer['role'] {
  */
 export async function assignLessons(
   db: Database,
-  input: { lessonIds: string[]; assigneeId: string | null },
+  input: {
+    lessonIds: string[]
+    assigneeId: string | null
+    /** Who assigned them; recorded in assignment_events for the history (R23). */
+    actorId?: string | null
+  },
 ): Promise<{ updated: number }> {
   const lessonIds = [...new Set(input.lessonIds)]
   if (lessonIds.length === 0) {
@@ -42,6 +48,11 @@ export async function assignLessons(
         throw new InvalidAssigneeError()
       }
     }
+    const before = await tx
+      .select({ id: lessons.id, assigneeId: lessons.assigneeId })
+      .from(lessons)
+      .where(inArray(lessons.id, lessonIds))
+      .for('update')
     const updated = await tx
       .update(lessons)
       .set({ assigneeId: input.assigneeId })
@@ -50,6 +61,17 @@ export async function assignLessons(
     if (updated.length !== lessonIds.length) {
       const found = new Set(updated.map((row) => row.id))
       throw new LessonNotFoundError(lessonIds.find((id) => !found.has(id))!)
+    }
+    const changed = before.filter((row) => row.assigneeId !== input.assigneeId)
+    if (changed.length > 0) {
+      await tx.insert(assignmentEvents).values(
+        changed.map((row) => ({
+          lessonId: row.id,
+          assigneeId: input.assigneeId,
+          actorId: input.actorId ?? null,
+          at: clockNow,
+        })),
+      )
     }
     return { updated: updated.length }
   })

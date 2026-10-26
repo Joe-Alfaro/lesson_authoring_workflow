@@ -1,9 +1,10 @@
 // Per-lesson generation status and a live feed (R9). Contract: src/generation/README.md.
-// Status changes are published with Postgres NOTIFY on one channel; subscribers LISTEN on a
-// dedicated pool connection and filter by unit.
+// Status changes are published with Postgres NOTIFY on one channel; subscribers share the
+// process's LISTEN connection (src/db/notify_hub.ts) and filter by unit.
 import { asc, desc, eq, sql } from 'drizzle-orm'
 import type pg from 'pg'
 import type { Database } from '../db/client'
+import { subscribeToChannel } from '../db/notify_hub'
 import { generationJobs, generationRuns, lessons } from '../db/schema'
 
 export const PROGRESS_CHANNEL = 'generation_progress'
@@ -132,43 +133,17 @@ function poolOf(db: Database): pg.Pool {
   return (db as Database & { $client: pg.Pool }).$client
 }
 
-/** Calls `listener` for every lesson status change in the unit until unsubscribed. */
+/**
+ * Calls `listener` for every lesson status change in the unit until unsubscribed. Every open feed
+ * shares the process's one LISTEN connection (src/db/notify_hub.ts), not a pool client.
+ */
 export async function subscribeToUnitProgress(
   db: Database,
   unitId: string,
   listener: (event: LessonProgressEvent) => void,
 ): Promise<() => Promise<void>> {
-  const client = await poolOf(db).connect()
-  let active = true
-  function onNotification(message: pg.Notification) {
-    if (!active || message.channel !== PROGRESS_CHANNEL || !message.payload) {
-      return
-    }
-    const event = JSON.parse(message.payload) as LessonProgressEvent
-    if (event.unitId === unitId) {
-      listener(event)
-    }
-  }
-  function onError(error: Error) {
-    console.error('[progress] listener connection error:', error.message)
-  }
-  client.on('notification', onNotification)
-  client.on('error', onError)
-  await client.query(`LISTEN ${PROGRESS_CHANNEL}`)
-
-  return async () => {
-    if (!active) {
-      return
-    }
-    active = false
-    client.off('notification', onNotification)
-    try {
-      await client.query(`UNLISTEN ${PROGRESS_CHANNEL}`)
-      client.off('error', onError)
-      client.release()
-    } catch (error) {
-      client.off('error', onError)
-      client.release(error instanceof Error ? error : true)
-    }
-  }
+  return subscribeToChannel(poolOf(db), PROGRESS_CHANNEL, (payload) => {
+    const event = JSON.parse(payload) as LessonProgressEvent
+    if (event.unitId === unitId) listener(event)
+  })
 }

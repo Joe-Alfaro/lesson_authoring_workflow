@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from 'node:util'
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { lessonVersions, lessons, users, yjsDocuments } from '../db/schema'
 import { isUuid } from '../import/is_uuid'
@@ -13,6 +13,7 @@ import {
   lockLesson,
   snapshotIfChanged,
 } from './lesson_rows'
+import { generatedJobs, jobNear } from './generation_provenance'
 import { changedAreas } from './version_changes'
 
 export interface VersionSummary {
@@ -25,6 +26,10 @@ export interface VersionSummary {
 export interface VersionListItem extends VersionSummary {
   /** Areas changed since the previous (older) version (R14); [] for the oldest. */
   changes: string[]
+  /** Others who edited since the previous version, by name; absent when only the author did. */
+  contributors?: { id: string; name: string }[]
+  /** "prompt v3" for a generated version whose generation job is known. */
+  generatedWith?: string
 }
 
 export interface LessonVersion extends VersionSummary {
@@ -80,17 +85,41 @@ export async function saveLessonContent(
 export async function listVersions(db: Database, lessonId: string): Promise<VersionListItem[]> {
   await assertLessonExists(db, lessonId)
   const rows = await db
-    .select({ ...summaryColumns, content: lessonVersions.content })
+    .select({
+      ...summaryColumns,
+      content: lessonVersions.content,
+      contributorIds: lessonVersions.contributorIds,
+    })
     .from(lessonVersions)
     .leftJoin(users, eq(users.id, lessonVersions.authorId))
     .where(eq(lessonVersions.lessonId, lessonId))
     .orderBy(desc(lessonVersions.createdAt))
+  const contributorIds = [...new Set(rows.flatMap((row) => row.contributorIds))]
+  const names = new Map(
+    contributorIds.length
+      ? (
+          await db
+            .select({ id: users.id, name: users.name })
+            .from(users)
+            .where(inArray(users.id, contributorIds))
+        ).map((user) => [user.id, user.name])
+      : [],
+  )
+  const jobs = rows.some((row) => row.authorId === null) ? await generatedJobs(db, lessonId) : []
   const contents = rows.map((row) => LessonContent.safeParse(row.content))
   return rows.map((row, index) => {
     const after = contents[index]!
     const before = contents[index + 1]
     const changes = after.success && before?.success ? changedAreas(before.data, after.data) : []
-    return { ...toSummary(row), changes }
+    const item: VersionListItem = { ...toSummary(row), changes }
+    const contributors = row.contributorIds
+      .filter((id) => id !== row.authorId && names.has(id))
+      .map((id) => ({ id, name: names.get(id)! }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+    if (contributors.length > 0) item.contributors = contributors
+    const job = row.authorId === null ? jobNear(jobs, row.createdAt) : null
+    if (job) item.generatedWith = `prompt v${job.promptVersion}`
+    return item
   })
 }
 
@@ -205,7 +234,12 @@ export async function saveEditorSnapshot(
  */
 export async function saveIdleVersion(
   db: Database,
-  input: { lessonId: string; userId: string },
+  input: {
+    lessonId: string
+    userId: string
+    /** Everyone who edited since the last version (the author included or not). */
+    contributorIds?: string[]
+  },
 ): Promise<{ saved: boolean }> {
   return db.transaction(async (tx) => {
     const lesson = await lockLesson(tx, input.lessonId)
@@ -215,6 +249,8 @@ export async function saveIdleVersion(
       if (error instanceof LessonLockedError) return { saved: false }
       throw error
     }
-    return { saved: await snapshotIfChanged(tx, lesson, input.userId) }
+    return {
+      saved: await snapshotIfChanged(tx, lesson, input.userId, input.contributorIds ?? []),
+    }
   })
 }

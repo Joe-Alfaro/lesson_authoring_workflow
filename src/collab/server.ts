@@ -54,14 +54,18 @@ export async function startCollabServer(options: CollabOptions): Promise<Running
   const persistence = createYjsPersistence(db)
   /** Who made the last change to each loaded document (becomes lessons.last_edited_by). */
   const lastEditor = new Map<string, string>()
+  /** Everyone who edited each document since its last idle version (R14 "who"). */
+  const editorsSinceVersion = new Map<string, Set<string>>()
 
   const versioner = createIdleVersioner({
     idleMs: options.versionIdleMs ?? VERSION_IDLE_MS,
     async onIdle(documentName, userId) {
       const lessonId = lessonIdOf(documentName)
       if (!lessonId) return
+      const contributorIds = [...(editorsSinceVersion.get(documentName) ?? [])]
+      editorsSinceVersion.delete(documentName)
       try {
-        await saveIdleVersion(db, { lessonId, userId })
+        await saveIdleVersion(db, { lessonId, userId, contributorIds })
       } catch (error) {
         // The lesson can be gone by then (unit deleted); there is nothing to version.
         if (!(error instanceof LessonNotFoundError)) throw error
@@ -170,6 +174,9 @@ export async function startCollabServer(options: CollabOptions): Promise<Running
       const userId = connection ? context?.user?.id : undefined
       if (userId) {
         lastEditor.set(documentName, userId)
+        const editors = editorsSinceVersion.get(documentName) ?? new Set<string>()
+        editors.add(userId)
+        editorsSinceVersion.set(documentName, editors)
         versioner.touch(documentName, userId)
       }
     },
@@ -209,6 +216,7 @@ export async function startCollabServer(options: CollabOptions): Promise<Running
         return
       }
       versioner.cancel(name)
+      editorsSinceVersion.delete(name)
       if (!document) return
       document.getConnections().forEach((connection) => (connection.readOnly = true))
       // An edit that raced the lock is dropped: everyone sees the approved content.
@@ -221,6 +229,7 @@ export async function startCollabServer(options: CollabOptions): Promise<Running
     async [LESSON_CONTENT_CHANNEL](lessonId) {
       const { name, document } = loaded(lessonId)
       versioner.cancel(name)
+      editorsSinceVersion.delete(name)
       if (!document) return
       const row = await lessonRow(lessonId)
       const content = LessonContent.safeParse(row?.content)

@@ -45,12 +45,14 @@ import { Icon } from '../lesson/lesson_icons'
 import { setStandardReference } from '../lesson/standard_tooltip'
 import { StatusPill } from '../lesson/status_pill'
 import { avatarColour, initials } from '../people'
+import { useLiveStatus } from './use_live_status'
 import { useLessonCollab, type SaveState } from './collab'
 import { formatShort, formatWhen } from './format_time'
 import { LiveDocument, PreviewDocument } from './lesson_documents'
 import type { EditorViewContext } from './node_views'
 import { AssistLayer, type AssistLayerHandle } from './assist_layer'
 import { RequestChangesDialog } from './request_changes_dialog'
+import { RetryGenerationButton } from './retry_generation'
 import { RestoreDialog } from './restore_dialog'
 import {
   SidePanel,
@@ -68,6 +70,8 @@ export interface EditorLesson {
   unitId: string
   unitNumber: number
   grade: number
+  /** The unit's current prompt version (R21 regenerate copy). */
+  promptVersion: number
   number: number | null
   status: LessonStatus
   content: LessonContent
@@ -93,30 +97,14 @@ const ACTION_LABELS: Partial<Record<WorkflowAction, string>> = {
 /** AI assist (R20-R22) is for reviewers and above on an editable lesson. */
 const ASSIST_ROLES: Role[] = ['reviewer', 'approver', 'admin']
 
-/** Live status (R23): the lesson's status as it changes, from the SSE feed. */
-function useLiveStatus(lessonId: string, initial: LessonStatus, onChange: () => void) {
-  const [status, setStatus] = useState(initial)
-  // A server refresh brings a newer status in props; it wins over the last pushed one.
-  const [fromServer, setFromServer] = useState(initial)
-  if (fromServer !== initial) {
-    setFromServer(initial)
-    setStatus(initial)
-  }
-  const changed = useRef(onChange)
-  useEffect(() => {
-    changed.current = onChange
-  }, [onChange])
-  useEffect(() => {
-    const source = new EventSource(`/api/lessons/${lessonId}/events`)
-    source.onmessage = (event) => {
-      const message = JSON.parse(String(event.data)) as { type?: string; status?: LessonStatus }
-      if (message.type !== 'status' || !message.status) return
-      setStatus(message.status)
-      changed.current()
-    }
-    return () => source.close()
-  }, [lessonId])
-  return [status, setStatus] as const
+/** The save-state slot when the lesson can't be edited (R23-workflow-states). */
+const NOT_EDITABLE_LABELS: Record<LessonStatus, string> = {
+  generating: 'Generating sections',
+  approved: 'Locked',
+  failed: 'Not generated',
+  draft: 'Locked',
+  in_review: 'Locked',
+  changes_requested: 'Locked',
 }
 
 /** Actions that save a version of the latest edits first (D-024), so the editor flushes. */
@@ -299,7 +287,9 @@ export function LessonEditorPage({
     if (panelRef.current === 'versions') void loadVersionsRef.current()
   }, [router])
   const [status, setStatus] = useLiveStatus(lesson.id, lesson.status, onStatusChange)
-  const editable = isEditableStatus(status)
+  // A failed lesson waits for Retry generation (R23-workflow-states), so it isn't edited either.
+  const editable = isEditableStatus(status) && status !== 'failed'
+  const canRetry = status === 'failed' && (user.role === 'author' || user.role === 'admin')
   const canAssist = editable && ASSIST_ROLES.includes(user.role)
   const collabUser = useMemo(() => ({ id: user.id, name: user.name }), [user.id, user.name])
   const collab = useLessonCollab(lesson.id, collabUrl, collabUser)
@@ -443,7 +433,7 @@ export function LessonEditorPage({
 
   const loadHistory = useCallback(async () => {
     const body = await readJson<{ events: HistoryItem[] }>(
-      await fetch(`/api/lessons/${lesson.id}/history`, { cache: 'no-store' }),
+      await fetch(`/api/lessons/${lesson.id}/timeline`, { cache: 'no-store' }),
     )
     setHistory(body.events)
   }, [lesson.id])
@@ -584,12 +574,8 @@ export function LessonEditorPage({
           </button>
         ) : (
           <span className="caption row save-state" aria-live="polite">
-            <Icon name={editable || status === 'generating' ? 'cloud' : 'lock'} />
-            {editable
-              ? SAVE_LABELS[collab.saveState]
-              : status === 'generating'
-                ? 'Generating sections'
-                : 'Locked'}
+            <Icon name={editable || status !== 'approved' ? 'cloud' : 'lock'} />
+            {editable ? SAVE_LABELS[collab.saveState] : NOT_EDITABLE_LABELS[status]}
           </span>
         )}
         <button
@@ -625,6 +611,16 @@ export function LessonEditorPage({
         ) : null}
         {status === 'generating' ? (
           <span className="caption">Opens for editing when generation finishes</span>
+        ) : null}
+        {canRetry ? (
+          <RetryGenerationButton
+            unitId={lesson.unitId}
+            lessonId={lesson.id}
+            onStarted={() => setStatus('generating')}
+          />
+        ) : null}
+        {status === 'failed' && !canRetry ? (
+          <span className="caption">Generation failed. An author can retry it.</span>
         ) : null}
         {actions.map((action) => (
           <button
@@ -668,6 +664,11 @@ export function LessonEditorPage({
                       ? `${lesson.approval.name} approved it ${formatWhen(lesson.approval.at, { at: true })}. `
                       : ''}
                     Reopening moves it back to In review so reviewers can edit.
+                  </>
+                ) : status === 'failed' ? (
+                  <>
+                    <b>Generation failed for this lesson, so there is nothing to edit yet.</b> Retry
+                    generation writes it again with the unit&rsquo;s current prompt.
                   </>
                 ) : (
                   <>
@@ -770,6 +771,7 @@ export function LessonEditorPage({
           editor={editor}
           lessonId={lesson.id}
           grade={lesson.grade}
+          promptVersion={lesson.promptVersion}
           content={lesson.content}
           previewCtx={previewCtx}
           wrap={docwrap}

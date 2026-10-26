@@ -13,6 +13,7 @@ import { Icon } from '../lesson/lesson_icons'
 import {
   acceptSection,
   acceptSuggestion,
+  anchorRange,
   assistableRange,
   assistPreviewKey,
   blockIdAt,
@@ -21,6 +22,7 @@ import {
   setPreview,
 } from './assist_plugin'
 import { PreviewDocument } from './lesson_documents'
+import { useModal } from './use_modal'
 import type { EditorViewContext } from './node_views'
 
 type SelectionAction = 'rewrite' | 'shorten' | 'simplify' | 'instruction'
@@ -265,6 +267,25 @@ function SelectionAssist({
     if (phase.kind === 'suggestion') acceptRef.current?.focus()
   }, [phase])
 
+  // The previewed text changed under a collaborator's edit: drop the request, say so, and leave
+  // assist ready for the next selection.
+  useEffect(() => {
+    function onTransaction() {
+      const lost = assistPreviewKey.getState(editor.state)?.lost
+      if (!lost) return
+      request.current.abort?.abort()
+      request.current = { id: request.current.id + 1, abort: null }
+      setPhase({ kind: 'error', message: lost })
+      queueMicrotask(() => {
+        if (!editor.isDestroyed) setPreview(editor.view, { lost: null })
+      })
+    }
+    editor.on('transaction', onTransaction)
+    return () => {
+      editor.off('transaction', onTransaction)
+    }
+  }, [editor])
+
   const runAction = useCallback(
     async (run: Run) => {
       request.current.abort?.abort()
@@ -274,7 +295,12 @@ function SelectionAssist({
       setAsking(false)
       setRange(null)
       setPhase({ kind: 'pending', run })
-      setPreview(editor.view, { selection: { kind: 'pending', from: run.from, to: run.to } })
+      // Anchored in the shared document, so collaborators' edits move it with the text.
+      const anchor = anchorRange(editor.state, run.from, run.to)
+      setPreview(editor.view, {
+        selection: { kind: 'pending', from: run.from, to: run.to, anchor },
+        lost: null,
+      })
       try {
         const { suggestion } = await postJson<{ suggestion: string }>(
           `/api/lessons/${lessonId}/assist/selection`,
@@ -287,10 +313,18 @@ function SelectionAssist({
           abort.signal,
         )
         if (request.current.id !== id || editor.isDestroyed) return
-        // The range may have moved with collaborators' edits while the model worked.
-        const mapped = assistPreviewKey.getState(editor.state)?.selection ?? run
+        // Where the text is now: it may have moved with collaborators' edits. If its own text
+        // changed, the preview was dropped and the user told (never fall back to old positions).
+        const mapped = assistPreviewKey.getState(editor.state)?.selection
+        if (!mapped) return
         setPreview(editor.view, {
-          selection: { kind: 'suggestion', from: mapped.from, to: mapped.to, suggestion },
+          selection: {
+            kind: 'suggestion',
+            from: mapped.from,
+            to: mapped.to,
+            anchor: mapped.anchor,
+            suggestion,
+          },
         })
         setPhase({ kind: 'suggestion', run: { ...run, from: mapped.from, to: mapped.to } })
       } catch (error) {
@@ -322,8 +356,8 @@ function SelectionAssist({
 
   function accept() {
     request.current = { id: request.current.id + 1, abort: null }
-    acceptSuggestion(editor.view)
-    setPhase({ kind: 'idle' })
+    // Refused when the text changed meanwhile; the `lost` watcher then shows why.
+    if (acceptSuggestion(editor.view)) setPhase({ kind: 'idle' })
   }
 
   function onCardKeyDown(event: React.KeyboardEvent) {
@@ -465,12 +499,14 @@ function RegenerateDialog({
   target,
   busy,
   error,
+  promptVersion,
   onCancel,
   onRun,
 }: {
   target: SectionTarget
   busy: boolean
   error: string | null
+  promptVersion: number
   onCancel: () => void
   onRun: (instruction: string) => void
 }) {
@@ -478,19 +514,21 @@ function RegenerateDialog({
   const fieldId = useId()
   const [instruction, setInstruction] = useState('')
   const name = SECTION_NAMES[target.kind]
+  const dialogRef = useRef<HTMLFormElement>(null)
+  const fieldRef = useRef<HTMLTextAreaElement>(null)
+  useModal(dialogRef, onCancel, { initialFocus: fieldRef })
+  // After a failed request the submit button was disabled; put focus back in the dialog.
+  useEffect(() => {
+    if (error) fieldRef.current?.focus()
+  }, [error])
   return (
     <div className="scrim">
       <form
+        ref={dialogRef}
         className="dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            event.preventDefault()
-            onCancel()
-          }
-        }}
         onSubmit={(event) => {
           event.preventDefault()
           onRun(instruction.trim())
@@ -510,15 +548,18 @@ function RegenerateDialog({
             Instruction <span className="muted opt">(optional)</span>
           </label>
           <textarea
+            ref={fieldRef}
             id={fieldId}
             className="textarea"
             rows={3}
-            autoFocus
             value={instruction}
             placeholder={`What should change in ${name}?`}
             onChange={(event) => setInstruction(event.target.value)}
           />
-          <p className="help">Uses this lesson&rsquo;s standards and the sections around it.</p>
+          <p className="help">
+            Uses prompt v{promptVersion} and this lesson&rsquo;s outline row, standards and the
+            sections around it.
+          </p>
           {busy ? (
             <p className="caption" role="status">
               Writing a new {name}. Nothing in the lesson changes until you accept it.
@@ -666,10 +707,13 @@ export function AssistLayer({
   previewCtx,
   wrap,
   handleRef,
+  promptVersion,
 }: {
   editor: Editor
   lessonId: string
   grade: number
+  /** The unit's current prompt version, named in the regenerate dialog (R21). */
+  promptVersion: number
   content: LessonContent
   previewCtx: EditorViewContext
   /** The document column: the toolbar and alerts are placed in it. */
@@ -690,9 +734,13 @@ export function AssistLayer({
 
   const proposal = regen.proposal
   const regionRef = useRef<HTMLDivElement>(null)
+  const proposalAcceptRef = useRef<HTMLButtonElement>(null)
   const proposalKey = proposal?.section
   useEffect(() => {
-    if (proposalKey) regionRef.current?.scrollIntoView({ block: 'center' })
+    if (!proposalKey) return
+    regionRef.current?.scrollIntoView({ block: 'center' })
+    // Focus moves from the closed dialog to the decision it asked for.
+    proposalAcceptRef.current?.focus({ preventScroll: true })
   }, [proposalKey])
 
   const name = proposal ? SECTION_NAMES[proposal.kind] : ''
@@ -711,6 +759,7 @@ export function AssistLayer({
           target={regen.dialog}
           busy={regen.busy}
           error={regen.error}
+          promptVersion={promptVersion}
           onCancel={regen.cancel}
           onRun={(instruction) => void regen.run(regen.dialog!, instruction)}
         />
@@ -730,7 +779,12 @@ export function AssistLayer({
                   accept. Minutes stay at{' '}
                   {sectionMinutes(editor, proposal.sectionId, proposal.section.minutes)}.
                   <div className="row ai-actions">
-                    <button type="button" className="btn primary sm" onClick={regen.accept}>
+                    <button
+                      ref={proposalAcceptRef}
+                      type="button"
+                      className="btn primary sm"
+                      onClick={regen.accept}
+                    >
                       <Icon name="check" />
                       Accept
                     </button>

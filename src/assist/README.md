@@ -229,13 +229,27 @@ through, in one labelled `Current text` (one of each per changed field).
   `R23-workflow-states-<status>-<role>`, `R23-request-changes`, `R23-approved-locked-live`,
   `R23-history`, `R14-version-history-changes`, `R14-version-diff`.
 
-## Implementation notes (M4, D-047)
+## Implementation notes (M4, D-047, D-050)
 
-- Live status reaches open editors through `GET /api/lessons/[id]/events` (SSE, `{ type: 'status',
-status }` on each `lesson_status_changed` for that lesson); the collab server still enforces the
-  lock itself.
-- Editor previews are decorations in `src/ui/editor/assist_plugin.ts`; the toolbar, cards and the
-  section proposal are in `src/ui/editor/assist_layer.tsx`; the version diff is
-  `src/ui/editor/version_diff.ts`.
+- Live status: open editors poll `GET /api/lessons/[id]/status` every 2 s (`{ status }`, ETag on
+  the status, 304 when unchanged; paused while the tab is hidden, checked at once on focus). No
+  connection is held per tab. The collab server still enforces the lock itself.
+- Editor previews are decorations in `src/ui/editor/assist_plugin.ts`, anchored with Yjs relative
+  positions: collaborators' edits before or after the selection move it with the text; an edit to
+  the selected text drops the preview with "Someone changed the selected text while the AI was
+  working…" and assist stays usable. Accept is refused the same way if the text no longer matches.
+- `regenerateSection` sends the generation context of the lesson (the unit's current prompt
+  version, its outline row, standards and neighbouring lessons, via `buildLessonPrompt`) plus the
+  section-rewrite instructions, so the dialog copy "Uses prompt vN and this lesson's outline row,
+  standards and the sections around it." is true.
+- The toolbar, cards and section proposal are in `src/ui/editor/assist_layer.tsx`; dialogs share
+  `src/ui/editor/use_modal.ts` (focus trap, document-level Escape, focus returns to the trigger).
+- History: `GET /api/lessons/[id]/timeline` (`getLessonTimeline`, `src/workflow/timeline.ts`) merges
+  status events and `assignment_events` (written by `assignLessons` with the actor), and names the
+  prompt version and model on "generated as Draft". Versions: `listVersions` items may carry
+  `contributors` (others who edited, from `lesson_versions.contributor_ids`, set by the collab idle
+  versioner) and `generatedWith` ("prompt v3").
 - Shift+Home / Shift+End select to the start / end of the current field (keyboard selection
   before `Alt+/`).
+- Failed lessons are read-only in the editor; authors (and admins) get Retry generation, which
+  regenerates that lesson through `POST /api/units/[id]/generation/regenerate`.

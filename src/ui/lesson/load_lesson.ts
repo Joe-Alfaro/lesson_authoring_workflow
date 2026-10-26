@@ -1,8 +1,15 @@
 // Server-side data for the lesson editor and lesson view pages.
-import { eq, inArray } from 'drizzle-orm'
+import { desc, eq, inArray } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import type { Database } from '../../db/client'
-import { lessons, standards, units, users, type LessonStatus } from '../../db/schema'
+import {
+  lessons,
+  promptVersions,
+  standards,
+  units,
+  users,
+  type LessonStatus,
+} from '../../db/schema'
 import type { StandardRef } from '../../editor/standards'
 import { getLessonGeneration } from '../../generation/service'
 import { isUuid } from '../../import/is_uuid'
@@ -16,6 +23,8 @@ export interface LessonPageData {
   unitNumber: number
   /** The unit's grade ("Simplify for grade 6", R20). */
   grade: number
+  /** The unit's current prompt version (R21 regenerate copy); 1 until the unit has one. */
+  promptVersion: number
   number: number | null
   status: LessonStatus
   /** Null until the lesson is generated (or when stored content no longer validates). */
@@ -51,9 +60,15 @@ export async function loadLessonPage(
     .where(eq(lessons.id, lessonId))
   if (!row) return null
 
-  const [generation, history] = await Promise.all([
+  const [generation, history, [latestPrompt]] = await Promise.all([
     getLessonGeneration(db, lessonId),
     getLessonHistory(db, lessonId),
+    db
+      .select({ version: promptVersions.version })
+      .from(promptVersions)
+      .where(eq(promptVersions.unitId, row.unitId))
+      .orderBy(desc(promptVersions.version))
+      .limit(1),
   ])
   const approved = [...history].reverse().find((event) => event.toStatus === 'approved')
   const parsed = LessonContent.safeParse(row.content)
@@ -63,6 +78,7 @@ export async function loadLessonPage(
     unitId: row.unitId,
     unitNumber: row.unitNumber,
     grade: row.grade,
+    promptVersion: latestPrompt?.version ?? 1,
     number: row.number,
     status: row.status,
     content: parsed.success ? parsed.data : null,

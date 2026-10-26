@@ -4,7 +4,6 @@
 // this tab list later.
 import { useId, useRef, type ReactNode } from 'react'
 import type { LessonStatus } from '../../db/schema'
-import { historyEventText } from '../../workflow/history_text'
 import { Icon, type IconName } from '../lesson/lesson_icons'
 import { formatWhen } from './format_time'
 
@@ -14,13 +13,21 @@ export interface VersionItem {
   author: { id: string; name: string } | null
   /** Areas this version changed since the previous one (R14). */
   changes: string[]
+  /** Others who edited it besides the author. */
+  contributors?: { id: string; name: string }[]
+  /** "prompt v3" on a generated version. */
+  generatedWith?: string
 }
 
+/** One timeline row (src/workflow/timeline.ts): a status change or an assignment. */
 export interface HistoryItem {
   id: string
-  fromStatus: LessonStatus | null
-  toStatus: LessonStatus
+  kind: 'status' | 'assignment'
+  /** The status a status event moved to; null for assignments. */
+  toStatus: LessonStatus | null
   actor: { name: string } | null
+  /** What happened, after the actor's name. */
+  text: string
   note: string | null
   at: string
 }
@@ -55,6 +62,11 @@ const STATUS_NODES: Record<LessonStatus, { icon: IconName; colour: string }> = {
   failed: { icon: 'warning', colour: 'var(--st-failed)' },
 }
 
+const ASSIGNMENT_NODE: { icon: IconName; colour: string } = {
+  icon: 'person',
+  colour: 'var(--st-none)',
+}
+
 const VERDICTS: Record<AlignmentVerdict, { label: string; pill: string; icon: IconName }> = {
   addressed: { label: 'Addressed', pill: 'approved', icon: 'check' },
   partly_addressed: { label: 'Partly addressed', pill: 'review', icon: 'warning' },
@@ -62,9 +74,18 @@ const VERDICTS: Record<AlignmentVerdict, { label: string; pill: string; icon: Ic
 }
 
 function versionLine(version: VersionItem): string {
-  if (!version.author) return 'System. Generated'
-  if (version.changes.length === 0) return `${version.author.name}. No content changes`
-  return `${version.author.name}. Edited ${version.changes.join(', ')}`
+  if (!version.author) {
+    return version.generatedWith
+      ? `System. Generated with ${version.generatedWith}`
+      : 'System. Generated'
+  }
+  // Everyone who edited since the previous version (mockup: "Reviewer 03, Reviewer 07. Edited ...").
+  const who = [version.author, ...(version.contributors ?? [])]
+    .map((person) => person.name)
+    .sort((a, b) => a.localeCompare(b))
+    .join(', ')
+  if (version.changes.length === 0) return `${who}. No content changes`
+  return `${who}. Edited ${version.changes.join(', ')}`
 }
 
 function minutesAgo(iso: string): string {
@@ -245,7 +266,7 @@ export function SidePanel({
         ) : (
           <ol className="tl">
             {[...history].reverse().map((event) => {
-              const node = STATUS_NODES[event.toStatus]
+              const node = event.toStatus ? STATUS_NODES[event.toStatus] : ASSIGNMENT_NODE
               return (
                 <li key={event.id}>
                   <span className="node" style={{ color: node.colour }} aria-hidden="true">
@@ -253,7 +274,7 @@ export function SidePanel({
                   </span>
                   <div>
                     <div>
-                      <b>{event.actor ? event.actor.name : 'System'}</b> {historyEventText(event)}
+                      <b>{event.actor ? event.actor.name : 'System'}</b> {event.text}
                     </div>
                     <div className="caption">{formatWhen(event.at, { capital: true })}</div>
                     {event.note ? <blockquote className="note">{event.note}</blockquote> : null}

@@ -124,7 +124,8 @@ getMyLessons(db, userId) -> { units: { unit; counts; lessons: DashboardLesson[] 
 ## Assignment (`assignment.ts`, R25)
 
 ```ts
-assignLessons(db, { lessonIds: string[]; assigneeId: string | null }) -> { updated: number }
+assignLessons(db, { lessonIds: string[]; assigneeId: string | null; actorId?: string | null }) -> { updated: number }
+// each lesson whose assignee changes gets an assignment_events row (R23 history, D-050)
 listAssignableReviewers(db) -> { id; name; email; role: 'reviewer' | 'approver'; openAssignments: number }[]
 ```
 

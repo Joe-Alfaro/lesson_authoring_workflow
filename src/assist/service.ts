@@ -16,6 +16,8 @@ import {
   type LlmUsage,
   type PriceTable,
 } from '../generation/llm'
+import { buildLessonPrompt } from '../generation/prompt_builder'
+import { loadLessonPromptInput } from '../generation/prompt_input'
 import { getTotalSpendUsd } from '../generation/service'
 import { getGlobalSpendCapUsd } from '../generation/settings'
 import { isUuid } from '../import/is_uuid'
@@ -327,27 +329,30 @@ export async function regenerateSection(
 
   const instruction = typeof input.instruction === 'string' ? input.instruction.trim() : ''
   const name = SECTION_NAMES[current.kind]
-  const { frontMatter, body } = lesson.content
+  const { body } = lesson.content
+  // The same context generation used: the unit's current prompt version (system text, style guide,
+  // type guidance), the outline row, standards and neighbouring lessons (R21 dialog copy).
+  const context = buildLessonPrompt(await loadLessonPromptInput(deps.db, lesson.id))
   const system = [
-    `You rewrite one section of a grade ${lesson.grade} English Language Arts lesson plan for teachers.`,
-    `Rewrite only the ${name} section. Keep its kind "${current.kind}" and its ${current.minutes} minutes; it must fit the lesson around it.`,
-    'Inline text may use **bold** and *italic* only. Return the whole section as {"section": {...}}.',
-  ].join('\n')
+    context.system,
+    `# This request
+
+You are not writing a whole lesson now. Rewrite only the ${name} section of the existing lesson below. Keep its kind "${current.kind}" and its ${current.minutes} minutes; it must fit the sections around it. Inline text may use **bold** and *italic* only. Return the whole section as {"section": {...}}.`,
+  ].join('\n\n')
   const prompt = [
-    `Lesson: ${body.title}`,
-    `Focus standards: ${frontMatter.focusStandards.join(', ') || 'none'}`,
-    `Other sections: ${body.sections
+    `# Lesson context from the outline\n\n${context.prompt}`,
+    `# The lesson as it is now\n\nTitle: ${body.title}\nOther sections: ${body.sections
       .filter((section) => section.id !== current.id)
       .map(
         (section) => `${SECTION_NAMES[section.kind]} (${section.minutes} min): ${section.purpose}`,
       )
       .join(' | ')}`,
     instruction
-      ? `Reviewer's instruction: ${instruction}`
-      : 'Reviewer gave no instruction: improve it.',
-    `Current ${name} section:`,
-    JSON.stringify(current),
-  ].join('\n')
+      ? `# Reviewer's instruction\n\n${instruction}`
+      : "# Reviewer's instruction\n\nNone: improve the section.",
+    `# Current ${name} section\n\n${JSON.stringify(current)}`,
+    `Return only {"section": ...} for ${name}; ignore the instruction above about returning a whole lesson body.`,
+  ].join('\n\n')
 
   const { value, costUsd } = await callModel(
     deps,

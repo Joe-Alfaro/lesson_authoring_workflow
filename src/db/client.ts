@@ -1,12 +1,19 @@
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres'
 import pg from 'pg'
-import { getDatabaseUrl } from '../config/env'
+import { getDatabaseUrl, getDbPoolMax } from '../config/env'
 import * as schema from './schema'
 
 export type Database = NodePgDatabase<typeof schema>
 
-export function createPool(connectionString = getDatabaseUrl()): pg.Pool {
-  const pool = new pg.Pool({ connectionString, connectionTimeoutMillis: 5_000 })
+export function createPool(
+  connectionString = getDatabaseUrl(),
+  options: { max?: number } = {},
+): pg.Pool {
+  const pool = new pg.Pool({
+    connectionString,
+    connectionTimeoutMillis: 5_000,
+    max: options.max ?? getDbPoolMax(),
+  })
   // An idle client dropped by the server (restart, failover) emits 'error' on the pool; without a
   // listener that crashes the process. The pool discards the client and reconnects on demand.
   pool.on('error', (error) => {

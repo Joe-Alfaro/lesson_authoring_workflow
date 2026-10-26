@@ -5,6 +5,7 @@ import { ROLES } from '../../../../auth/roles'
 import { getCollabUrl } from '../../../../config/env'
 import { getDb } from '../../../../db/client'
 import { lessonLabel } from '../../../../lesson/labels'
+import { RetryGenerationButton } from '../../../../ui/editor/retry_generation'
 import { LessonEditorPage } from '../../../../ui/editor/lesson_editor_page'
 import { loadLessonPage, loadStandards } from '../../../../ui/lesson/load_lesson'
 import { StatusPill } from '../../../../ui/lesson/status_pill'
@@ -35,11 +36,19 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
           <span className="t">{lessonLabel(lesson.number)}</span>
           <StatusPill status={lesson.status} />
           {lesson.provenance ? <span className="caption">{lesson.provenance}</span> : null}
+          <span className="spacer" />
+          {lesson.status === 'failed' ? (
+            <span className="caption row save-state">Not generated</span>
+          ) : null}
+          {lesson.status === 'failed' && (user.role === 'author' || user.role === 'admin') ? (
+            <RetryGenerationButton unitId={lesson.unitId} lessonId={lesson.id} />
+          ) : null}
         </div>
         <main className="lv-wrap">
           <p className="notice info">
-            This lesson hasn’t been generated yet. Generate it from the unit page, then edit it
-            here.
+            {lesson.status === 'failed'
+              ? 'Generation failed for this lesson. An author can retry it from here or from the unit page.'
+              : 'This lesson hasn’t been generated yet. Generate it from the unit page, then edit it here.'}
           </p>
         </main>
       </div>

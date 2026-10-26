@@ -195,6 +195,11 @@ export const lessonVersions = pgTable(
     content: jsonb('content').$type<unknown>().notNull(),
     // Null when the version came from generation rather than a person.
     authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
+    // Everyone else who edited since the previous version (collab idle versions, R14).
+    contributorIds: uuid('contributor_ids')
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
     createdAt: createdAt(),
   },
   (table) => [index('lesson_versions_lesson_idx').on(table.lessonId, table.createdAt)],
@@ -311,6 +316,22 @@ export const yjsDocuments = pgTable('yjs_documents', {
   state: bytea('state').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
+
+/** Who assigned a lesson to whom, and when (R23 history, R25). */
+export const assignmentEvents = pgTable(
+  'assignment_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    lessonId: uuid('lesson_id')
+      .notNull()
+      .references(() => lessons.id, { onDelete: 'cascade' }),
+    // Null when the lesson was unassigned.
+    assigneeId: uuid('assignee_id').references(() => users.id, { onDelete: 'set null' }),
+    actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
+    at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('assignment_events_lesson_idx').on(table.lessonId, table.at)],
+)
 
 /** One row per AI assist model call, retries included (R20-R22); counts in SPEND_CAP_USD. */
 export const assistCalls = pgTable(

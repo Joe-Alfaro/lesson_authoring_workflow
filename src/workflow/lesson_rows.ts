@@ -53,11 +53,19 @@ export function assertEditable(lesson: { status: LessonStatus }): void {
 
 export async function insertVersion(
   tx: Transaction,
-  values: { lessonId: string; content: unknown; authorId: string | null },
+  values: {
+    lessonId: string
+    content: unknown
+    authorId: string | null
+    contributorIds?: string[]
+  },
 ): Promise<string> {
+  const contributorIds = [...new Set(values.contributorIds ?? [])].filter(
+    (id) => id !== values.authorId,
+  )
   const [row] = await tx
     .insert(lessonVersions)
-    .values({ ...values, createdAt: clockNow })
+    .values({ ...values, contributorIds, createdAt: clockNow })
     .returning({ id: lessonVersions.id })
   return row!.id
 }
@@ -70,6 +78,8 @@ export async function snapshotIfChanged(
   tx: Transaction,
   lesson: LockedLesson,
   authorId: string,
+  /** Others who edited since the last version (collab idle versions). */
+  contributorIds: string[] = [],
 ): Promise<boolean> {
   if (lesson.content == null) {
     return false
@@ -83,6 +93,11 @@ export async function snapshotIfChanged(
   if (latest && isDeepStrictEqual(latest.content, lesson.content)) {
     return false
   }
-  await insertVersion(tx, { lessonId: lesson.id, content: lesson.content, authorId })
+  await insertVersion(tx, {
+    lessonId: lesson.id,
+    content: lesson.content,
+    authorId,
+    contributorIds,
+  })
   return true
 }

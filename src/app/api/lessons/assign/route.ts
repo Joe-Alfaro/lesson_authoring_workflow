@@ -20,7 +20,9 @@ export async function POST(request: Request): Promise<Response> {
     if (assigneeId !== null && typeof assigneeId !== 'string') {
       throw new BadRequestError('"assigneeId" must be a user id or null.')
     }
-    return Response.json(await assignLessons(getDb(), { lessonIds, assigneeId }))
+    return Response.json(
+      await assignLessons(getDb(), { lessonIds, assigneeId, actorId: access.id }),
+    )
   } catch (error) {
     return workflowErrorResponse(error)
   }

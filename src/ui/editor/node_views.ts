@@ -819,7 +819,12 @@ function sectionView(node: PmNode, where: Where, ctx: EditorViewContext): NodeVi
   const regenerate = ctx.regenerateSection
   if (ctx.editable && regenerate) {
     const sectionId = String(node.attrs.id)
-    const ai = button('btn quiet sm sec-regen', '', () => regenerate(sectionId, kind))
+    const ai = button('btn quiet sm sec-regen', '', () => {
+      // The mousedown is cancelled to keep the editor's selection; focus the button so the
+      // dialog can return focus to it (D1).
+      ai.focus()
+      regenerate(sectionId, kind)
+    })
     ai.append(icon('sparkle'), document.createTextNode('Regenerate'))
     ai.setAttribute('aria-label', `Regenerate ${SECTION_NAMES[kind] ?? kind} with AI`)
     head.append(ai)

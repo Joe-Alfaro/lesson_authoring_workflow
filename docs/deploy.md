@@ -136,7 +136,9 @@ in step 3 and never commit or paste them.
 | `AUTH_SECRET`              | set by owner                              | not used                     | `${{web.AUTH_SECRET}}`       | yes     |
 | `SEED_PASSWORD`            | set by owner                              | not used                     | not used                     | yes     |
 | `COLLAB_URL`               | `wss://${{collab.RAILWAY_PUBLIC_DOMAIN}}` | not used                     | not used                     | no      |
-| `ANTHROPIC_API_KEY`        | not used                                  | set by owner                 | not used                     | yes     |
+| `ANTHROPIC_API_KEY`        | set by owner (AI assist, R20-R22)         | set by owner                 | not used                     | yes     |
+| `ASSIST_MODEL`             | `claude-haiku-5-5`                        | not used                     | not used                     | no      |
+| `DB_POOL_MAX`              | `10`                                      | `10`                         | `10`                         | no      |
 | `SPEND_CAP_USD`            | `3`                                       | `3`                          | not used                     | no      |
 | `GENERATION_SPEND_CAP_USD` | `1`                                       | `1`                          | not used                     | no      |
 | `GENERATION_MODEL`         | `claude-haiku-5-5`                        | `claude-haiku-5-5`           | not used                     | no      |
@@ -154,8 +156,14 @@ Notes:
   works anywhere. It isn't a `NEXT_PUBLIC_` variable because those are fixed at build time.
 - Spend guard (R12): the web app checks `SPEND_CAP_USD` when a run starts, the worker before every
   job. It is the total for this database across all runs, so a public URL can spend at most $3
-  (the reserve in D-038). Raise it on purpose for a bigger hosted run. Only the worker has the
-  Anthropic key.
+  (the reserve in D-038). Raise it on purpose for a bigger hosted run. The worker uses the
+  Anthropic key for generation; the web app uses it for AI assist (R20-R22), whose calls are
+  metered in `assist_calls` and count against the same `SPEND_CAP_USD`. Without the key on `web`,
+  assist answers 503 and nothing else changes.
+- `DB_POOL_MAX` sizes each process's Postgres pool (default 10). Live feeds don't use pool
+  clients: each process shares one LISTEN connection, and open editors poll the lesson status, so
+  the pool only bounds concurrent queries. Keep (web + worker + collab) x `DB_POOL_MAX` + 3 under
+  the database's connection limit.
 - Hosted demo passwords come from `SEED_PASSWORD`; the README's `demo-password` does not work
   there.
 

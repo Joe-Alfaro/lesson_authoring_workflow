@@ -20,6 +20,20 @@ export function getDatabaseUrl(): string {
   return `postgres://postgres:postgres@localhost:${port}/lesson_authoring`
 }
 
+/**
+ * Size of each process's Postgres pool: `DB_POOL_MAX`, an integer >= 1, default 10. Live feeds
+ * share one LISTEN connection outside the pool (src/db/notify_hub.ts), so this only bounds queries.
+ */
+export function getDbPoolMax(env: Record<string, string | undefined> = process.env): number {
+  const raw = env.DB_POOL_MAX?.trim()
+  if (!raw) return 10
+  const max = Number(raw)
+  if (!Number.isInteger(max) || max < 1) {
+    throw new Error(`DB_POOL_MAX must be an integer >= 1, got "${raw}"`)
+  }
+  return max
+}
+
 export function getPort(defaultPort: number): number {
   const raw = readEnv('PORT')
   if (!raw) {
